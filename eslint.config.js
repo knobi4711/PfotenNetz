@@ -1,7 +1,9 @@
 const tseslint = require('typescript-eslint');
+const path = require('node:path');
 const prettierPlugin = require('eslint-plugin-prettier');
 const reactPlugin = require('eslint-plugin-react');
 const reactHooksPlugin = require('eslint-plugin-react-hooks');
+const nextPlugin = require('@next/eslint-plugin-next');
 
 module.exports = tseslint.config(
   {
@@ -13,6 +15,7 @@ module.exports = tseslint.config(
       '**/.expo/**',
       '**/.turbo/**',
       '**/coverage/**',
+      '**/next-env.d.ts',
       '*.config.*',
     ],
   },
@@ -52,6 +55,22 @@ module.exports = tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-floating-promises': 'warn',
+    },
+  },
+  {
+    files: ['apps/web/**/*.{js,jsx,ts,tsx}'],
+    plugins: {
+      '@next/next': nextPlugin,
+    },
+    settings: {
+      next: {
+        rootDir: path.join(__dirname, 'apps/web'),
+      },
+    },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs['core-web-vitals'].rules,
+      '@next/next/no-html-link-for-pages': 'off',
     },
   }
 );
