@@ -3,6 +3,7 @@ import { Image, Pressable, ScrollView, Switch, Text, TextInput, View } from 'rea
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { File } from 'expo-file-system';
 import {
   PET_SPECIES_LABELS,
   PET_SPECIES_OPTIONS,
@@ -100,9 +101,10 @@ function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
           if (!result.canceled) {
             const asset = result.assets[0];
             if (!asset) return;
+            const fileData = await new File(asset.uri).arrayBuffer();
             uploadPhoto.mutate({
               petId: pet.id,
-              uri: asset.uri,
+              fileData,
               contentType: asset.mimeType ?? 'image/jpeg',
             });
           }

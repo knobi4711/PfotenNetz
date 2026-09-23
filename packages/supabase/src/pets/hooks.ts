@@ -51,8 +51,8 @@ export function useUploadPetPhoto() {
   const client = getSupabaseClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { petId: string; uri: string; contentType?: string }) =>
-      uploadPetPhoto(client, input.petId, input.uri, input.contentType),
+    mutationFn: (input: { petId: string; fileData: ArrayBuffer; contentType?: string }) =>
+      uploadPetPhoto(client, input.petId, input.fileData, input.contentType),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: petsKeys.own });
       void queryClient.refetchQueries({ queryKey: petsKeys.own, type: 'active' });
