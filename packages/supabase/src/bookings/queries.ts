@@ -7,6 +7,7 @@ export interface BookingPet {
   id: string;
   name: string;
   species: string;
+  avatar_url: string | null;
 }
 
 export interface BookingProfile {
@@ -24,7 +25,7 @@ export interface BookingWithRelations extends Booking {
 // from the caller arrive as null instead of failing the whole query.
 export const BOOKING_SELECT = [
   '*',
-  'pet:pets!bookings_pet_id_fkey(id,name,species)',
+  'pet:pets!bookings_pet_id_fkey(id,name,species,avatar_url)',
   'seekerProfile:profiles!bookings_seeker_id_fkey(id,display_name)',
   'helperProfile:profiles!bookings_helper_id_fkey(id,display_name)',
 ].join(',');
@@ -45,7 +46,20 @@ export async function fetchBooking(
 
   if (error) throw error;
   if (data === null) throw new Error(`Booking not found: ${bookingId}`);
-  return data as unknown as BookingWithRelations;
+  return addPetPhotoUrl(client, data as unknown as BookingWithRelations);
+}
+
+async function addPetPhotoUrl(
+  client: SupabaseClient<Database>,
+  booking: BookingWithRelations
+): Promise<BookingWithRelations> {
+  if (booking.pet?.avatar_url === null || booking.pet?.avatar_url === undefined) return booking;
+  const signed = await client.storage
+    .from('pet-photos')
+    .createSignedUrl(booking.pet.avatar_url, 3600);
+  return signed.error === null
+    ? { ...booking, pet: { ...booking.pet, avatar_url: signed.data.signedUrl } }
+    : booking;
 }
 
 /**
@@ -63,5 +77,9 @@ export async function fetchBookingsForUser(
     .order('start_at', { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as unknown as BookingWithRelations[];
+  return Promise.all(
+    (data ?? []).map((booking) =>
+      addPetPhotoUrl(client, booking as unknown as BookingWithRelations)
+    )
+  );
 }

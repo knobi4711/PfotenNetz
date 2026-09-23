@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -132,6 +132,7 @@ export default function BookingDetailScreen() {
   const rateSeeker = useRateSeeker();
 
   const [ratingDone, setRatingDone] = useState(false);
+  const [largePhotoVisible, setLargePhotoVisible] = useState(false);
 
   const anyPending =
     accept.isPending ||
@@ -214,6 +215,17 @@ export default function BookingDetailScreen() {
 
             <Card>
               <SectionTitle>Details</SectionTitle>
+              {booking.pet?.avatar_url ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Tierbild groß anzeigen"
+                  onPress={() => setLargePhotoVisible(true)}
+                  style={styles.petPhotoPreview}
+                >
+                  <Image source={{ uri: booking.pet.avatar_url }} style={styles.petPhoto} />
+                  <Text style={[styles.photoHint, { color: c.primary }]}>Bild vergrößern</Text>
+                </Pressable>
+              ) : null}
               <InfoRow label="Typ" value={bookingTypeLabels[booking.type]} />
               <InfoRow label="Tier" value={booking.pet?.name ?? '–'} />
               <InfoRow label="Suchende:r" value={booking.seekerProfile?.display_name ?? '–'} />
@@ -386,6 +398,23 @@ export default function BookingDetailScreen() {
           </>
         )}
       </ScrollView>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setLargePhotoVisible(false)}
+        transparent
+        visible={largePhotoVisible && booking?.pet?.avatar_url !== undefined}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Großes Tierbild schließen"
+          onPress={() => setLargePhotoVisible(false)}
+          style={styles.photoModal}
+        >
+          {booking?.pet?.avatar_url ? (
+            <Image source={{ uri: booking.pet.avatar_url }} style={styles.largePhoto} />
+          ) : null}
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -421,6 +450,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   rateButtons: { flexDirection: 'row', gap: 8 },
+  petPhotoPreview: { alignItems: 'center', marginBottom: 16 },
+  petPhoto: { width: 120, height: 120, borderRadius: 20 },
+  photoHint: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 18, marginTop: 6 },
+  photoModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.86)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  largePhoto: { width: '100%', aspectRatio: 1, borderRadius: 24 },
   rateButton: {
     flex: 1,
     minHeight: 48,

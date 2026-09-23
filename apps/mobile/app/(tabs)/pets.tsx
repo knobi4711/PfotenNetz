@@ -44,9 +44,6 @@ function calculateAge(birthDate: string | null): number | null {
 
 function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
   const c = usePalette();
-  const setActive = useSetPetActive();
-  const setDeceased = useSetPetDeceased();
-  const uploadPhoto = useUploadPetPhoto();
   const speciesLabel =
     (PET_SPECIES_OPTIONS as readonly string[]).includes(pet.species) &&
     pet.species in PET_SPECIES_LABELS
@@ -85,67 +82,6 @@ function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
           value={`${calculateAge(pet.birth_date)} ${calculateAge(pet.birth_date) === 1 ? 'Jahr' : 'Jahre'}`}
         />
       ) : null}
-      <ActionButton
-        title="Bild auswählen"
-        variant="secondary"
-        pending={uploadPhoto.isPending}
-        onPress={async () => {
-          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!permission.granted) return;
-          const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.85,
-          });
-          if (!result.canceled) {
-            const asset = result.assets[0];
-            if (!asset) return;
-            const fileData = await new File(asset.uri).arrayBuffer();
-            uploadPhoto.mutate({
-              petId: pet.id,
-              fileData,
-              contentType: asset.mimeType ?? 'image/jpeg',
-            });
-          }
-        }}
-      />
-      {uploadPhoto.isError ? (
-        <ErrorBox message={`Bild konnte nicht gespeichert werden: ${uploadPhoto.error.message}`} />
-      ) : null}
-      {setActive.isError ? (
-        <ErrorBox message={`Status konnte nicht geändert werden: ${setActive.error.message}`} />
-      ) : null}
-      <ActionButton
-        title={pet.is_deceased ? 'Verstorben' : pet.is_active ? 'Pausieren' : 'Reaktivieren'}
-        variant="secondary"
-        disabled={pet.is_deceased}
-        pending={setActive.isPending}
-        onPress={() => {
-          setActive.mutate({ petId: pet.id, isActive: !pet.is_active });
-        }}
-      />
-      <View style={styles.deceasedRow}>
-        <View style={styles.deceasedLabel}>
-          <Text style={[styles.deceasedTitle, { color: c.onSurface }]}>Verstorben</Text>
-          <Text style={[styles.deceasedHint, { color: c.onSurfaceVariant }]}>
-            Nicht mehr für Aufträge verfügbar
-          </Text>
-        </View>
-        <Switch
-          accessibilityLabel={`${pet.name} als verstorben markieren`}
-          disabled={setDeceased.isPending}
-          onValueChange={(value) => {
-            setDeceased.mutate({ petId: pet.id, isDeceased: value });
-          }}
-          thumbColor={pet.is_deceased ? c.primary : c.surfaceContainerLowest}
-          trackColor={{ false: c.outlineVariant, true: c.primaryFixed }}
-          value={pet.is_deceased}
-        />
-      </View>
-      {setDeceased.isError ? (
-        <ErrorBox message={`Status konnte nicht geändert werden: ${setDeceased.error.message}`} />
-      ) : null}
     </Card>
   );
 }
@@ -155,6 +91,9 @@ export default function PetsScreen() {
   const petsQuery = useOwnPets();
   const createPet = useCreatePet();
   const updatePet = useUpdatePet();
+  const uploadPhoto = useUploadPetPhoto();
+  const setActive = useSetPetActive();
+  const setDeceased = useSetPetDeceased();
 
   const [showForm, setShowForm] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
@@ -170,6 +109,30 @@ export default function PetsScreen() {
 
   const pets = petsQuery.data ?? [];
   const pending = createPet.isPending || updatePet.isPending;
+
+  const selectPetPhoto = async () => {
+    if (editingPet === null) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (!asset) return;
+    const fileData = await new File(asset.uri).arrayBuffer();
+    setEditingPet((current) =>
+      current === null ? current : { ...current, avatar_url: asset.uri }
+    );
+    uploadPhoto.mutate({
+      petId: editingPet.id,
+      fileData,
+      contentType: asset.mimeType ?? 'image/jpeg',
+    });
+  };
 
   const openEditForm = (pet: Pet) => {
     setEditingPet(pet);
@@ -265,6 +228,92 @@ export default function PetsScreen() {
                 <SectionTitle>
                   {editingPet === null ? 'Neues Tier' : 'Tier bearbeiten'}
                 </SectionTitle>
+                {editingPet !== null ? (
+                  <>
+                    <View style={[styles.detailPhoto, { backgroundColor: c.primaryFixed }]}>
+                      {editingPet.avatar_url !== null ? (
+                        <Image
+                          source={{ uri: editingPet.avatar_url }}
+                          style={styles.detailPhotoImage}
+                        />
+                      ) : (
+                        <Text style={styles.detailPhotoEmoji}>
+                          {editingPet.species === 'cat' ? '🐱' : '🐶'}
+                        </Text>
+                      )}
+                    </View>
+                    <ActionButton
+                      title="Bild auswählen"
+                      variant="secondary"
+                      pending={uploadPhoto.isPending}
+                      disabled={pending}
+                      onPress={() => {
+                        void selectPetPhoto();
+                      }}
+                    />
+                    {uploadPhoto.isError ? (
+                      <ErrorBox
+                        message={`Bild konnte nicht gespeichert werden: ${uploadPhoto.error.message}`}
+                      />
+                    ) : null}
+                    <View style={styles.statusSwitchRow}>
+                      <View style={styles.deceasedLabel}>
+                        <Text style={[styles.deceasedTitle, { color: c.onSurface }]}>
+                          Aktiv für Aufträge
+                        </Text>
+                        <Text style={[styles.deceasedHint, { color: c.onSurfaceVariant }]}>
+                          Pausieren oder reaktivieren
+                        </Text>
+                      </View>
+                      <Switch
+                        accessibilityLabel={`${editingPet.name} für Aufträge aktiv`}
+                        disabled={pending || setActive.isPending || editingPet.is_deceased}
+                        onValueChange={(value) => {
+                          setActive.mutate(
+                            { petId: editingPet.id, isActive: value },
+                            { onSuccess: (updated) => setEditingPet(updated) }
+                          );
+                        }}
+                        thumbColor={editingPet.is_active ? c.secondary : c.surfaceContainerLowest}
+                        trackColor={{ false: c.outlineVariant, true: c.secondaryContainer }}
+                        value={editingPet.is_active}
+                      />
+                    </View>
+                    <View style={styles.statusSwitchRow}>
+                      <View style={styles.deceasedLabel}>
+                        <Text style={[styles.deceasedTitle, { color: c.onSurface }]}>
+                          Verstorben
+                        </Text>
+                        <Text style={[styles.deceasedHint, { color: c.onSurfaceVariant }]}>
+                          Nicht mehr für Aufträge verfügbar
+                        </Text>
+                      </View>
+                      <Switch
+                        accessibilityLabel={`${editingPet.name} als verstorben markieren`}
+                        disabled={pending || setDeceased.isPending}
+                        onValueChange={(value) => {
+                          setDeceased.mutate(
+                            { petId: editingPet.id, isDeceased: value },
+                            { onSuccess: (updated) => setEditingPet(updated) }
+                          );
+                        }}
+                        thumbColor={editingPet.is_deceased ? c.primary : c.surfaceContainerLowest}
+                        trackColor={{ false: c.outlineVariant, true: c.primaryFixed }}
+                        value={editingPet.is_deceased}
+                      />
+                    </View>
+                    {setActive.isError ? (
+                      <ErrorBox
+                        message={`Status konnte nicht geändert werden: ${setActive.error.message}`}
+                      />
+                    ) : null}
+                    {setDeceased.isError ? (
+                      <ErrorBox
+                        message={`Status konnte nicht geändert werden: ${setDeceased.error.message}`}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
                 <Text style={[styles.label, { color: c.onSurface }]}>Name</Text>
                 <TextInput
                   autoCapitalize="words"
@@ -513,10 +562,32 @@ const styles = StyleSheet.create({
   },
   petAvatarEmoji: { fontSize: 28 },
   petAvatarImage: { width: '100%', height: '100%', borderRadius: 18 },
+  detailPhoto: {
+    width: 120,
+    height: 120,
+    borderRadius: 24,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  detailPhotoImage: { width: '100%', height: '100%' },
+  detailPhotoEmoji: { fontSize: 58 },
   petHeaderMain: { flex: 1 },
   petName: { fontFamily: appFonts.extrabold, fontSize: 18, lineHeight: 24 },
   petSpecies: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 18, marginTop: 2 },
   deceasedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#dec0b744',
+  },
+  statusSwitchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
