@@ -3,11 +3,21 @@ import { Stack } from 'expo-router/stack';
 import { router, useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import type * as Notifications from 'expo-notifications';
+import { PlusJakartaSans_400Regular } from '@expo-google-fonts/plus-jakarta-sans/400Regular';
+import { PlusJakartaSans_500Medium } from '@expo-google-fonts/plus-jakarta-sans/500Medium';
+import { PlusJakartaSans_600SemiBold } from '@expo-google-fonts/plus-jakarta-sans/600SemiBold';
+import { PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans/700Bold';
+import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans/800ExtraBold';
+import { useFonts } from 'expo-font';
 import { useAuth, useRegisterDevice } from '@pfotennetz/supabase';
 import { Providers } from '../providers/Providers';
 import { ErrorBox, LoadingView, usePalette } from '../components/ui';
-import { configureForegroundPresentation, ensurePushRegistration } from '../lib/push';
+import {
+  configureForegroundPresentation,
+  ensurePushRegistration,
+  getNotificationsModule,
+} from '../lib/push';
 
 function usePushSetup(enabled: boolean) {
   const registerDevice = useRegisterDevice();
@@ -18,19 +28,22 @@ function usePushSetup(enabled: boolean) {
   }, []);
 
   // Deep link: push payload data.url -> expo-router (nur interne Pfade).
+  // Ohne Push-Modul (Expo Go) ist dieser Effekt ein No-op.
   useEffect(() => {
+    const notifications = getNotificationsModule();
+    if (notifications === null) return;
     const navigate = (notification: Notifications.Notification) => {
       const url = notification.request.content.data?.['url'];
       if (typeof url === 'string' && url.startsWith('/')) {
         router.push(url);
       }
     };
-    const lastResponse = Notifications.getLastNotificationResponse();
+    const lastResponse = notifications.getLastNotificationResponse();
     if (lastResponse?.notification !== undefined) {
       navigate(lastResponse.notification);
-      void Notifications.clearLastNotificationResponseAsync().catch(() => undefined);
+      void notifications.clearLastNotificationResponseAsync().catch(() => undefined);
     }
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    const subscription = notifications.addNotificationResponseReceivedListener((response) => {
       navigate(response.notification);
     });
     return () => {
@@ -124,6 +137,18 @@ function AuthGate() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+  });
+
+  if (!fontsLoaded && fontError === null) {
+    return null;
+  }
+
   return (
     <Providers>
       <AuthGate />

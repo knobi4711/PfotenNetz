@@ -15,6 +15,7 @@ module.exports = tseslint.config(
       '**/.expo/**',
       '**/.turbo/**',
       '**/coverage/**',
+      '**/expo-env.d.ts',
       '**/next-env.d.ts',
       '*.config.*',
     ],

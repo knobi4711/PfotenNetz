@@ -6,12 +6,14 @@ import { bookingTypeLabels } from '../../lib/booking';
 import { formatAvailableDays } from '../../lib/helper-map';
 import {
   ActionButton,
+  AppHeader,
   Card,
   EmptyText,
   ErrorBox,
   InfoRow,
   LoadingView,
   SectionTitle,
+  appFonts,
   usePalette,
 } from '../../components/ui';
 
@@ -34,7 +36,7 @@ export default function HelperDetailScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: c.onSurface }]}>Helper-Profil</Text>
+        <AppHeader title="Helfer-Profil" subtitle="Verifiziert, erfahren und in deiner Nähe." />
 
         {detailQuery.isPending ? (
           <LoadingView label="Helper-Profil wird geladen …" />
@@ -135,22 +137,21 @@ export default function HelperDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 16 },
+  content: { padding: 16, paddingBottom: 40 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 20, fontWeight: '800' },
+  avatarText: { fontFamily: appFonts.extrabold, fontSize: 24 },
   headerMain: { flex: 1 },
-  name: { fontSize: 18, fontWeight: '800' },
-  trust: { fontSize: 13, marginTop: 2 },
+  name: { fontFamily: appFonts.extrabold, fontSize: 20, lineHeight: 28 },
+  trust: { fontFamily: appFonts.semibold, fontSize: 13, lineHeight: 18, marginTop: 2 },
   slot: { paddingVertical: 8 },
-  slotDay: { fontSize: 15, fontWeight: '700' },
-  slotMeta: { fontSize: 13, marginTop: 2 },
-  privacy: { fontSize: 12, marginTop: 12, lineHeight: 17 },
+  slotDay: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
+  slotMeta: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginTop: 2 },
+  privacy: { fontFamily: appFonts.regular, fontSize: 11, marginTop: 12, lineHeight: 17 },
 });

@@ -3,6 +3,7 @@ import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'r
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   KIEZ_RADIUS_OPTIONS,
@@ -33,12 +34,14 @@ import {
 } from '../../lib/fingerprint-login';
 import {
   ActionButton,
+  AppHeader,
   Card,
   EmptyText,
   ErrorBox,
   InfoRow,
   LoadingView,
   SectionTitle,
+  appFonts,
   usePalette,
 } from '../../components/ui';
 
@@ -278,10 +281,13 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: c.onSurface }]}>Profil</Text>
+        <AppHeader
+          title="Mein Profil & Nachbarschaft"
+          subtitle="Vertrauen, Verfügbarkeit und Kiez-Einstellungen."
+          avatarLabel={profile?.display_name.slice(0, 1).toUpperCase() || '🐾'}
+        />
 
         <Card>
-          <SectionTitle>Mein Profil</SectionTitle>
           {profileQuery.isPending ? (
             <LoadingView label="Profil wird geladen …" />
           ) : profileQuery.isError ? (
@@ -297,6 +303,7 @@ export default function ProfileScreen() {
             </EmptyText>
           ) : editing ? (
             <>
+              <SectionTitle>Profil bearbeiten</SectionTitle>
               <Text style={[styles.label, { color: c.onSurface }]}>Anzeigename</Text>
               <TextInput
                 autoCapitalize="words"
@@ -381,6 +388,27 @@ export default function ProfileScreen() {
             </>
           ) : (
             <>
+              <View style={styles.profileHero}>
+                <View
+                  style={[
+                    styles.profileAvatar,
+                    { backgroundColor: c.primaryFixed, borderColor: c.surfaceContainerLowest },
+                  ]}
+                >
+                  <Text style={[styles.profileAvatarText, { color: c.primary }]}>
+                    {profile.display_name.slice(0, 1).toUpperCase() || '🐾'}
+                  </Text>
+                </View>
+                <View style={styles.profileHeroMain}>
+                  <Text style={[styles.profileName, { color: c.onSurface }]}>
+                    {profile.display_name}
+                  </Text>
+                  <View style={styles.trustLine}>
+                    <MaterialCommunityIcons name="shield-check" size={16} color={c.secondary} />
+                    <Text style={[styles.trustText, { color: c.secondary }]}>Kiez-Mitglied</Text>
+                  </View>
+                </View>
+              </View>
               <InfoRow label="Name" value={profile.display_name} />
               <InfoRow label="E-Mail" value={profile.email} />
               <InfoRow label="Telefon" value={profile.phone ?? '–'} />
@@ -551,28 +579,53 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '700', marginTop: 12, marginBottom: 6 },
+  content: { padding: 16, paddingBottom: 40 },
+  profileHero: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18 },
+  profileAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileAvatarText: { fontFamily: appFonts.extrabold, fontSize: 28 },
+  profileHeroMain: { flex: 1 },
+  profileName: { fontFamily: appFonts.extrabold, fontSize: 20, lineHeight: 28 },
+  trustLine: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  trustText: { fontFamily: appFonts.bold, fontSize: 12, lineHeight: 18 },
+  label: {
+    fontFamily: appFonts.bold,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 12,
+    marginBottom: 6,
+  },
   input: {
-    minHeight: 48,
-    borderRadius: 12,
+    minHeight: 52,
+    borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 14,
-    fontSize: 16,
+    fontFamily: appFonts.regular,
+    fontSize: 15,
   },
-  hint: { fontSize: 14, marginTop: 8 },
+  hint: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, marginTop: 8 },
   radiusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   radiusChip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
-  radiusText: { fontSize: 14, fontWeight: '700' },
-  passkeyDescription: { fontSize: 14, lineHeight: 20, marginBottom: 8 },
+  radiusText: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18 },
+  passkeyDescription: {
+    fontFamily: appFonts.regular,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
   passkeyRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   passkeyMain: { flex: 1 },
-  passkeyName: { fontSize: 15, fontWeight: '700' },
-  passkeyDate: { fontSize: 12, marginTop: 2 },
+  passkeyName: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
+  passkeyDate: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16, marginTop: 2 },
   passkeyDelete: { paddingHorizontal: 8, paddingVertical: 10 },
-  passkeyDeleteText: { fontSize: 13, fontWeight: '700' },
-  balance: { fontSize: 36, fontWeight: '800', marginBottom: 8 },
+  passkeyDeleteText: { fontFamily: appFonts.bold, fontSize: 12, lineHeight: 18 },
+  balance: { fontFamily: appFonts.extrabold, fontSize: 36, lineHeight: 44, marginBottom: 8 },
   txRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -580,10 +633,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   txMain: { flexShrink: 1, flex: 1, gap: 2 },
-  txType: { fontSize: 15, fontWeight: '700' },
-  txDate: { fontSize: 12 },
-  txDescription: { fontSize: 13, lineHeight: 18 },
+  txType: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
+  txDate: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
+  txDescription: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18 },
   txAmounts: { alignItems: 'flex-end', gap: 2 },
-  txAmount: { fontSize: 15, fontWeight: '800' },
-  txBalance: { fontSize: 12 },
+  txAmount: { fontFamily: appFonts.extrabold, fontSize: 14, lineHeight: 20 },
+  txBalance: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
 });

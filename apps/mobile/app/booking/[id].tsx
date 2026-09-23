@@ -25,6 +25,7 @@ import {
   LoadingView,
   SectionTitle,
   StatusBadge,
+  appFonts,
   statusColor,
   usePalette,
 } from '../../components/ui';
@@ -372,9 +373,9 @@ export default function BookingDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingBottom: 40 },
   backButton: { paddingVertical: 12, marginBottom: 4, alignSelf: 'flex-start' },
-  backText: { fontSize: 16, fontWeight: '600' },
+  backText: { fontFamily: appFonts.semibold, fontSize: 15, lineHeight: 20 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -382,21 +383,31 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 12,
   },
-  bookingNumber: { fontSize: 20, fontWeight: '800', flexShrink: 1 },
+  bookingNumber: { fontFamily: appFonts.extrabold, fontSize: 20, lineHeight: 28, flexShrink: 1 },
   timeline: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   timelineStep: { flex: 1, alignItems: 'center', gap: 6 },
   timelineDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
-  timelineLabel: { fontSize: 11, textAlign: 'center' },
-  timelineLabelCurrent: { fontWeight: '800' },
+  timelineLabel: {
+    fontFamily: appFonts.regular,
+    fontSize: 11,
+    lineHeight: 15,
+    textAlign: 'center',
+  },
+  timelineLabelCurrent: { fontFamily: appFonts.extrabold },
   rateRow: { marginTop: 4 },
-  rateTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  rateTitle: {
+    fontFamily: appFonts.semibold,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
   rateButtons: { flexDirection: 'row', gap: 8 },
   rateButton: {
     flex: 1,
     minHeight: 48,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rateButtonText: { fontSize: 16, fontWeight: '700' },
+  rateButtonText: { fontFamily: appFonts.bold, fontSize: 15, lineHeight: 20 },
 });

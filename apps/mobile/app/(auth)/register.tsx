@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSignUp } from '@pfotennetz/supabase';
-import { ActionButton, Card, ErrorBox, usePalette } from '../../components/ui';
+import { ActionButton, Card, ErrorBox, appFonts, usePalette } from '../../components/ui';
 
 function friendlySignUpError(message: string): string {
   const normalized = message.toLowerCase();
@@ -183,13 +183,39 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 30, fontWeight: '800', marginTop: 24, marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 15, lineHeight: 22, marginBottom: 20, textAlign: 'center' },
-  label: { fontSize: 14, fontWeight: '700', marginTop: 12, marginBottom: 6 },
-  input: { minHeight: 48, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 16 },
-  hint: { fontSize: 14, marginTop: 12 },
-  successTitle: { fontSize: 22, fontWeight: '800', marginBottom: 8 },
-  successText: { fontSize: 15, lineHeight: 22, marginBottom: 12 },
+  title: {
+    fontFamily: appFonts.extrabold,
+    fontSize: 30,
+    lineHeight: 38,
+    marginTop: 24,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontFamily: appFonts.regular,
+    fontSize: 15,
+    lineHeight: 24,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  label: {
+    fontFamily: appFonts.bold,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  input: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontFamily: appFonts.regular,
+    fontSize: 15,
+  },
+  hint: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, marginTop: 12 },
+  successTitle: { fontFamily: appFonts.extrabold, fontSize: 22, lineHeight: 30, marginBottom: 8 },
+  successText: { fontFamily: appFonts.regular, fontSize: 15, lineHeight: 24, marginBottom: 12 },
   loginLink: { alignSelf: 'center', padding: 12 },
-  linkText: { fontSize: 14, fontWeight: '700' },
+  linkText: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18 },
 });

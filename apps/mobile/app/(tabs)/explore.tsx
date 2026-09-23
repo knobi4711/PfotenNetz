@@ -6,12 +6,16 @@ import * as Location from 'expo-location';
 import { useNearbyHelpers, type NearbyHelper } from '@pfotennetz/supabase';
 import {
   ActionButton,
+  AppHeader,
   Card,
+  Chip,
+  ChipRow,
   EmptyText,
   ErrorBox,
   InfoRow,
   LoadingView,
   SectionTitle,
+  appFonts,
   usePalette,
 } from '../../components/ui';
 import { formatAvailableDays, projectNearbyPoint, type MapCoordinate } from '../../lib/helper-map';
@@ -206,47 +210,39 @@ export default function ExploreScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: c.onSurface }]}>Helfer:innen im Kiez</Text>
-        <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
-          Finde verifizierte Helfer:innen in deiner Nähe. Die Karte zeigt aus Datenschutzgründen nur
-          ungefähre Positionen.
-        </Text>
+        <AppHeader
+          title="Helfer:innen im Kiez"
+          subtitle="Verifizierte Unterstützung direkt in deiner Nähe."
+          onNotifications={() => {
+            router.push('/(tabs)/tracking');
+          }}
+        />
 
-        <Card>
-          <SectionTitle>Suchradius</SectionTitle>
-          <View style={styles.radiusRow}>
+        <View style={styles.filterSection}>
+          <ChipRow>
             {RADII.map((radius) => {
               const selected = radius === radiusKm;
               return (
-                <Pressable
+                <Chip
                   key={radius}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
+                  label={`${radius.toString().replace('.', ',')} km`}
+                  selected={selected}
+                  icon="map-marker-radius"
                   onPress={() => {
                     setRadiusKm(radius);
                     setSelectedId(null);
                   }}
-                  style={[
-                    styles.radiusChip,
-                    { backgroundColor: selected ? c.primary : c.surfaceContainerHigh },
-                  ]}
-                >
-                  <Text
-                    style={[styles.radiusText, { color: selected ? c.onPrimary : c.onSurface }]}
-                  >
-                    {radius.toString().replace('.', ',')} km
-                  </Text>
-                </Pressable>
+                />
               );
             })}
-          </View>
+          </ChipRow>
           <ActionButton
             title={center === null ? 'Standort verwenden' : 'Standort aktualisieren'}
             pending={locationPending}
             onPress={locate}
           />
           {locationError !== null ? <ErrorBox message={locationError} /> : null}
-        </Card>
+        </View>
 
         {center === null ? (
           <Card>
@@ -272,11 +268,12 @@ export default function ExploreScreen() {
               selectedId={selectedId}
               onSelect={setSelectedId}
             />
-            <Text style={[styles.resultCount, { color: c.onSurfaceVariant }]}>
-              {helpers.length === 1
-                ? '1 Helfer:in gefunden'
-                : `${helpers.length} Helfer:innen gefunden`}
-            </Text>
+            <View style={styles.resultHeading}>
+              <SectionTitle>In deiner Nähe</SectionTitle>
+              <Text style={[styles.resultCount, { color: c.secondary }]}>
+                {helpers.length === 1 ? '1 Treffer' : `${helpers.length} Treffer`}
+              </Text>
+            </View>
             {helpers.length === 0 ? (
               <Card>
                 <EmptyText>
@@ -314,17 +311,13 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
-  subtitle: { fontSize: 14, lineHeight: 20, marginBottom: 16 },
-  radiusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  radiusChip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
-  radiusText: { fontSize: 14, fontWeight: '700' },
+  content: { padding: 16, paddingBottom: 40 },
+  filterSection: { marginBottom: 16 },
   map: {
     height: 280,
-    borderRadius: 18,
+    borderRadius: 24,
     borderWidth: 1,
-    marginBottom: 12,
+    marginBottom: 20,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -365,7 +358,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  userMarkerText: { fontSize: 11, fontWeight: '800' },
+  userMarkerText: { fontFamily: appFonts.extrabold, fontSize: 11 },
   helperMarker: {
     position: 'absolute',
     width: 38,
@@ -377,10 +370,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  helperMarkerText: { fontSize: 16, fontWeight: '800' },
-  north: { position: 'absolute', right: 12, top: 10, fontSize: 13, fontWeight: '800' },
-  mapCaption: { position: 'absolute', right: 10, bottom: 8, fontSize: 11 },
-  resultCount: { fontSize: 13, marginBottom: 10 },
+  helperMarkerText: { fontFamily: appFonts.extrabold, fontSize: 16 },
+  north: {
+    position: 'absolute',
+    right: 12,
+    top: 10,
+    fontFamily: appFonts.extrabold,
+    fontSize: 13,
+  },
+  mapCaption: {
+    position: 'absolute',
+    right: 10,
+    bottom: 8,
+    fontFamily: appFonts.regular,
+    fontSize: 11,
+  },
+  resultHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  resultCount: { fontFamily: appFonts.bold, fontSize: 12, marginBottom: 12 },
   helperHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
   avatar: {
     width: 42,
@@ -389,18 +395,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 18, fontWeight: '800' },
+  avatarText: { fontFamily: appFonts.extrabold, fontSize: 18 },
   helperMain: { flex: 1 },
-  helperName: { fontSize: 16, fontWeight: '800' },
-  helperTrust: { fontSize: 12, marginTop: 2 },
-  distance: { fontSize: 14, fontWeight: '800' },
+  helperName: { fontFamily: appFonts.bold, fontSize: 16, lineHeight: 22 },
+  helperTrust: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginTop: 2 },
+  distance: { fontFamily: appFonts.extrabold, fontSize: 13 },
   cardActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
   cardButton: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 999,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardButtonText: { fontSize: 14, fontWeight: '800' },
+  cardButtonText: { fontFamily: appFonts.bold, fontSize: 13 },
 });

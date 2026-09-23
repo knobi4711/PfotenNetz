@@ -1,22 +1,39 @@
 import { Tabs } from 'expo-router/tabs';
-import { useColorScheme } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { appFonts, usePalette } from '../../components/ui';
 
+// Stitch "PfotenNetz App": Bottom-Navigation (Übersicht, Karte, Anfragen, Profil).
+// Abweichung: Der Reiter "Tiere" bleibt bestehen, da Stitch Haustiere nur im
+// Dashboard zeigt, die App sie aber als eigenen Bereich mit CRUD führt.
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const c = usePalette();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colorScheme === 'dark' ? '#ffb59e' : '#e26d46',
-        tabBarInactiveTintColor: colorScheme === 'dark' ? '#b8b2ad' : '#8a726a',
+        headerShown: false,
+        tabBarActiveTintColor: c.primary,
+        tabBarInactiveTintColor: c.onSurfaceVariant,
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#fff8f5',
-          borderTopWidth: 0,
+          backgroundColor: c.surfaceContainerLowest,
+          borderTopColor: c.outlineVariant,
+          borderTopWidth: 1,
+          height: 70,
+          paddingTop: 7,
           paddingBottom: 8,
+          shadowColor: c.onSurface,
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.04,
+          shadowRadius: 10,
+          elevation: 8,
         },
         tabBarItemStyle: {
           flex: 1,
+        },
+        tabBarLabelStyle: {
+          fontFamily: appFonts.semibold,
+          fontSize: 10,
+          lineHeight: 14,
         },
       }}
     >
@@ -43,7 +60,7 @@ export default function TabLayout() {
         options={{
           title: 'Anfragen',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="calendar" color={color} size={size} />
+            <MaterialCommunityIcons name="calendar-month" color={color} size={size} />
           ),
         }}
       />

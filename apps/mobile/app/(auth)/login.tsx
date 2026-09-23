@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useSignIn } from '@pfotennetz/supabase';
-import { ActionButton, Card, ErrorBox, usePalette } from '../../components/ui';
+import { ActionButton, Card, ErrorBox, appFonts, usePalette } from '../../components/ui';
 import {
   friendlyPasskeyError,
   isPasskeySupported,
@@ -269,22 +269,42 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 32, fontWeight: '800', marginTop: 32, marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 15, textAlign: 'center', marginBottom: 24, lineHeight: 22 },
-  label: { fontSize: 14, fontWeight: '700', marginTop: 12, marginBottom: 6 },
+  title: {
+    fontFamily: appFonts.extrabold,
+    fontSize: 32,
+    lineHeight: 40,
+    marginTop: 32,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontFamily: appFonts.regular,
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  label: {
+    fontFamily: appFonts.bold,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 12,
+    marginBottom: 6,
+  },
   input: {
-    minHeight: 48,
-    borderRadius: 12,
+    minHeight: 52,
+    borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 14,
-    fontSize: 16,
+    fontFamily: appFonts.regular,
+    fontSize: 15,
   },
   toggle: { alignSelf: 'flex-start', paddingVertical: 12 },
-  toggleText: { fontSize: 14, fontWeight: '600' },
-  hint: { fontSize: 14, marginTop: 8 },
+  toggleText: { fontFamily: appFonts.semibold, fontSize: 13, lineHeight: 18 },
+  hint: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, marginTop: 8 },
   footer: { marginTop: 8, alignItems: 'center' },
-  footerText: { fontSize: 13, textAlign: 'center' },
+  footerText: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, textAlign: 'center' },
   registerLink: { padding: 10 },
-  passkeyTitle: { fontSize: 17, fontWeight: '800', marginBottom: 4 },
-  passkeyText: { fontSize: 14, lineHeight: 20 },
+  passkeyTitle: { fontFamily: appFonts.extrabold, fontSize: 17, lineHeight: 24, marginBottom: 4 },
+  passkeyText: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20 },
 });

@@ -20,10 +20,14 @@ import { bookingTypeLabels } from '../../lib/booking';
 import {
   Card,
   ActionButton,
+  AppHeader,
+  Chip,
+  ChipRow,
   EmptyText,
   ErrorBox,
   LoadingView,
   StatusBadge,
+  appFonts,
   usePalette,
 } from '../../components/ui';
 
@@ -118,7 +122,11 @@ export default function TrackingScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: c.onSurface }]}>Anfragen</Text>
+        <AppHeader
+          title="Anfragen & Betreuung"
+          subtitle={unread > 0 ? `${unread} neue Mitteilungen warten auf dich.` : 'Alles im Blick.'}
+          hasNotifications={unread > 0}
+        />
         <ActionButton
           title="Neue Anfrage"
           onPress={() => {
@@ -126,7 +134,7 @@ export default function TrackingScreen() {
           }}
         />
 
-        <View style={styles.filterRow}>
+        <ChipRow>
           {(
             [
               { value: 'all', label: 'Alle' },
@@ -136,25 +144,17 @@ export default function TrackingScreen() {
           ).map((option) => {
             const selected = filter === option.value;
             return (
-              <Pressable
+              <Chip
                 key={option.value}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
+                label={option.label}
+                selected={selected}
                 onPress={() => {
                   setFilter(option.value);
                 }}
-                style={[
-                  styles.filterChip,
-                  { backgroundColor: selected ? c.primary : c.surfaceContainerHigh },
-                ]}
-              >
-                <Text style={[styles.filterText, { color: selected ? c.onPrimary : c.onSurface }]}>
-                  {option.label}
-                </Text>
-              </Pressable>
+              />
             );
           })}
-        </View>
+        </ChipRow>
 
         {bookingsQuery.isPending ? (
           <LoadingView label="Buchungen werden geladen …" />
@@ -260,38 +260,34 @@ export default function TrackingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 16 },
+  content: { padding: 16, paddingBottom: 40 },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 12,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
+    padding: 18,
+    marginBottom: 14,
     minHeight: 48,
   },
   rowMain: { flexShrink: 1, flex: 1, gap: 2 },
-  bookingNumber: { fontSize: 16, fontWeight: '800' },
-  rowSub: { fontSize: 13 },
-  price: { fontSize: 14, fontWeight: '700', marginTop: 4 },
-  filterRow: { flexDirection: 'row', gap: 8, marginTop: 12, marginBottom: 4 },
-  filterChip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
-  filterText: { fontSize: 14, fontWeight: '700' },
+  bookingNumber: { fontFamily: appFonts.bold, fontSize: 15, lineHeight: 20 },
+  rowSub: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18 },
+  price: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18, marginTop: 4 },
   notifHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  notifTitle: { fontSize: 17, fontWeight: '700' },
-  markAll: { fontSize: 14, fontWeight: '700' },
+  notifTitle: { fontFamily: appFonts.bold, fontSize: 18, lineHeight: 24 },
+  markAll: { fontFamily: appFonts.bold, fontSize: 12, lineHeight: 18 },
   notifRow: { flexDirection: 'row', gap: 10, paddingVertical: 10 },
   notifDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
   notifMain: { flex: 1, flexShrink: 1, gap: 2 },
-  notifSubject: { fontSize: 15, fontWeight: '700' },
-  notifBody: { fontSize: 13, lineHeight: 18 },
-  notifDate: { fontSize: 12 },
+  notifSubject: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
+  notifBody: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20 },
+  notifDate: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
 });

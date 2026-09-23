@@ -16,6 +16,7 @@ import {
   InfoRow,
   LoadingView,
   SectionTitle,
+  appFonts,
   usePalette,
 } from './ui';
 
@@ -170,6 +171,6 @@ export function HelperStatusCard({ profile }: { profile: Profile }) {
 }
 
 const styles = StyleSheet.create({
-  hint: { fontSize: 12, lineHeight: 17, marginTop: 8 },
-  saved: { fontSize: 13, marginTop: 8, fontWeight: '600' },
+  hint: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 17, marginTop: 8 },
+  saved: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 18, marginTop: 8 },
 });

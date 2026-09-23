@@ -19,6 +19,7 @@ import {
   ErrorBox,
   LoadingView,
   SectionTitle,
+  appFonts,
   usePalette,
 } from './ui';
 
@@ -257,17 +258,24 @@ export function AvailabilityManager() {
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 14, fontWeight: '700', marginTop: 12, marginBottom: 6 },
+  label: {
+    fontFamily: appFonts.bold,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 12,
+    marginBottom: 6,
+  },
   input: {
-    minHeight: 48,
-    borderRadius: 12,
+    minHeight: 52,
+    borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 14,
-    fontSize: 16,
+    fontFamily: appFonts.regular,
+    fontSize: 15,
   },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
-  chipText: { fontSize: 14, fontWeight: '700' },
+  chipText: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18 },
   twoColumns: { flexDirection: 'row', gap: 12 },
   column: { flex: 1 },
   slot: {
@@ -277,10 +285,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   slotMain: { flex: 1, flexShrink: 1 },
-  slotDay: { fontSize: 15, fontWeight: '700' },
-  slotMeta: { fontSize: 13, marginTop: 2 },
-  inlineError: { fontSize: 13, marginTop: 4 },
+  slotDay: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
+  slotMeta: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginTop: 2 },
+  inlineError: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginTop: 4 },
   slotActions: { gap: 6, justifyContent: 'center' },
   miniButton: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  miniText: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  miniText: { fontFamily: appFonts.bold, fontSize: 12, lineHeight: 18, textAlign: 'center' },
 });

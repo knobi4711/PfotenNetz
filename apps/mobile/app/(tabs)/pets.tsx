@@ -13,12 +13,14 @@ import {
 } from '@pfotennetz/supabase';
 import {
   ActionButton,
+  AppHeader,
   Card,
   EmptyText,
   ErrorBox,
   InfoRow,
   LoadingView,
   SectionTitle,
+  appFonts,
   usePalette,
 } from '../../components/ui';
 
@@ -34,11 +36,16 @@ function PetCard({ pet }: { pet: Pet }) {
   return (
     <Card>
       <View style={styles.petHeader}>
-        <Text style={[styles.petName, { color: c.onSurface }]}>{pet.name}</Text>
-        <Text style={[styles.petSpecies, { color: c.onSurfaceVariant }]}>
-          {speciesLabel}
-          {pet.is_active ? '' : ' · pausiert'}
-        </Text>
+        <View style={[styles.petAvatar, { backgroundColor: c.primaryFixed }]}>
+          <Text style={styles.petAvatarEmoji}>{pet.species === 'cat' ? '🐱' : '🐶'}</Text>
+        </View>
+        <View style={styles.petHeaderMain}>
+          <Text style={[styles.petName, { color: c.onSurface }]}>{pet.name}</Text>
+          <Text style={[styles.petSpecies, { color: c.onSurfaceVariant }]}>
+            {speciesLabel}
+            {pet.is_active ? '' : ' · pausiert'}
+          </Text>
+        </View>
       </View>
       {pet.breed !== null ? <InfoRow label="Rasse" value={pet.breed} /> : null}
       {pet.color !== null ? <InfoRow label="Farbe" value={pet.color} /> : null}
@@ -103,7 +110,7 @@ export default function PetsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: c.onSurface }]}>Meine Tiere</Text>
+        <AppHeader title="Meine Haustiere" subtitle="Profile, Bedürfnisse und Betreuungsstatus." />
 
         {petsQuery.isPending ? (
           <LoadingView label="Tiere werden geladen …" />
@@ -269,22 +276,37 @@ export default function PetsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '700', marginTop: 12, marginBottom: 6 },
+  content: { padding: 16, paddingBottom: 40 },
+  label: {
+    fontFamily: appFonts.bold,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 12,
+    marginBottom: 6,
+  },
   input: {
-    minHeight: 48,
-    borderRadius: 12,
+    minHeight: 52,
+    borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 14,
-    fontSize: 16,
+    fontFamily: appFonts.regular,
+    fontSize: 15,
   },
   multiline: { minHeight: 88, paddingTop: 12, textAlignVertical: 'top' },
-  hint: { fontSize: 14, marginTop: 8 },
+  hint: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, marginTop: 8 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
-  chipText: { fontSize: 14, fontWeight: '700' },
-  petHeader: { marginBottom: 4 },
-  petName: { fontSize: 18, fontWeight: '800' },
-  petSpecies: { fontSize: 13, marginTop: 2 },
+  chipText: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18 },
+  petHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  petAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  petAvatarEmoji: { fontSize: 28 },
+  petHeaderMain: { flex: 1 },
+  petName: { fontFamily: appFonts.extrabold, fontSize: 18, lineHeight: 24 },
+  petSpecies: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 18, marginTop: 2 },
 });
