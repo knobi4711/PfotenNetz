@@ -5,19 +5,39 @@ on:
     - cron: '*/5 * * * *'
   workflow_dispatch:
 
+concurrency:
+  group: send-push
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   send-push:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/supabase
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
         with:
-          node-version: 22
-      - run: npm install --no-save @supabase/supabase-js dotenv
-      - run: node send-push-notifications.mjs
+          version: 9.0.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Send pending notifications
+        working-directory: packages/supabase
+        run: node send-push-notifications.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
