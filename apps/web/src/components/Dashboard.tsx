@@ -86,7 +86,9 @@ export function Dashboard() {
                 type="button"
                 className={`rounded-full px-4 py-2 text-sm font-semibold ${index === 0 ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
                 onClick={() => {
+                  if (item === 'Nachbarschaftskarte') router.push('/explore');
                   if (item === 'Gefahrenradar') router.push('/hazard/radar');
+                  if (item === 'Betreuung & Tracking') router.push('/tracking');
                 }}
               >
                 {item}
