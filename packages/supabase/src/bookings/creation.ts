@@ -91,12 +91,14 @@ export async function createBooking(
 
   const { data: pet, error: petError } = await client
     .from('pets')
-    .select('id,owner_id,is_active')
+    .select('id,owner_id,is_active,is_deceased')
     .eq('id', input.petId)
     .maybeSingle();
   if (petError) throw petError;
   if (pet === null) throw new Error('Tier nicht gefunden.');
   if (pet.owner_id !== seekerId) throw new Error('Das Tier gehört nicht zu deinem Konto.');
+  if (pet.is_deceased === true)
+    throw new Error('Für verstorbene Tiere sind keine neuen Aufträge möglich.');
   if (pet.is_active !== true) throw new Error('Das Tier ist pausiert.');
 
   const address = input.meetingAddress?.trim();

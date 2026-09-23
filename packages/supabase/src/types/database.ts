@@ -761,6 +761,7 @@ export type Database = {
           id: string;
           insurance_policy: string | null;
           is_active: boolean;
+          is_deceased: boolean;
           medications: Json;
           microchip_number: string | null;
           name: string;
@@ -784,6 +785,7 @@ export type Database = {
           id?: string;
           insurance_policy?: string | null;
           is_active?: boolean;
+          is_deceased?: boolean;
           medications?: Json;
           microchip_number?: string | null;
           name: string;
@@ -807,6 +809,7 @@ export type Database = {
           id?: string;
           insurance_policy?: string | null;
           is_active?: boolean;
+          is_deceased?: boolean;
           medications?: Json;
           microchip_number?: string | null;
           name?: string;

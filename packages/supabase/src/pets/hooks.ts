@@ -1,7 +1,16 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { getSupabaseClient } from '../client/createClient';
 import { petsKeys } from './keys';
-import { createPet, fetchOwnPets, setPetActive, type CreatePetInput, type Pet } from './queries';
+import {
+  createPet,
+  fetchOwnPets,
+  setPetActive,
+  setPetDeceased,
+  updatePet,
+  type CreatePetInput,
+  type Pet,
+  type UpdatePetInput,
+} from './queries';
 
 /** The caller's own pets, newest first. */
 export function useOwnPets(): UseQueryResult<Pet[], Error> {
@@ -24,6 +33,18 @@ export function useCreatePet() {
   });
 }
 
+/** Updates one of the caller's own pets. */
+export function useUpdatePet() {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdatePetInput) => updatePet(client, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: petsKeys.own });
+    },
+  });
+}
+
 /** Activates or deactivates one of the caller's own pets. */
 export function useSetPetActive() {
   const client = getSupabaseClient();
@@ -31,6 +52,19 @@ export function useSetPetActive() {
   return useMutation({
     mutationFn: (input: { petId: string; isActive: boolean }) =>
       setPetActive(client, input.petId, input.isActive),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: petsKeys.own });
+    },
+  });
+}
+
+/** Marks one of the caller's own pets as deceased or living. */
+export function useSetPetDeceased() {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { petId: string; isDeceased: boolean }) =>
+      setPetDeceased(client, input.petId, input.isDeceased),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: petsKeys.own });
     },
