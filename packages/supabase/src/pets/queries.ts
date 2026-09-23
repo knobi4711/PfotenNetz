@@ -147,9 +147,11 @@ export async function uploadPetPhoto(
   if (petError) throw petError;
 
   const response = await fetch(uri);
-  const blob = await response.blob();
+  // React Native's Blob polyfill can report local image URIs as text/plain.
+  // ArrayBuffer preserves the actual binary image data for Supabase Storage.
+  const fileData = await response.arrayBuffer();
   const path = `${userId}/${pet.id}/avatar.jpg`;
-  const upload = await client.storage.from('pet-photos').upload(path, blob, {
+  const upload = await client.storage.from('pet-photos').upload(path, fileData, {
     contentType,
     upsert: true,
   });
