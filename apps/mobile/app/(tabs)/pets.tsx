@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { File } from 'expo-file-system';
 import {
@@ -76,6 +77,13 @@ function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
       {pet.breed !== null ? <InfoRow label="Rasse" value={pet.breed} /> : null}
       {pet.color !== null ? <InfoRow label="Farbe" value={pet.color} /> : null}
       {pet.special_needs !== null ? <InfoRow label="Besonderes" value={pet.special_needs} /> : null}
+      <ActionButton
+        title="Notfallkarte"
+        variant="secondary"
+        onPress={() => {
+          router.push({ pathname: '/pet/[petId]/emergency', params: { petId: pet.id } });
+        }}
+      />
       {calculateAge(pet.birth_date) !== null ? (
         <InfoRow
           label="Alter"
