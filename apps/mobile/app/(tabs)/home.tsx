@@ -291,6 +291,18 @@ export default function HomeScreen() {
         </Card>
 
         <Card>
+          <SectionTitle>Tier vermisst?</SectionTitle>
+          <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+            Aktiviere schnell Hilfe aus deiner Nachbarschaft.
+          </Text>
+          <ActionButton
+            title="Vermisstes Tier melden"
+            variant="secondary"
+            onPress={() => router.push('/missing')}
+          />
+        </Card>
+
+        <Card>
           <View style={styles.balanceHeading}>
             <View style={[styles.balanceIcon, { backgroundColor: c.secondaryFixed }]}>
               <MaterialCommunityIcons name="hand-heart" size={22} color={c.secondary} />
