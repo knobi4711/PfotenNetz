@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /** @type {import('next').NextConfig} */
 const path = require('node:path');
 const dotenv = require('dotenv');
