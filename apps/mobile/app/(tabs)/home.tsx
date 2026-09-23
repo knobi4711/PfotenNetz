@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -249,7 +249,11 @@ export default function HomeScreen() {
                 ]}
               >
                 <View style={[styles.petPortrait, { backgroundColor: c.primaryFixed }]}>
-                  <Text style={styles.petEmoji}>{petEmoji(pet)}</Text>
+                  {pet.avatar_url !== null ? (
+                    <Image source={{ uri: pet.avatar_url }} style={styles.petPortraitImage} />
+                  ) : (
+                    <Text style={styles.petEmoji}>{petEmoji(pet)}</Text>
+                  )}
                 </View>
                 <Text style={[styles.petName, { color: c.onSurface }]}>{pet.name}</Text>
                 <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
@@ -380,6 +384,7 @@ const styles = StyleSheet.create({
   petRail: { paddingHorizontal: 16, gap: 12 },
   petCard: { width: 146, borderRadius: 20, borderWidth: 1, padding: 10 },
   petPortrait: { height: 92, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  petPortraitImage: { width: '100%', height: '100%', borderRadius: 15 },
   petEmoji: { fontSize: 42 },
   petName: { fontFamily: appFonts.bold, fontSize: 15, lineHeight: 20, marginTop: 9 },
   petMeta: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
