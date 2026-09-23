@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@pfotennetz/design-system/*": ["../../packages/design-system/src/*"],
+      "@pfotennetz/supabase/*": ["../../packages/supabase/src/*"],
+      "@pfotennetz/shared/*": ["../../packages/shared/src/*"],
+      "@pfotennetz/native/*": ["../../packages/native/src/*"],
+      "@pfotennetz/testing/*": ["../../packages/testing/src/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "app/**/*",
+    "components/**/*",
+    "lib/**/*",
+    "expo-router.d.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", ".expo"]
+}

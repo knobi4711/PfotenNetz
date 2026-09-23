@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.expo/
+.turbo/
+dist/
+build/
+coverage/
+pnpm-lock.yaml
+apps/mobile/android/.cxx/
+apps/mobile/android/app/build/

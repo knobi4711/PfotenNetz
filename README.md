@@ -1,56 +1,68 @@
-# Welcome to your Expo app 👋
+# PfotenNetz
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+PfotenNetz ist eine Nachbarschaftsplattform für Haustierbetreuung. Das Repository ist ein
+pnpm-/Turborepo-Monorepo mit einer Expo-App, einer Next.js-Web-App und gemeinsam genutzten
+Paketen.
 
-## Get started
+## Struktur
 
-1. Install dependencies
+- `apps/mobile` – Expo SDK 57 / React Native App
+- `apps/web` – Next.js Web-App
+- `packages/design-system` – gemeinsame Design-Tokens und UI-Grundlagen
+- `packages/native` – native Dienste wie Biometrie und Standort-Tracking
+- `packages/shared` – gemeinsame Typen, Validierung und Hilfsfunktionen
+- `packages/supabase` – Supabase-Client, Queries und Authentifizierung
+- `packages/testing` – gemeinsame Testkonfiguration
+- `supabase` – lokale Supabase-Konfiguration und SQL-Migrationen
 
-   ```bash
-   npm install
-   ```
+## Voraussetzungen
 
-2. Start the app
+- Node.js 22.13 oder neuer
+- pnpm 9 oder neuer
+- Supabase CLI 2.x für Datenbankarbeiten
+- Docker Desktop nur für die lokale Supabase-Umgebung
 
-   ```bash
-   npx expo start
-   ```
+## Einrichtung
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```powershell
+Copy-Item .env.example .env
+pnpm install
+pnpm typecheck
+pnpm lint
+pnpm test
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Die benötigten Variablen und Hinweise zum sicheren Umgang mit Zugangsdaten stehen in
+[`docs/ENVIRONMENT_SETUP.md`](docs/ENVIRONMENT_SETUP.md).
 
-### Other setup steps
+## Entwicklung
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Alle Apps starten:
 
-## Learn more
+```powershell
+pnpm dev
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Nur die mobile App starten:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```powershell
+pnpm --filter @pfotennetz/mobile dev
+```
 
-## Join the community
+Nur die Web-App starten:
 
-Join our community of developers creating universal apps.
+```powershell
+pnpm --filter @pfotennetz/web dev
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Qualitätsprüfungen
+
+```powershell
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm --filter @pfotennetz/mobile doctor
+```
+
+Datenbankmigrationen werden nicht automatisch auf das verknüpfte Remote-Projekt übertragen.
+Vor `supabase db push` ist immer ein aktueller Remote-Preflight erforderlich.

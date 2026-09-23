@@ -1,0 +1,247 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light Mode - PfotenNetz Design Tokens from Stitch */
+    --color-primary: #e26d46;
+    --color-primary-hover: #c8542f;
+    --color-primary-container: #c0532f;
+    --color-on-primary: #ffffff;
+    --color-on-primary-container: #fffbff;
+    --color-primary-fixed: #ffdbd0;
+    --color-primary-fixed-dim: #ffb59e;
+    --color-on-primary-fixed: #390b00;
+    --color-on-primary-fixed-variant: #822704;
+
+    --color-secondary: #4b7c59;
+    --color-secondary-container: #b7ecc2;
+    --color-on-secondary: #ffffff;
+    --color-on-secondary-container: #3c6d4b;
+    --color-secondary-fixed: #baefc5;
+    --color-secondary-fixed-dim: #9ed3aa;
+    --color-on-secondary-fixed: #00210e;
+    --color-on-secondary-fixed-variant: #1f5031;
+
+    --color-tertiary: #e68a00;
+    --color-tertiary-container: #a96400;
+    --color-on-tertiary: #ffffff;
+    --color-on-tertiary-container: #fffbff;
+    --color-tertiary-fixed: #ffdcbd;
+    --color-tertiary-fixed-dim: #ffb86e;
+    --color-on-tertiary-fixed: #2c1600;
+    --color-on-tertiary-fixed-variant: #693c00;
+
+    --color-error: #ba1a1a;
+    --color-error-container: #ffdad6;
+    --color-on-error: #ffffff;
+    --color-on-error-container: #93000a;
+
+    --color-success: #2e7d32;
+    --color-success-container: #e8f5e9;
+    --color-on-success: #ffffff;
+    --color-on-success-container: #1b5e20;
+
+    --color-surface: #fff8f5;
+    --color-surface-bright: #fff8f5;
+    --color-surface-dim: #e5d7d0;
+    --color-surface-container-lowest: #ffffff;
+    --color-surface-container-low: #fff1e9;
+    --color-surface-container: #f9ebe4;
+    --color-surface-container-high: #f3e6de;
+    --color-surface-container-highest: #eee0d8;
+    --color-surface-variant: #eee0d8;
+
+    --color-on-surface: #211a16;
+    --color-on-surface-variant: #57423c;
+    --color-on-background: #211a16;
+
+    --color-outline: #8a726a;
+    --color-outline-variant: #dec0b7;
+
+    --color-inverse-surface: #362f2a;
+    --color-inverse-on-surface: #fceee6;
+    --color-inverse-primary: #ffb59e;
+
+    --color-background: #fff8f5;
+
+    --color-surface-tint: #a23e1b;
+
+    /* Radius */
+    --radius-sm: 0.5rem;
+    --radius-md: 1rem;
+    --radius-lg: 1.5rem;
+    --radius-xl: 2rem;
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-level-1: 0 2px 8px rgba(168, 128, 105, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-level-2: 0 8px 24px rgba(140, 95, 75, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
+    --shadow-level-3: 0 16px 40px rgba(80, 50, 40, 0.16);
+  }
+
+  .dark {
+    --color-primary: #f0825b;
+    --color-primary-hover: #e87045;
+    --color-primary-container: #c0532f;
+    --color-on-primary: #362f2a;
+    --color-on-primary-container: #fffbff;
+    --color-primary-fixed: #ffdbd0;
+    --color-primary-fixed-dim: #ffb59e;
+    --color-on-primary-fixed: #390b00;
+    --color-on-primary-fixed-variant: #822704;
+
+    --color-secondary: #9ed3aa;
+    --color-secondary-container: #386847;
+    --color-on-secondary: #1a1a1a;
+    --color-on-secondary-container: #baefc5;
+    --color-secondary-fixed: #baefc5;
+    --color-secondary-fixed-dim: #9ed3aa;
+    --color-on-secondary-fixed: #00210e;
+    --color-on-secondary-fixed-variant: #1f5031;
+
+    --color-tertiary: #ffb86e;
+    --color-tertiary-container: #874f00;
+    --color-on-tertiary: #1a1a1a;
+    --color-on-tertiary-container: #ffdcbd;
+    --color-tertiary-fixed: #ffdcbd;
+    --color-tertiary-fixed-dim: #ffb86e;
+    --color-on-tertiary-fixed: #2c1600;
+    --color-on-tertiary-fixed-variant: #693c00;
+
+    --color-error: #ffb4ab;
+    --color-error-container: #93000a;
+    --color-on-error: #362f2a;
+    --color-on-error-container: #ffdad6;
+
+    --color-success: #81c784;
+    --color-success-container: #1b5e20;
+    --color-on-success: #1a1a1a;
+    --color-on-success-container: #e8f5e9;
+
+    --color-surface: #1a1a1a;
+    --color-surface-bright: #262626;
+    --color-surface-dim: #121212;
+    --color-surface-container-lowest: #101010;
+    --color-surface-container-low: #1a1a1a;
+    --color-surface-container: #262626;
+    --color-surface-container-high: #2e2e2e;
+    --color-surface-container-highest: #383838;
+    --color-surface-variant: #383838;
+
+    --color-on-surface: #f9f8f6;
+    --color-on-surface-variant: #b8b2ad;
+    --color-on-background: #f9f8f6;
+
+    --color-outline: #766c66;
+    --color-outline-variant: #57423c;
+
+    --color-inverse-surface: #fff8f5;
+    --color-inverse-on-surface: #211a16;
+    --color-inverse-primary: #e26d46;
+
+    --color-background: #1a1a1a;
+
+    --color-surface-tint: #f0825b;
+
+    --shadow-level-1: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --shadow-level-2: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-level-3: 0 16px 40px rgba(0, 0, 0, 0.75);
+  }
+
+  * {
+    @apply border-outline-variant;
+  }
+
+  body {
+    @apply bg-background text-on-surface font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full font-label-lg px-6 py-3 min-h-[52px] transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-on-primary shadow-[0_4px_16px_rgba(226,109,70,0.3)] hover:bg-primary-hover;
+  }
+
+  .btn-secondary {
+    @apply btn bg-transparent border-2 border-primary text-primary hover:bg-primary/10;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-on-surface hover:bg-surface-container;
+  }
+
+  .btn-emergency {
+    @apply btn bg-error text-on-error shadow-[0_4px_16px_rgba(186,26,26,0.3)] hover:bg-error/90;
+  }
+
+  .card {
+    @apply bg-surface-container-lowest rounded-lg border border-outline-variant/30 shadow-[var(--shadow-level-1)] transition-shadow hover:shadow-[var(--shadow-level-2)];
+  }
+
+  .card-elevated {
+    @apply bg-surface-container-lowest rounded-xl shadow-[var(--shadow-level-2)];
+  }
+
+  .input {
+    @apply w-full h-[52px] rounded-lg bg-surface-container-low border border-transparent placeholder:text-on-surface-variant/60 px-4 text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-label-md font-medium transition-all;
+  }
+
+  .chip-primary {
+    @apply chip bg-primary-container text-on-primary-container;
+  }
+
+  .chip-secondary {
+    @apply chip bg-secondary-container text-on-secondary-container;
+  }
+
+  .chip-outline {
+    @apply chip bg-transparent border border-outline-variant text-on-surface-variant hover:bg-surface-container;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-label-sm font-medium;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-horizontal {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
