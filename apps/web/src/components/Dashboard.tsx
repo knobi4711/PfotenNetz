@@ -89,6 +89,7 @@ export function Dashboard() {
                   if (item === 'Nachbarschaftskarte') router.push('/explore');
                   if (item === 'Gefahrenradar') router.push('/hazard/radar');
                   if (item === 'Betreuung & Tracking') router.push('/tracking');
+                  if (item === 'Community') router.push('/community');
                 }}
               >
                 {item}
