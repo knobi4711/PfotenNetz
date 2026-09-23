@@ -74,6 +74,42 @@ export async function fetchOwnHazards(client: SupabaseClient<Database>): Promise
   return data ?? [];
 }
 
+export async function fetchModerationHazards(client: SupabaseClient<Database>): Promise<Hazard[]> {
+  const { data, error } = await client
+    .from('hazards')
+    .select('*')
+    .in('status', ['pending_review', 'active'])
+    .order('created_at', { ascending: true })
+    .limit(100);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function moderateHazard(
+  client: SupabaseClient<Database>,
+  input: {
+    hazardId: string;
+    status: 'active' | 'rejected' | 'resolved';
+    resolutionNotes: string | null;
+  }
+): Promise<Hazard> {
+  const { data, error } = await client
+    .from('hazards')
+    .update({
+      status: input.status,
+      resolution_notes: input.resolutionNotes,
+      resolved_at:
+        input.status === 'resolved' || input.status === 'rejected'
+          ? new Date().toISOString()
+          : null,
+    })
+    .eq('id', input.hazardId)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export function subscribeHazards(
   client: SupabaseClient<Database>,
   onEvent: () => void

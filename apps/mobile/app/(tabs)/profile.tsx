@@ -427,6 +427,19 @@ export default function ProfileScreen() {
           <>
             <HelperStatusCard profile={profile} />
             <AvailabilityManager />
+            {profile.role === 'admin' ? (
+              <Card>
+                <SectionTitle>Moderation</SectionTitle>
+                <Text style={[styles.passkeyDescription, { color: c.onSurfaceVariant }]}>
+                  Prüfe neue Gefahrenmeldungen und veröffentliche oder entwarne sie.
+                </Text>
+                <ActionButton
+                  title="Gefahrenmeldungen prüfen"
+                  variant="secondary"
+                  onPress={() => router.push('/hazard/moderation')}
+                />
+              </Card>
+            ) : null}
           </>
         ) : null}
 

@@ -8,6 +8,8 @@ import {
   fetchActiveHazards,
   fetchHazard,
   fetchOwnHazards,
+  fetchModerationHazards,
+  moderateHazard,
   subscribeHazards,
   uploadHazardPhoto,
   type ActiveHazard,
@@ -49,6 +51,27 @@ export function useHazard(hazardId: string | null): UseQueryResult<Hazard, Error
 export function useOwnHazards(): UseQueryResult<Hazard[], Error> {
   const client = getSupabaseClient();
   return useQuery({ queryKey: hazardKeys.own, queryFn: () => fetchOwnHazards(client) });
+}
+
+export function useModerationHazards(): UseQueryResult<Hazard[], Error> {
+  const client = getSupabaseClient();
+  return useQuery({
+    queryKey: [...hazardKeys.all, 'moderation'],
+    queryFn: () => fetchModerationHazards(client),
+  });
+}
+
+export function useModerateHazard() {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      hazardId: string;
+      status: 'active' | 'rejected' | 'resolved';
+      resolutionNotes: string | null;
+    }) => moderateHazard(client, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: hazardKeys.all }),
+  });
 }
 
 export function useHazardSubscription(): void {
