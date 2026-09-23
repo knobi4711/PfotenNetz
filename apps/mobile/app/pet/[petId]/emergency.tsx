@@ -27,6 +27,14 @@ function calculateAge(birthDate: string | null): string {
   return age >= 0 ? `${age} Jahre` : 'Nicht angegeben';
 }
 
+function jsonList(value: unknown): string {
+  if (!Array.isArray(value)) return 'Keine Angaben';
+  const items = value.filter(
+    (item): item is string => typeof item === 'string' && item.trim() !== ''
+  );
+  return items.length > 0 ? items.join(', ') : 'Keine Angaben';
+}
+
 export default function EmergencyCardScreen() {
   const c = usePalette();
   const { petId } = useLocalSearchParams<{ petId: string }>();
@@ -50,7 +58,7 @@ export default function EmergencyCardScreen() {
   const shareCard = () => {
     void Share.share({
       title: `Notfallkarte ${pet.name}`,
-      message: `PfotenNetz Notfallkarte\n\nName: ${pet.name}\nTierart: ${PET_SPECIES_LABELS[pet.species as PetSpecies] ?? pet.species}\nAlter: ${calculateAge(pet.birth_date)}\nRasse: ${pet.breed ?? 'Nicht angegeben'}\nFarbe: ${pet.color ?? 'Nicht angegeben'}\nBesonderes: ${pet.special_needs ?? 'Keine Angaben'}`,
+      message: `PfotenNetz Notfallkarte\n\nName: ${pet.name}\nTierart: ${PET_SPECIES_LABELS[pet.species as PetSpecies] ?? pet.species}\nAlter: ${calculateAge(pet.birth_date)}\nChipnummer: ${pet.microchip_number ?? 'Nicht angegeben'}\nMedikamente: ${jsonList(pet.medications)}\nAllergien: ${pet.allergies?.join(', ') || 'Keine Angaben'}\nTierarzt: ${pet.vet_clinic ?? 'Nicht angegeben'} · ${pet.vet_phone ?? 'Keine Telefonnummer'}\nBesonderes: ${pet.special_needs ?? 'Keine Angaben'}`,
     });
   };
 
@@ -82,16 +90,20 @@ export default function EmergencyCardScreen() {
             label="Status"
             value={pet.is_deceased ? 'Verstorben' : pet.is_active ? 'Aktiv' : 'Pausiert'}
           />
+          <Info label="Chipnummer" value={pet.microchip_number ?? 'Nicht angegeben'} />
         </View>
       </Card>
       <Card>
-        <SectionTitle>Wichtige Hinweise</SectionTitle>
+        <SectionTitle>Medizinische Hinweise</SectionTitle>
+        <View style={styles.grid}>
+          <Info label="Medikamente" value={jsonList(pet.medications)} />
+          <Info label="Allergien" value={pet.allergies?.join(', ') || 'Keine Angaben'} />
+          <Info label="Tierarztpraxis" value={pet.vet_clinic ?? 'Nicht angegeben'} />
+          <Info label="Tierarzt-Telefon" value={pet.vet_phone ?? 'Nicht angegeben'} />
+          <Info label="Versicherung" value={pet.insurance_policy ?? 'Nicht angegeben'} />
+        </View>
         <Text style={[styles.notes, { color: c.onSurface }]}>
           {pet.special_needs ?? 'Keine besonderen Hinweise hinterlegt.'}
-        </Text>
-        <Text style={[styles.disclaimer, { color: c.onSurfaceVariant }]}>
-          Ergänze Medikamente, Allergien und Tierarztkontakte im Tierprofil, sobald diese Felder
-          verfügbar sind.
         </Text>
       </Card>
       <ActionButton title="Notfallkarte teilen" onPress={shareCard} />
