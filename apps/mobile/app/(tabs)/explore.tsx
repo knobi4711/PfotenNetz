@@ -32,7 +32,7 @@ function helperInitial(name: string): string {
   return name.trim().slice(0, 1).toUpperCase() || '🐾';
 }
 
-function KiezMap({
+function NeighborhoodMap({
   center,
   radiusKm,
   helpers,
@@ -48,7 +48,7 @@ function KiezMap({
   const c = usePalette();
   return (
     <View
-      accessibilityLabel={`Kiez-Kartenübersicht mit ${helpers.length} Helferinnen und Helfern`}
+      accessibilityLabel={`Kartenübersicht der Nachbarschaft mit ${helpers.length} Helferinnen und Helfern`}
       style={[
         styles.map,
         { backgroundColor: c.surfaceContainerLow, borderColor: c.outlineVariant },
@@ -211,7 +211,7 @@ export default function ExploreScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <AppHeader
-          title="Helfer:innen im Kiez"
+          title="Helfer:innen in der Nachbarschaft"
           subtitle="Verifizierte Unterstützung direkt in deiner Nähe."
           onNotifications={() => {
             router.push('/(tabs)/tracking');
@@ -247,7 +247,7 @@ export default function ExploreScreen() {
         {center === null ? (
           <Card>
             <EmptyText>
-              Aktiviere deinen Standort, um Helfer:innen in deinem Kiez zu suchen.
+              Aktiviere deinen Standort, um Helfer:innen in deiner Nachbarschaft zu suchen.
             </EmptyText>
           </Card>
         ) : helpersQuery.isPending ? (
@@ -261,7 +261,7 @@ export default function ExploreScreen() {
           />
         ) : (
           <>
-            <KiezMap
+            <NeighborhoodMap
               center={center}
               radiusKm={radiusKm}
               helpers={helpers}

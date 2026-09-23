@@ -283,7 +283,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <AppHeader
           title="Mein Profil & Nachbarschaft"
-          subtitle="Vertrauen, Verfügbarkeit und Kiez-Einstellungen."
+          subtitle="Vertrauen, Verfügbarkeit und Nachbarschafts-Einstellungen."
           avatarLabel={profile?.display_name.slice(0, 1).toUpperCase() || '🐾'}
         />
 
@@ -336,7 +336,7 @@ export default function ProfileScreen() {
                 ]}
                 value={phone}
               />
-              <Text style={[styles.label, { color: c.onSurface }]}>Kiez-Radius</Text>
+              <Text style={[styles.label, { color: c.onSurface }]}>Nachbarschafts-Radius</Text>
               <View style={styles.radiusRow}>
                 {KIEZ_RADIUS_OPTIONS.map((option) => {
                   const selected = option === kiezRadiusKm;
@@ -405,7 +405,9 @@ export default function ProfileScreen() {
                   </Text>
                   <View style={styles.trustLine}>
                     <MaterialCommunityIcons name="shield-check" size={16} color={c.secondary} />
-                    <Text style={[styles.trustText, { color: c.secondary }]}>Kiez-Mitglied</Text>
+                    <Text style={[styles.trustText, { color: c.secondary }]}>
+                      Nachbarschafts-Mitglied
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -413,7 +415,7 @@ export default function ProfileScreen() {
               <InfoRow label="E-Mail" value={profile.email} />
               <InfoRow label="Telefon" value={profile.phone ?? '–'} />
               <InfoRow
-                label="Kiez-Radius"
+                label="Nachbarschafts-Radius"
                 value={`${Number(profile.kiez_radius_km).toString().replace('.', ',')} km`}
               />
               <ActionButton title="Profil bearbeiten" variant="secondary" onPress={startEditing} />
