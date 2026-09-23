@@ -1,8 +1,9 @@
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useColorScheme } from 'react-native';
 import type { ComponentProps, ReactNode } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '@pfotennetz/design-system';
+import logoSource from '../assets/pfotennetz-logo.png';
 import { bookingStatusLabels, type BookingStatus } from '../lib/booking';
 
 type Mode = 'light' | 'dark';
@@ -202,7 +203,7 @@ export function AppHeader({
       <View style={styles.brandRow}>
         <View style={styles.brandLockup}>
           <View style={[styles.brandMark, { backgroundColor: c.primaryFixed }]}>
-            <MaterialCommunityIcons name="paw" size={15} color={c.primary} />
+            <Image source={logoSource} style={styles.brandLogo} />
           </View>
           <Text style={[styles.brandName, { color: c.onSurface }]}>PfotenNetz</Text>
         </View>
@@ -439,6 +440,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  brandLogo: { width: 24, height: 24, resizeMode: 'contain' },
   brandName: { fontFamily: appFonts.extrabold, fontSize: 15, letterSpacing: -0.2 },
   appHeaderMain: { flexShrink: 1, flex: 1 },
   appHeaderTitle: {

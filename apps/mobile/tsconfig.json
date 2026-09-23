@@ -24,6 +24,7 @@
     "src/**/*",
     "app/**/*",
     "components/**/*",
+    "assets.d.ts",
     "lib/**/*",
     "expo-router.d.ts",
     ".expo/types/**/*.ts",

@@ -6,6 +6,7 @@ import {
   fetchOwnPets,
   setPetActive,
   setPetDeceased,
+  uploadPetPhoto,
   updatePet,
   type CreatePetInput,
   type Pet,
@@ -39,6 +40,19 @@ export function useUpdatePet() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: UpdatePetInput) => updatePet(client, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: petsKeys.own });
+    },
+  });
+}
+
+/** Uploads or replaces one of the caller's pet photos. */
+export function useUploadPetPhoto() {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { petId: string; uri: string; contentType?: string }) =>
+      uploadPetPhoto(client, input.petId, input.uri, input.contentType),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: petsKeys.own });
     },

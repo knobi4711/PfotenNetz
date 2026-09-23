@@ -21,6 +21,7 @@ export interface CreatePetInput {
   breed: string | null;
   color: string | null;
   specialNeeds: string | null;
+  birthDate: string | null;
 }
 
 export interface UpdatePetInput extends CreatePetInput {
@@ -39,6 +40,9 @@ export function validateCreatePet(input: CreatePetInput): string | null {
   if (input.name.trim().length < 2) {
     return 'Bitte gib einen Namen mit mindestens zwei Zeichen ein.';
   }
+  if (input.birthDate !== null && !/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)) {
+    return 'Bitte gib ein gültiges Geburtsdatum ein.';
+  }
   return null;
 }
 
@@ -53,6 +57,7 @@ function toInsertRow(ownerId: string, input: CreatePetInput) {
       input.specialNeeds === null || input.specialNeeds.trim() === ''
         ? null
         : input.specialNeeds.trim(),
+    birth_date: input.birthDate,
   };
 }
 
@@ -66,7 +71,13 @@ export async function fetchOwnPets(client: SupabaseClient<Database>): Promise<Pe
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data ?? [];
+  return Promise.all(
+    (data ?? []).map(async (pet) => {
+      if (!pet.avatar_url) return pet;
+      const signed = await client.storage.from('pet-photos').createSignedUrl(pet.avatar_url, 3600);
+      return signed.error === null ? { ...pet, avatar_url: signed.data.signedUrl } : pet;
+    })
+  );
 }
 
 /** Creates a pet for the caller. */
@@ -108,12 +119,49 @@ export async function updatePet(
         input.specialNeeds === null || input.specialNeeds.trim() === ''
           ? null
           : input.specialNeeds.trim(),
+      birth_date: input.birthDate,
     })
     .eq('id', input.petId)
     .eq('owner_id', userId)
     .select('*')
     .single();
 
+  if (error) throw error;
+  return data;
+}
+
+/** Uploads or replaces the caller's pet photo and stores its private path. */
+export async function uploadPetPhoto(
+  client: SupabaseClient<Database>,
+  petId: string,
+  uri: string,
+  contentType = 'image/jpeg'
+): Promise<Pet> {
+  const userId = await requireUserId(client);
+  const { data: pet, error: petError } = await client
+    .from('pets')
+    .select('id')
+    .eq('id', petId)
+    .eq('owner_id', userId)
+    .single();
+  if (petError) throw petError;
+
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  const path = `${userId}/${pet.id}/avatar.jpg`;
+  const upload = await client.storage.from('pet-photos').upload(path, blob, {
+    contentType,
+    upsert: true,
+  });
+  if (upload.error) throw upload.error;
+
+  const { data, error } = await client
+    .from('pets')
+    .update({ avatar_url: path })
+    .eq('id', petId)
+    .eq('owner_id', userId)
+    .select('*')
+    .single();
   if (error) throw error;
   return data;
 }

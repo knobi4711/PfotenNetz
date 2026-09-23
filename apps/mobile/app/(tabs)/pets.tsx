@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import {
   PET_SPECIES_LABELS,
   PET_SPECIES_OPTIONS,
@@ -10,6 +11,7 @@ import {
   useSetPetDeceased,
   useSetPetActive,
   useUpdatePet,
+  useUploadPetPhoto,
   type Pet,
   type PetSpecies,
 } from '@pfotennetz/supabase';
@@ -26,10 +28,24 @@ import {
   usePalette,
 } from '../../components/ui';
 
+function calculateAge(birthDate: string | null): number | null {
+  if (birthDate === null) return null;
+  const birth = new Date(`${birthDate}T00:00:00`);
+  if (!Number.isFinite(birth.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const birthdayPassed =
+    today.getMonth() > birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+  if (!birthdayPassed) age -= 1;
+  return age >= 0 ? age : null;
+}
+
 function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
   const c = usePalette();
   const setActive = useSetPetActive();
   const setDeceased = useSetPetDeceased();
+  const uploadPhoto = useUploadPetPhoto();
   const speciesLabel =
     (PET_SPECIES_OPTIONS as readonly string[]).includes(pet.species) &&
     pet.species in PET_SPECIES_LABELS
@@ -45,7 +61,11 @@ function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
         style={styles.petHeader}
       >
         <View style={[styles.petAvatar, { backgroundColor: c.primaryFixed }]}>
-          <Text style={styles.petAvatarEmoji}>{pet.species === 'cat' ? '🐱' : '🐶'}</Text>
+          {pet.avatar_url !== null ? (
+            <Image source={{ uri: pet.avatar_url }} style={styles.petAvatarImage} />
+          ) : (
+            <Text style={styles.petAvatarEmoji}>{pet.species === 'cat' ? '🐱' : '🐶'}</Text>
+          )}
         </View>
         <View style={styles.petHeaderMain}>
           <Text style={[styles.petName, { color: c.onSurface }]}>{pet.name}</Text>
@@ -58,6 +78,39 @@ function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
       {pet.breed !== null ? <InfoRow label="Rasse" value={pet.breed} /> : null}
       {pet.color !== null ? <InfoRow label="Farbe" value={pet.color} /> : null}
       {pet.special_needs !== null ? <InfoRow label="Besonderes" value={pet.special_needs} /> : null}
+      {calculateAge(pet.birth_date) !== null ? (
+        <InfoRow
+          label="Alter"
+          value={`${calculateAge(pet.birth_date)} ${calculateAge(pet.birth_date) === 1 ? 'Jahr' : 'Jahre'}`}
+        />
+      ) : null}
+      <ActionButton
+        title="Bild auswählen"
+        variant="secondary"
+        pending={uploadPhoto.isPending}
+        onPress={async () => {
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!permission.granted) return;
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.85,
+          });
+          if (!result.canceled) {
+            const asset = result.assets[0];
+            if (!asset) return;
+            uploadPhoto.mutate({
+              petId: pet.id,
+              uri: asset.uri,
+              contentType: asset.mimeType ?? 'image/jpeg',
+            });
+          }
+        }}
+      />
+      {uploadPhoto.isError ? (
+        <ErrorBox message={`Bild konnte nicht gespeichert werden: ${uploadPhoto.error.message}`} />
+      ) : null}
       {setActive.isError ? (
         <ErrorBox message={`Status konnte nicht geändert werden: ${setActive.error.message}`} />
       ) : null}
@@ -108,6 +161,9 @@ export default function PetsScreen() {
   const [breed, setBreed] = useState('');
   const [color, setColor] = useState('');
   const [specialNeeds, setSpecialNeeds] = useState('');
+  const [birthYear, setBirthYear] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay] = useState('');
   const [formHint, setFormHint] = useState<string | null>(null);
 
   const pets = petsQuery.data ?? [];
@@ -120,6 +176,9 @@ export default function PetsScreen() {
     setBreed(pet.breed ?? '');
     setColor(pet.color ?? '');
     setSpecialNeeds(pet.special_needs ?? '');
+    setBirthYear(pet.birth_date?.slice(0, 4) ?? '');
+    setBirthMonth(pet.birth_date?.slice(5, 7).replace(/^0/, '') ?? '');
+    setBirthDay(pet.birth_date?.slice(8, 10).replace(/^0/, '') ?? '');
     setFormHint(null);
     setShowForm(true);
   };
@@ -131,6 +190,9 @@ export default function PetsScreen() {
     setBreed('');
     setColor('');
     setSpecialNeeds('');
+    setBirthYear('');
+    setBirthMonth('');
+    setBirthDay('');
     setFormHint(null);
   };
 
@@ -140,12 +202,27 @@ export default function PetsScreen() {
       return;
     }
     setFormHint(null);
+    const year = birthYear.trim();
+    const month = birthMonth.trim() === '' ? '01' : birthMonth.trim().padStart(2, '0');
+    const day = birthDay.trim() === '' ? '01' : birthDay.trim().padStart(2, '0');
+    if (year !== '' && !/^\d{4}$/.test(year)) {
+      setFormHint('Bitte gib ein vierstelliges Geburtsjahr ein.');
+      return;
+    }
+    if (
+      year !== '' &&
+      (Number(month) < 1 || Number(month) > 12 || Number(day) < 1 || Number(day) > 31)
+    ) {
+      setFormHint('Bitte prüfe Monat und Tag des Geburtsdatums.');
+      return;
+    }
     const input = {
       name: name.trim(),
       species,
       breed: breed.trim() === '' ? null : breed.trim(),
       color: color.trim() === '' ? null : color.trim(),
       specialNeeds: specialNeeds.trim() === '' ? null : specialNeeds.trim(),
+      birthDate: year === '' ? null : `${year}-${month}-${day}`,
     };
     if (editingPet === null) {
       createPet.mutate(input, { onSuccess: closeForm });
@@ -284,6 +361,66 @@ export default function PetsScreen() {
                   ]}
                   value={specialNeeds}
                 />
+                <Text style={[styles.label, { color: c.onSurface }]}>Geburtsjahr (optional)</Text>
+                <TextInput
+                  editable={!pending}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  onChangeText={setBirthYear}
+                  placeholder="z. B. 2020"
+                  placeholderTextColor={c.outline}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: c.surfaceContainerLow,
+                      borderColor: c.outlineVariant,
+                      color: c.onSurface,
+                    },
+                  ]}
+                  value={birthYear}
+                />
+                <View style={styles.birthDateRow}>
+                  <View style={styles.birthDateField}>
+                    <Text style={[styles.smallLabel, { color: c.onSurfaceVariant }]}>Monat</Text>
+                    <TextInput
+                      editable={!pending}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      onChangeText={setBirthMonth}
+                      placeholder="optional"
+                      placeholderTextColor={c.outline}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: c.surfaceContainerLow,
+                          borderColor: c.outlineVariant,
+                          color: c.onSurface,
+                        },
+                      ]}
+                      value={birthMonth}
+                    />
+                  </View>
+                  <View style={styles.birthDateField}>
+                    <Text style={[styles.smallLabel, { color: c.onSurfaceVariant }]}>Tag</Text>
+                    <TextInput
+                      editable={!pending}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      onChangeText={setBirthDay}
+                      placeholder="optional"
+                      placeholderTextColor={c.outline}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: c.surfaceContainerLow,
+                          borderColor: c.outlineVariant,
+                          color: c.onSurface,
+                        },
+                      ]}
+                      value={birthDay}
+                    />
+                  </View>
+                </View>
                 {formHint !== null ? (
                   <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
                 ) : null}
@@ -316,6 +453,9 @@ export default function PetsScreen() {
                   setBreed('');
                   setColor('');
                   setSpecialNeeds('');
+                  setBirthYear('');
+                  setBirthMonth('');
+                  setBirthDay('');
                   setFormHint(null);
                   setShowForm(true);
                 }}
@@ -370,6 +510,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   petAvatarEmoji: { fontSize: 28 },
+  petAvatarImage: { width: '100%', height: '100%', borderRadius: 18 },
   petHeaderMain: { flex: 1 },
   petName: { fontFamily: appFonts.extrabold, fontSize: 18, lineHeight: 24 },
   petSpecies: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 18, marginTop: 2 },
@@ -386,4 +527,7 @@ const styles = StyleSheet.create({
   deceasedLabel: { flex: 1 },
   deceasedTitle: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18 },
   deceasedHint: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16, marginTop: 2 },
+  birthDateRow: { flexDirection: 'row', gap: 12 },
+  birthDateField: { flex: 1 },
+  smallLabel: { fontFamily: appFonts.semibold, fontSize: 11, lineHeight: 16, marginBottom: 4 },
 });

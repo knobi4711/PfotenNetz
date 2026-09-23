@@ -66,6 +66,7 @@ describe('pets queries', () => {
       breed: '  Labrador  ',
       color: '',
       specialNeeds: null,
+      birthDate: null,
     });
 
     expect(result).toEqual(pet);
@@ -77,12 +78,20 @@ describe('pets queries', () => {
       breed: 'Labrador',
       color: null,
       special_needs: null,
+      birth_date: null,
     });
   });
 
   it('validates the pet name before creating', async () => {
     expect(
-      validateCreatePet({ name: 'B', species: 'dog', breed: null, color: null, specialNeeds: null })
+      validateCreatePet({
+        name: 'B',
+        species: 'dog',
+        breed: null,
+        color: null,
+        specialNeeds: null,
+        birthDate: null,
+      })
     ).not.toBeNull();
   });
 

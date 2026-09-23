@@ -6,6 +6,7 @@
     "version": "0.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/pfotennetz-logo.png",
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
@@ -50,7 +51,15 @@
       "expo-location",
       "expo-notifications",
       "expo-task-manager",
-      "expo-background-fetch"
+      "expo-background-fetch",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "PfotenNetz benötigt Zugriff auf deine Fotos, um Tierbilder zu speichern.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
