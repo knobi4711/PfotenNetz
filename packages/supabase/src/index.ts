@@ -23,6 +23,8 @@ export * from './profile/hooks';
 export * from './pets/keys';
 export * from './pets/queries';
 export * from './pets/hooks';
+export * from './messages/queries';
+export * from './messages/hooks';
 export * from './helpers/keys';
 export * from './helpers/queries';
 export * from './helpers/hooks';

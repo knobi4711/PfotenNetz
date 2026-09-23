@@ -260,6 +260,25 @@ export default function BookingDetailScreen() {
               ) : null}
             </Card>
 
+            {booking.helper_id !== null &&
+            (booking.status === 'confirmed' ||
+              booking.status === 'in_progress' ||
+              booking.status === 'completed') ? (
+              <Card>
+                <SectionTitle>Nachrichten</SectionTitle>
+                <EmptyText>Stimme dich direkt mit deiner Betreuung ab.</EmptyText>
+                <ActionButton
+                  title="Chat öffnen"
+                  variant="secondary"
+                  onPress={() => {
+                    if (bookingId !== undefined) {
+                      router.push({ pathname: '/chat/[bookingId]', params: { bookingId } });
+                    }
+                  }}
+                />
+              </Card>
+            ) : null}
+
             {mutationError !== null ? <ErrorBox message={mutationError.message} /> : null}
 
             {booking.status === 'requested' && isHelper ? (
