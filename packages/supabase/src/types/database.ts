@@ -1570,6 +1570,21 @@ export type Database = {
           type: string;
         }[];
       };
+      get_active_hazards_in_radius_v2: {
+        Args: { p_latitude: number; p_longitude: number; p_radius_km?: number };
+        Returns: {
+          created_at: string;
+          description: string;
+          distance_km: number;
+          hazard_number: string;
+          id: string;
+          latitude: number;
+          longitude: number;
+          radius_km: number;
+          severity: string;
+          type: string;
+        }[];
+      };
       get_helper_detail: {
         Args: { p_helper_id: string };
         Returns: {

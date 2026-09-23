@@ -5,7 +5,7 @@ export type Hazard = Database['public']['Tables']['hazards']['Row'];
 export type HazardType = Database['public']['Enums']['hazard_type'];
 export type HazardSeverity = Database['public']['Enums']['hazard_severity'];
 export type ActiveHazard =
-  Database['public']['Functions']['get_active_hazards_in_radius']['Returns'][number];
+  Database['public']['Functions']['get_active_hazards_in_radius_v2']['Returns'][number];
 export type HazardSighting = Database['public']['Tables']['hazard_sightings']['Row'];
 
 export const HAZARD_TYPE_LABELS: Record<HazardType, string> = {
@@ -44,7 +44,7 @@ export async function fetchActiveHazards(
   client: SupabaseClient<Database>,
   input: { latitude: number; longitude: number; radiusKm: number }
 ): Promise<ActiveHazard[]> {
-  const { data, error } = await client.rpc('get_active_hazards_in_radius', {
+  const { data, error } = await client.rpc('get_active_hazards_in_radius_v2', {
     p_latitude: input.latitude,
     p_longitude: input.longitude,
     p_radius_km: input.radiusKm,

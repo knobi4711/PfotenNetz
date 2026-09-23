@@ -29,6 +29,7 @@ import {
 
 const RADII = [0.5, 1, 1.5, 3] as const;
 const SEVERITY_FILTERS = ['all', 'critical', 'high', 'medium', 'low'] as const;
+const TIME_FILTERS = [2, 24, 168] as const;
 
 function severityColor(severity: string, colors: ReturnType<typeof usePalette>): string {
   if (severity === 'critical' || severity === 'high') return colors.error;
@@ -165,13 +166,17 @@ export default function HazardRadarScreen() {
   const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<(typeof RADII)[number]>(1.5);
   const [severityFilter, setSeverityFilter] = useState<(typeof SEVERITY_FILTERS)[number]>('all');
+  const [timeFilterHours, setTimeFilterHours] = useState<(typeof TIME_FILTERS)[number]>(24);
   const [locationPending, setLocationPending] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const hazardsQuery = useActiveHazards(center === null ? null : { ...center, radiusKm });
   const ownHazardsQuery = useOwnHazards();
   const hazards = hazardsQuery.data ?? [];
+  const cutoff = Date.now() - timeFilterHours * 60 * 60 * 1000;
   const visibleHazards = hazards.filter(
-    (hazard) => severityFilter === 'all' || hazard.severity === severityFilter
+    (hazard) =>
+      (severityFilter === 'all' || hazard.severity === severityFilter) &&
+      new Date(hazard.created_at).getTime() >= cutoff
   );
 
   const locate = () => {
@@ -221,6 +226,16 @@ export default function HazardRadarScreen() {
             label={`${radius.toString().replace('.', ',')} km`}
             selected={radius === radiusKm}
             onPress={() => setRadiusKm(radius)}
+          />
+        ))}
+      </ChipRow>
+      <ChipRow>
+        {TIME_FILTERS.map((hours) => (
+          <Chip
+            key={hours}
+            label={hours === 2 ? 'Letzte 2 h' : hours === 24 ? 'Letzte 24 h' : 'Letzte 7 Tage'}
+            selected={timeFilterHours === hours}
+            onPress={() => setTimeFilterHours(hours)}
           />
         ))}
       </ChipRow>
