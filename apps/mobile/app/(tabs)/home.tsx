@@ -279,6 +279,18 @@ export default function HomeScreen() {
         </Card>
 
         <Card>
+          <SectionTitle>Gemeinsam unterwegs</SectionTitle>
+          <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+            Rudelrunden, Playdates und Treffen in deiner Nachbarschaft.
+          </Text>
+          <ActionButton
+            title="Community-Events entdecken"
+            variant="secondary"
+            onPress={() => router.push('/community')}
+          />
+        </Card>
+
+        <Card>
           <View style={styles.balanceHeading}>
             <View style={[styles.balanceIcon, { backgroundColor: c.secondaryFixed }]}>
               <MaterialCommunityIcons name="hand-heart" size={22} color={c.secondary} />
