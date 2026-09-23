@@ -12,6 +12,7 @@ import {
   type ActiveHazard,
   type Hazard,
 } from '@pfotennetz/supabase';
+import { projectNearbyPoint, type MapCoordinate } from '../../lib/helper-map';
 import {
   ActionButton,
   AppHeader,
@@ -27,6 +28,7 @@ import {
 } from '../../components/ui';
 
 const RADII = [0.5, 1, 1.5, 3] as const;
+const SEVERITY_FILTERS = ['all', 'critical', 'high', 'medium', 'low'] as const;
 
 function severityColor(severity: string, colors: ReturnType<typeof usePalette>): string {
   if (severity === 'critical' || severity === 'high') return colors.error;
@@ -100,16 +102,77 @@ function OwnHazardRow({ hazard }: { hazard: Hazard }) {
   );
 }
 
+function HazardMap({
+  center,
+  radiusKm,
+  hazards,
+}: {
+  center: MapCoordinate;
+  radiusKm: number;
+  hazards: ActiveHazard[];
+}) {
+  const c = usePalette();
+  return (
+    <View
+      accessibilityLabel={`Karte mit ${hazards.length} aktiven Gefahren`}
+      style={[
+        styles.map,
+        { backgroundColor: c.surfaceContainerLow, borderColor: c.outlineVariant },
+      ]}
+    >
+      <View style={[styles.mapLineHorizontal, { borderColor: c.outlineVariant }]} />
+      <View style={[styles.mapLineVertical, { borderColor: c.outlineVariant }]} />
+      <View style={[styles.mapRadius, { borderColor: c.primary }]} />
+      <View style={[styles.mapCenter, { backgroundColor: c.secondary, borderColor: c.surface }]}>
+        <Text style={[styles.mapCenterText, { color: c.onSecondary }]}>Du</Text>
+      </View>
+      {hazards.map((hazard) => {
+        const point = projectNearbyPoint(
+          center,
+          { latitude: hazard.latitude, longitude: hazard.longitude },
+          radiusKm
+        );
+        const color = severityColor(hazard.severity, c);
+        return (
+          <Pressable
+            key={hazard.id}
+            accessibilityRole="button"
+            accessibilityLabel={`${HAZARD_TYPE_LABELS[hazard.type as keyof typeof HAZARD_TYPE_LABELS] ?? hazard.type} auf der Karte öffnen`}
+            onPress={() => router.push({ pathname: '/hazard/[id]', params: { id: hazard.id } })}
+            style={[
+              styles.mapPin,
+              {
+                left: `${point.x}%`,
+                top: `${point.y}%`,
+                backgroundColor: color,
+                borderColor: c.surface,
+              },
+            ]}
+          >
+            <Text style={[styles.mapPinText, { color: c.onPrimary }]}>!</Text>
+          </Pressable>
+        );
+      })}
+      <Text style={[styles.mapNorth, { color: c.onSurfaceVariant }]}>N</Text>
+      <Text style={[styles.mapCaption, { color: c.onSurfaceVariant }]}>Radius {radiusKm} km</Text>
+    </View>
+  );
+}
+
 export default function HazardRadarScreen() {
   const c = usePalette();
   useHazardSubscription();
   const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<(typeof RADII)[number]>(1.5);
+  const [severityFilter, setSeverityFilter] = useState<(typeof SEVERITY_FILTERS)[number]>('all');
   const [locationPending, setLocationPending] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const hazardsQuery = useActiveHazards(center === null ? null : { ...center, radiusKm });
   const ownHazardsQuery = useOwnHazards();
   const hazards = hazardsQuery.data ?? [];
+  const visibleHazards = hazards.filter(
+    (hazard) => severityFilter === 'all' || hazard.severity === severityFilter
+  );
 
   const locate = () => {
     setLocationPending(true);
@@ -161,6 +224,16 @@ export default function HazardRadarScreen() {
           />
         ))}
       </ChipRow>
+      <ChipRow>
+        {SEVERITY_FILTERS.map((severity) => (
+          <Chip
+            key={severity}
+            label={severity === 'all' ? 'Alle Dringlichkeiten' : HAZARD_SEVERITY_LABELS[severity]}
+            selected={severityFilter === severity}
+            onPress={() => setSeverityFilter(severity)}
+          />
+        ))}
+      </ChipRow>
       {locationError ? <ErrorBox message={locationError} /> : null}
       {ownHazardsQuery.data && ownHazardsQuery.data.length > 0 ? (
         <Card>
@@ -185,16 +258,19 @@ export default function HazardRadarScreen() {
         />
       ) : (
         <>
+          <HazardMap center={center} radiusKm={radiusKm} hazards={visibleHazards} />
           <View style={styles.heading}>
             <SectionTitle>Aktive Warnungen</SectionTitle>
-            <Text style={[styles.count, { color: c.secondary }]}>{hazards.length} Treffer</Text>
+            <Text style={[styles.count, { color: c.secondary }]}>
+              {visibleHazards.length} Treffer
+            </Text>
           </View>
-          {hazards.length === 0 ? (
+          {visibleHazards.length === 0 ? (
             <Card>
               <EmptyText>In diesem Radius sind aktuell keine aktiven Gefahren bekannt.</EmptyText>
             </Card>
           ) : (
-            hazards.map((hazard) => <HazardRow key={hazard.id} hazard={hazard} />)
+            visibleHazards.map((hazard) => <HazardRow key={hazard.id} hazard={hazard} />)
           )}
         </>
       )}
@@ -232,4 +308,74 @@ const styles = StyleSheet.create({
   ownMain: { flex: 1, gap: 2 },
   ownType: { fontFamily: appFonts.semibold, fontSize: 14 },
   ownStatus: { fontFamily: appFonts.bold, fontSize: 12 },
+  map: {
+    height: 230,
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 16,
+    position: 'relative',
+  },
+  mapLineHorizontal: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '50%',
+    borderTopWidth: 1,
+    opacity: 0.7,
+  },
+  mapLineVertical: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: '50%',
+    borderLeftWidth: 1,
+    opacity: 0.7,
+  },
+  mapRadius: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 2,
+    left: '50%',
+    top: '50%',
+    marginLeft: -75,
+    marginTop: -75,
+    opacity: 0.55,
+  },
+  mapCenter: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    marginLeft: -17,
+    marginTop: -17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+  },
+  mapCenterText: { fontFamily: appFonts.bold, fontSize: 10 },
+  mapPin: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginLeft: -15,
+    marginTop: -15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  mapPinText: { fontFamily: appFonts.bold, fontSize: 17 },
+  mapNorth: { position: 'absolute', top: 12, right: 14, fontFamily: appFonts.bold, fontSize: 12 },
+  mapCaption: {
+    position: 'absolute',
+    bottom: 10,
+    left: 14,
+    fontFamily: appFonts.semibold,
+    fontSize: 11,
+  },
 });
