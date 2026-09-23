@@ -21,6 +21,20 @@ export async function fetchOwnMissingPets(client: SupabaseClient<Database>): Pro
   return data ?? [];
 }
 
+export async function fetchNearbyMissingPets(
+  client: SupabaseClient<Database>
+): Promise<MissingPet[]> {
+  await requireUserId(client);
+  const { data, error } = await client
+    .from('missing_pets')
+    .select('*')
+    .eq('status', 'active')
+    .order('last_seen_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function createMissingPet(
   client: SupabaseClient<Database>,
   input: {

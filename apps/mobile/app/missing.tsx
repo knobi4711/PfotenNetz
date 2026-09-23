@@ -64,6 +64,11 @@ export default function MissingPetsScreen() {
       contentContainerStyle={styles.content}
     >
       <AppHeader title="Vermisstes Tier" subtitle="Schnelle Hilfe aus der Nachbarschaft." />
+      <ActionButton
+        title="Vermissten-Radar öffnen"
+        variant="secondary"
+        onPress={() => router.push('/missing/radar')}
+      />
       <Card>
         <SectionTitle>Vermisst melden</SectionTitle>
         <Text style={[styles.hint, { color: c.onSurfaceVariant }]}>
