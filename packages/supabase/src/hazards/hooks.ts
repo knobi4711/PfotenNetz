@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { getSupabaseClient } from '../client/createClient';
 import { hazardKeys } from './keys';
@@ -6,6 +7,8 @@ import {
   createHazardSighting,
   fetchActiveHazards,
   fetchHazard,
+  fetchOwnHazards,
+  subscribeHazards,
   uploadHazardPhoto,
   type ActiveHazard,
   type Hazard,
@@ -41,6 +44,22 @@ export function useHazard(hazardId: string | null): UseQueryResult<Hazard, Error
     },
     enabled: hazardId !== null,
   });
+}
+
+export function useOwnHazards(): UseQueryResult<Hazard[], Error> {
+  const client = getSupabaseClient();
+  return useQuery({ queryKey: hazardKeys.own, queryFn: () => fetchOwnHazards(client) });
+}
+
+export function useHazardSubscription(): void {
+  const queryClient = useQueryClient();
+  useEffect(
+    () =>
+      subscribeHazards(getSupabaseClient(), () => {
+        void queryClient.invalidateQueries({ queryKey: hazardKeys.all });
+      }),
+    [queryClient]
+  );
 }
 
 export function useCreateHazard() {

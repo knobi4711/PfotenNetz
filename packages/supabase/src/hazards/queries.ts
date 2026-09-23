@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
 
 export type Hazard = Database['public']['Tables']['hazards']['Row'];
@@ -22,6 +22,15 @@ export const HAZARD_SEVERITY_LABELS: Record<HazardSeverity, string> = {
   medium: 'Mittel',
   high: 'Hoch',
   critical: 'Akute Lebensgefahr',
+};
+
+export const HAZARD_STATUS_LABELS: Record<Database['public']['Enums']['hazard_status'], string> = {
+  draft: 'Entwurf',
+  pending_review: 'Wird geprüft',
+  active: 'Aktiv',
+  resolved: 'Entwarnt',
+  expired: 'Abgelaufen',
+  rejected: 'Abgelehnt',
 };
 
 async function requireUserId(client: SupabaseClient<Database>): Promise<string> {
@@ -51,6 +60,31 @@ export async function fetchHazard(
   const { data, error } = await client.from('hazards').select('*').eq('id', hazardId).single();
   if (error) throw error;
   return data;
+}
+
+export async function fetchOwnHazards(client: SupabaseClient<Database>): Promise<Hazard[]> {
+  const reporterId = await requireUserId(client);
+  const { data, error } = await client
+    .from('hazards')
+    .select('*')
+    .eq('reporter_id', reporterId)
+    .order('created_at', { ascending: false })
+    .limit(25);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export function subscribeHazards(
+  client: SupabaseClient<Database>,
+  onEvent: () => void
+): () => void {
+  const channel: RealtimeChannel = client
+    .channel('hazards:nearby')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'hazards' }, onEvent)
+    .subscribe();
+  return () => {
+    void client.removeChannel(channel);
+  };
 }
 
 export async function createHazard(

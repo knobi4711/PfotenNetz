@@ -4,9 +4,13 @@ import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import {
   useActiveHazards,
+  useHazardSubscription,
+  useOwnHazards,
+  HAZARD_STATUS_LABELS,
   HAZARD_SEVERITY_LABELS,
   HAZARD_TYPE_LABELS,
   type ActiveHazard,
+  type Hazard,
 } from '@pfotennetz/supabase';
 import {
   ActionButton,
@@ -66,13 +70,45 @@ function HazardRow({ hazard }: { hazard: ActiveHazard }) {
   );
 }
 
+function OwnHazardRow({ hazard }: { hazard: Hazard }) {
+  const c = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Eigene Meldung ${hazard.hazard_number} öffnen`}
+      onPress={() => router.push({ pathname: '/hazard/[id]', params: { id: hazard.id } })}
+    >
+      <View
+        style={[
+          styles.ownRow,
+          { backgroundColor: c.surfaceContainerLow, borderColor: c.outlineVariant },
+        ]}
+      >
+        <View style={styles.ownMain}>
+          <Text style={[styles.ownType, { color: c.onSurface }]}>
+            {HAZARD_TYPE_LABELS[hazard.type]}
+          </Text>
+          <Text style={[styles.meta, { color: c.onSurfaceVariant }]}>{hazard.hazard_number}</Text>
+        </View>
+        <Text
+          style={[styles.ownStatus, { color: hazard.status === 'rejected' ? c.error : c.primary }]}
+        >
+          {HAZARD_STATUS_LABELS[hazard.status]}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function HazardRadarScreen() {
   const c = usePalette();
+  useHazardSubscription();
   const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<(typeof RADII)[number]>(1.5);
   const [locationPending, setLocationPending] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const hazardsQuery = useActiveHazards(center === null ? null : { ...center, radiusKm });
+  const ownHazardsQuery = useOwnHazards();
   const hazards = hazardsQuery.data ?? [];
 
   const locate = () => {
@@ -126,6 +162,14 @@ export default function HazardRadarScreen() {
         ))}
       </ChipRow>
       {locationError ? <ErrorBox message={locationError} /> : null}
+      {ownHazardsQuery.data && ownHazardsQuery.data.length > 0 ? (
+        <Card>
+          <SectionTitle>Meine Meldungen</SectionTitle>
+          {ownHazardsQuery.data.slice(0, 5).map((hazard) => (
+            <OwnHazardRow key={hazard.id} hazard={hazard} />
+          ))}
+        </Card>
+      ) : null}
       {center === null ? (
         <Card>
           <EmptyText>
@@ -176,4 +220,16 @@ const styles = StyleSheet.create({
   meta: { fontFamily: appFonts.regular, fontSize: 12, marginTop: 8 },
   description: { fontFamily: appFonts.regular, fontSize: 14, lineHeight: 20, marginTop: 10 },
   openHint: { fontFamily: appFonts.semibold, fontSize: 12, marginTop: 12 },
+  ownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 8,
+  },
+  ownMain: { flex: 1, gap: 2 },
+  ownType: { fontFamily: appFonts.semibold, fontSize: 14 },
+  ownStatus: { fontFamily: appFonts.bold, fontSize: 12 },
 });
