@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router/tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { appFonts, usePalette } from '../../components/ui';
 
 // Stitch "PfotenNetz App": Bottom-Navigation (Übersicht, Karte, Anfragen, Profil).
@@ -7,6 +8,7 @@ import { appFonts, usePalette } from '../../components/ui';
 // Dashboard zeigt, die App sie aber als eigenen Bereich mit CRUD führt.
 export default function TabLayout() {
   const c = usePalette();
+  const { bottom } = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -18,9 +20,11 @@ export default function TabLayout() {
           backgroundColor: c.surfaceContainerLowest,
           borderTopColor: c.outlineVariant,
           borderTopWidth: 1,
-          height: 70,
+          // Android's three-button navigation bar is not covered by the
+          // fixed tab-bar height. Reserve its bottom inset explicitly.
+          height: 70 + bottom,
           paddingTop: 7,
-          paddingBottom: 8,
+          paddingBottom: 8 + bottom,
           shadowColor: c.onSurface,
           shadowOffset: { width: 0, height: -3 },
           shadowOpacity: 0.04,
