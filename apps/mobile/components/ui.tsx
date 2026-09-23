@@ -1,9 +1,8 @@
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useColorScheme } from 'react-native';
 import type { ComponentProps, ReactNode } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '@pfotennetz/design-system';
-import logoSource from '../assets/pfotennetz-logo.png';
 import { bookingStatusLabels, type BookingStatus } from '../lib/booking';
 
 type Mode = 'light' | 'dark';
@@ -203,7 +202,7 @@ export function AppHeader({
       <View style={styles.brandRow}>
         <View style={styles.brandLockup}>
           <View style={[styles.brandMark, { backgroundColor: c.primaryFixed }]}>
-            <Image source={logoSource} style={styles.brandLogo} />
+            <MaterialCommunityIcons name="paw" size={23} color={c.primary} />
           </View>
           <Text style={[styles.brandName, { color: c.onSurface }]}>PfotenNetz</Text>
         </View>
@@ -434,14 +433,13 @@ const styles = StyleSheet.create({
   },
   brandLockup: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   brandMark: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brandLogo: { width: 24, height: 24, resizeMode: 'contain' },
-  brandName: { fontFamily: appFonts.extrabold, fontSize: 15, letterSpacing: -0.2 },
+  brandName: { fontFamily: appFonts.extrabold, fontSize: 17, letterSpacing: -0.2 },
   appHeaderMain: { flexShrink: 1, flex: 1 },
   appHeaderTitle: {
     fontFamily: appFonts.extrabold,
