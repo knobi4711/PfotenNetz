@@ -265,6 +265,20 @@ export default function HomeScreen() {
         )}
 
         <Card>
+          <SectionTitle>Nachbarschafts-Sicherheit</SectionTitle>
+          <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+            Aktive Gefahren in deiner Nähe prüfen oder eine Warnung melden.
+          </Text>
+          <ActionButton
+            title="Gefahrenradar öffnen"
+            variant="secondary"
+            onPress={() => {
+              router.push('/hazard/radar');
+            }}
+          />
+        </Card>
+
+        <Card>
           <View style={styles.balanceHeading}>
             <View style={[styles.balanceIcon, { backgroundColor: c.secondaryFixed }]}>
               <MaterialCommunityIcons name="hand-heart" size={22} color={c.secondary} />

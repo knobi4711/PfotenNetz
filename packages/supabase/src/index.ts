@@ -40,4 +40,7 @@ export * from './notifications/hooks';
 export * from './devices/keys';
 export * from './devices/queries';
 export * from './devices/hooks';
+export * from './hazards/keys';
+export * from './hazards/queries';
+export * from './hazards/hooks';
 export * from './types/database';
