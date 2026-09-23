@@ -55,6 +55,7 @@ export function useUploadPetPhoto() {
       uploadPetPhoto(client, input.petId, input.uri, input.contentType),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: petsKeys.own });
+      void queryClient.refetchQueries({ queryKey: petsKeys.own, type: 'active' });
     },
   });
 }
