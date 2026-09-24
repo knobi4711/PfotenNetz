@@ -19,6 +19,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Digitale Tier-Notfallkarte mit Chipnummer, Medikamenten, Allergien, Tierarzt- und Versicherungsdaten, inklusive Teilen-Funktion
 - Helfer:innen-Suche mit Standortfreigabe, Radius und schematischer Karte
 - OpenStreetMap/Nominatim-Ortssuche im Web-Gefahrenmelder mit Übernahme der gefundenen Koordinaten
+- Öffentliche Notfallkarten mit zeitlich validiertem Browser-Offline-Cache und Mobile-SecureStore-Fallback
 - OpenStreetMap-/Leaflet-Karten für Helfer:innen-Suche, Gefahrenradar und Tracking-Flows
 - Buchungsworkflow inklusive Statuswechseln, Zeitbank und Benachrichtigungen
 - Buchungs-Chat mit Nachrichtenliste und Realtime-Grundlage
@@ -52,7 +53,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Mobile-Typecheck und Mobile-Lint: erfolgreich
 - Supabase-Tests: 81 erfolgreich
 - Mobile-Tests: 54 erfolgreich
-- Web-E2E: 10/10 erfolgreich
+- Web-E2E: 11/11 erfolgreich, inklusive Offline-Notfallkarten-Smoke-Test
 - Web-Build: erfolgreich
 - Expo-Android-Bundle: erfolgreich erzeugt
 - Remote-Migrationen bis `049_fix_hazard_sighting_geography_assignment.sql` angewendet
@@ -61,7 +62,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 
 - Vollständige Geocoding- und Routenberechnung sowie flächendeckende Straßenkartenfunktionen
 - Native Hintergrund-/Geofence- und Broadcast-Tests auf echten Geräten
-- Offline-Synchronisierung der öffentlichen Notfallkarte
+- QR-/Offline-Notfallkarten-Tests auf realen Android-/iOS-Geräten
 - Tasso-Anbindung und automatische Vermisst-Tier-Synchronisierung
 - Rich-Push-Lockscreen mit Ausweichroute und Entwarnungsaktion
 - Foto-/Audio-Upload, Voice-Notes, Anruf-/Video-Funktionen und Ende-zu-Ende-Verschlüsselung im Chat
@@ -383,7 +384,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 1. Echte Routenberechnung (z. B. OSRM) und die verbleibenden Kartenfunktionen für Mobile und Web integrieren.
 2. Native Live-Tracking-Funktionen mit Geofence und Realtime-Broadcast sind technisch vorbereitet; vollständige
    Tests auf realen Android-/iOS-Geräten stehen noch aus.
-3. Offline-Synchronisierung der öffentlichen Notfallkarte und QR-/Gerätetests ergänzen.
+3. QR-/Offline-Notfallkarten-Tests auf realen Android-/iOS-Geräten ergänzen.
 4. Vermisst-Tier-Sichtungen inklusive Foto-Upload, Detailansicht und Tasso-Prozess ergänzen.
 5. Rich-Push-Flows, Notification-Deep-Links und Entwarnungsaktionen auf realen Android-Geräten testen.
 

@@ -8,6 +8,39 @@ import {
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+const cachePrefix = 'pfotennetz.public-emergency.';
+
+function isValidCard(card: PublicEmergencyCard | null): card is PublicEmergencyCard {
+  return card !== null && Date.parse(card.expires_at) > Date.now();
+}
+
+function readCachedCard(token: string): PublicEmergencyCard | null {
+  try {
+    const value = window.localStorage.getItem(`${cachePrefix}${token}`);
+    if (!value) return null;
+    const card = JSON.parse(value) as PublicEmergencyCard;
+    return isValidCard(card) ? card : null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheCard(token: string, card: PublicEmergencyCard): void {
+  try {
+    window.localStorage.setItem(`${cachePrefix}${token}`, JSON.stringify(card));
+  } catch {
+    // Private browsing or a full storage quota must not block the public card.
+  }
+}
+
+function removeCachedCard(token: string): void {
+  try {
+    window.localStorage.removeItem(`${cachePrefix}${token}`);
+  } catch {
+    // Ignore unavailable browser storage.
+  }
+}
+
 function list(value: unknown) {
   return Array.isArray(value) && value.length ? value.join(', ') : 'Keine Angaben';
 }
@@ -16,15 +49,46 @@ export default function PublicEmergencyCardPage() {
   const params = useParams<{ token: string }>();
   const [card, setCard] = useState<PublicEmergencyCard | null>(null);
   const [state, setState] = useState<'loading' | 'error' | 'ready'>('loading');
+  const [offline, setOffline] = useState(false);
 
   useEffect(() => {
     if (!params.token) return;
+    const cached = readCachedCard(params.token);
+    if (!navigator.onLine) {
+      if (cached) {
+        setCard(cached);
+        setOffline(true);
+        setState('ready');
+      } else {
+        setState('error');
+      }
+      return;
+    }
+
     void fetchPublicEmergencyCard(getSupabaseClient(), params.token)
       .then((value) => {
+        if (!isValidCard(value)) {
+          // An online null response means the token was revoked or expired. Do not
+          // show a stale cached card in that case.
+          removeCachedCard(params.token);
+          setCard(null);
+          setState('error');
+          return;
+        }
+        cacheCard(params.token, value);
         setCard(value);
-        setState(value ? 'ready' : 'error');
+        setOffline(false);
+        setState('ready');
       })
-      .catch(() => setState('error'));
+      .catch(() => {
+        if (cached) {
+          setCard(cached);
+          setOffline(true);
+          setState('ready');
+        } else {
+          setState('error');
+        }
+      });
   }, [params.token]);
 
   return (
@@ -32,6 +96,12 @@ export default function PublicEmergencyCardPage() {
       <div className="mx-auto max-w-xl">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-primary">PfotenNetz</p>
         <h1 className="mt-2 text-3xl font-extrabold">Digitale Notfallkarte</h1>
+        {offline ? (
+          <p className="mt-4 rounded-xl bg-secondary-container p-3 text-sm font-semibold text-on-secondary-container">
+            Offline-Modus: zuletzt synchronisierte Karte. Gültig bis{' '}
+            {card ? new Date(card.expires_at).toLocaleDateString('de-DE') : 'unbekannt'}.
+          </p>
+        ) : null}
         {state === 'loading' ? <p className="mt-8">Notfallkarte wird geladen …</p> : null}
         {state === 'error' ? (
           <section className="card mt-8 p-6" role="alert">

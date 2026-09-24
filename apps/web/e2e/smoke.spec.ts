@@ -45,4 +45,37 @@ test.describe('Web smoke flows', () => {
     await expect(page.getByRole('link', { name: /Dashboard/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /Dashboard/ })).toHaveAttribute('href', '/');
   });
+
+  test('renders a valid cached emergency card when offline', async ({ page }) => {
+    const token = 'offline-test-token';
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    await page.addInitScript(
+      ({ cacheKey, card }) => {
+        window.localStorage.setItem(cacheKey, JSON.stringify(card));
+        Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+      },
+      {
+        cacheKey: `pfotennetz.public-emergency.${token}`,
+        card: {
+          name: 'Testtier',
+          species: 'dog',
+          breed: 'Mischling',
+          color: 'Braun',
+          birth_date: null,
+          microchip_number: 'TEST-123',
+          medications: ['Keine'],
+          allergies: [],
+          special_needs: null,
+          vet_clinic: 'Testpraxis',
+          vet_phone: null,
+          insurance_policy: null,
+          avatar_url: null,
+          expires_at: expiresAt,
+        },
+      }
+    );
+    await page.goto(`/emergency/${token}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Offline-Modus: zuletzt synchronisierte Karte.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Testtier' })).toBeVisible();
+  });
 });
