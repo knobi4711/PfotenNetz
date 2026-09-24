@@ -82,7 +82,7 @@ test.describe('Web smoke flows', () => {
     await expect(page.getByRole('heading', { name: 'Testtier' })).toBeVisible();
   });
 
-  test('edits structured pet health data in an authenticated flow', async ({ page }) => {
+  test('covers authenticated pet health, booking chat and media flows', async ({ page }) => {
     const userId = '00000000-0000-0000-0000-000000000001';
     const petId = '00000000-0000-0000-0000-000000000002';
     const pet = {
@@ -109,6 +109,8 @@ test.describe('Web smoke flows', () => {
       created_at: '2026-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
     };
+    const bookingId = '00000000-0000-0000-0000-000000000003';
+    const helperId = '00000000-0000-0000-0000-000000000004';
     const profile = {
       id: userId,
       display_name: 'Testkonto',
@@ -122,6 +124,36 @@ test.describe('Web smoke flows', () => {
       postal_code: null,
       notification_prefs: {},
       kiez_radius_km: 5,
+    };
+    const booking = {
+      id: bookingId,
+      booking_number: 'PN-TEST-0001',
+      seeker_id: userId,
+      helper_id: helperId,
+      pet_id: petId,
+      type: 'dog_walking',
+      status: 'confirmed',
+      start_at: '2026-10-01T10:00:00.000Z',
+      end_at: '2026-10-01T11:00:00.000Z',
+      meeting_address: 'Teststraße 1',
+      notes: null,
+      currency: 'KIEZ_HOURS',
+      price_kiez_hours: 1,
+      price_eur_cents: null,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+      pet,
+      seekerProfile: profile,
+      helperProfile: { id: helperId, display_name: 'Testhelfer' },
+    };
+    const message = {
+      id: '00000000-0000-0000-0000-000000000005',
+      booking_id: bookingId,
+      sender_id: userId,
+      type: 'text',
+      content: 'Bin gleich da.',
+      metadata: {},
+      created_at: '2026-01-01T00:00:00.000Z',
     };
 
     const authUser = {
@@ -190,8 +222,43 @@ test.describe('Web smoke flows', () => {
         });
         return;
       }
+      if (url.pathname.endsWith('/bookings')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(booking),
+        });
+        return;
+      }
+      if (url.pathname.endsWith('/messages')) {
+        if (route.request().method() === 'POST') {
+          const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>;
+          expect(body.booking_id).toBe(bookingId);
+          if (body.type === 'text') {
+            expect(body.content).toBe('Bin gleich da.');
+          } else {
+            expect(body.type).toBe('image');
+            expect(body.content).toBe('Foto');
+          }
+          await route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify(message),
+          });
+          return;
+        }
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+        return;
+      }
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
+    await page.route('**/storage/v1/object/**', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ Key: 'test.jpg' }),
+      })
+    );
 
     await page.goto('/pets', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Testtier' })).toBeVisible();
@@ -202,5 +269,15 @@ test.describe('Web smoke flows', () => {
     await page.getByLabel('Tierarzt-Telefon').fill('+49 30 987654');
     await page.getByRole('button', { name: 'Gesundheitsdaten speichern' }).click();
     await expect(page.getByRole('button', { name: 'Gesundheitsdaten speichern' })).toBeVisible();
+    await page.goto(`/chat/${bookingId}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Betreuung für Testtier')).toBeVisible();
+    await page.getByRole('textbox', { name: 'Nachricht' }).fill('Bin gleich da.');
+    await page.getByRole('button', { name: 'Senden' }).click();
+    await expect(page.getByRole('textbox', { name: 'Nachricht' })).toHaveValue('');
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'sichtung.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from('test-image'),
+    });
   });
 });

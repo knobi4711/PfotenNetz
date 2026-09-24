@@ -55,7 +55,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Mobile-Typecheck und Mobile-Lint: erfolgreich
 - Supabase-Tests: 83 erfolgreich
 - Mobile-Tests: 54 erfolgreich
-- Web-E2E: 15/15 erfolgreich, inklusive authentifiziertem Tierprofil-Update, Buchungs-/Chat-Routen und Offline-Notfallkarten-Smoke-Test
+- Web-E2E: 15/15 erfolgreich, inklusive authentifizierten Tier-, Buchungs-, Chat- und Medienflüssen sowie Offline-Notfallkarten-Smoke-Test
 - Web-Build: erfolgreich
 - Expo-Android-Bundle: erfolgreich erzeugt
 - Remote-Migrationen bis `049_fix_hazard_sighting_geography_assignment.sql` angewendet
