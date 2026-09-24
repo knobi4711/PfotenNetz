@@ -1,7 +1,7 @@
 # PfotenNetz — Gesamte Plattform-Architektur & Screen-Spezifikation
 
 **Projekt:** PfotenNetz — Mobile-First & Desktop Nachbarschafts-Plattform für Haustierbetreuung, P2P-Solidarität & hyperlokale Gefahrenwarnung  
-**Version:** 3.2.0 (Standabgleich Mobile/Web, 24.09.2026)
+**Version:** 3.3.0 (Standabgleich Mobile/Web, 24.09.2026)
 **Design-System:** Warm Community Pet Care (`#e26d46` Terracotta, `#2e7d32` Salbeigrün/Waldgrün, `#fff8f5` Warm Linen)  
 **Status:** Mobile-Betreuungsplattform und zentrale Web-Flows implementiert; Notfall-, Integrations- und Produktionsfunktionen teilweise offen
 
@@ -39,11 +39,13 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - `/hazard/radar`: Desktop-Gefahrenradar mit Standort, Pins und Filtern
 - `/hazard/report` und `/hazard/[id]`: Gefahrenmeldung und Details
 - `/bookings`: Buchungsübersicht
+- `/booking/[id]`: Buchungsdetail mit Statusaktionen und Chat-Einstieg
+- `/chat/[bookingId]`: Web-Chat mit Text-, Foto- und Medienanzeige
 - `/profile`: Profil und Zeitbank-Verlauf
 - `/pets`: Tierprofile mit strukturierten Gesundheitsdaten und Notfallkarten-Zugriff
 - `/missing` und `/missing/[id]`: Vermisst-Tier-Übersicht, Sichtungsverlauf und Foto-Upload
 - `/tracking`: Betreuung-/Tracking-Übersicht mit direktem Web-Chat-Einstieg
-- `/community`: kommende Community-Events
+- `/community`: kommende Community-Events, Event-Erstellung und Teilnahme
 - `/hazard/moderation`: Admin-Moderation aktiver Gefahrenmeldungen
 - Root-`.env`-Laden für den Web-Build im Monorepo
 
@@ -62,14 +64,14 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 
 ### Noch nicht vollständig umgesetzt
 
-- Vollständige Geocoding- und Routenberechnung sowie flächendeckende Straßenkartenfunktionen
+- Vollständige Geocoding-Abdeckung sowie flächendeckende Straßenkartenfunktionen
 - Native Hintergrund-/Geofence- und Broadcast-Tests auf echten Geräten
 - QR-/Offline-Notfallkarten-Tests auf realen Android-/iOS-Geräten
 - Tasso-Anbindung und automatische Vermisst-Tier-Synchronisierung
 - Rich-Push-Lockscreen mit Ausweichroute und Entwarnungsaktion
-- Foto-/Audio-Upload, Voice-Notes, Anruf-/Video-Funktionen und Ende-zu-Ende-Verschlüsselung im Chat
+- Native Voice-Notes, Anruf-/Video-Funktionen und Ende-zu-Ende-Verschlüsselung im Chat
 - SmartLock, Haftpflicht-/Schutzgarantie- und Tierarzt-/Polizei-Integrationen
-- Vollständige Community-Moderation und Event-Erstellung
+- Erweiterte Community-Moderation und produktive Event-Moderationsrichtlinien
 - Native Passkeys bleiben ein PoC und benötigen einen Development Build
 
 ---
@@ -410,7 +412,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 
 ### Priorität 1 – Produktreife
 
-1. Echte Routenberechnung ist im Web-Live-Tracking über OSRM integriert; verbleibende Kartenfunktionen für Mobile und Web ergänzen.
+1. OSRM-Routenberechnung ist im Web-Live-Tracking integriert; verbleibende Kartenfunktionen und mobile Routenführung ergänzen.
 2. Native Live-Tracking-Funktionen mit Geofence und Realtime-Broadcast sind technisch vorbereitet; vollständige
    Tests auf realen Android-/iOS-Geräten stehen noch aus.
 3. QR-/Offline-Notfallkarten-Tests auf realen Android-/iOS-Geräten ergänzen.
@@ -420,7 +422,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 ### Priorität 2 – Plattformfunktionen
 
 1. Native Geräte-/Development-Build-Tests für Push, Tracking, Geofence, QR und Offline-Modus durchführen.
-2. Authentifizierte Web-Buchungs- und Chat-Flows mit echten Testkonten als E2E-Tests ergänzen.
+2. Authentifizierte Web-Buchungs-, Chat- und Medienflüsse sind mit isolierten Testkonten als E2E-Test abgedeckt; echte Staging-Testkonten ergänzen.
 3. Native Passkeys in einem Expo-Development-Build validieren.
 4. Authentifizierte Playwright-/Detox- und native Gerätetests sowie CI-Checks für die Hauptjourneys ausbauen.
 
