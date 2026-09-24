@@ -40,7 +40,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - `/hazard/report` und `/hazard/[id]`: Gefahrenmeldung und Details
 - `/bookings`: Buchungsübersicht
 - `/profile`: Profil und Zeitbank-Verlauf
-- `/pets`: Tierprofile
+- `/pets`: Tierprofile mit strukturierten Gesundheitsdaten und Notfallkarten-Zugriff
 - `/missing` und `/missing/[id]`: Vermisst-Tier-Übersicht, Sichtungsverlauf und Foto-Upload
 - `/tracking`: Betreuung-/Tracking-Übersicht mit direktem Web-Chat-Einstieg
 - `/community`: kommende Community-Events
@@ -421,9 +421,8 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 
 1. Native Geräte-/Development-Build-Tests für Push, Tracking, Geofence, QR und Offline-Modus durchführen.
 2. Authentifizierte Web-Buchungs- und Chat-Flows mit echten Testkonten als E2E-Tests ergänzen.
-3. Tierprofil-Formular um strukturierte Medikamente, Allergien und Tierarztinformationen erweitern.
-4. Native Passkeys in einem Expo-Development-Build validieren.
-5. Authentifizierte Playwright-/Detox- und native Gerätetests sowie CI-Checks für die Hauptjourneys ausbauen.
+3. Native Passkeys in einem Expo-Development-Build validieren.
+4. Authentifizierte Playwright-/Detox- und native Gerätetests sowie CI-Checks für die Hauptjourneys ausbauen.
 
 ### Priorität 3 – Integrationen und Betrieb
 

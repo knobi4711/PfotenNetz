@@ -1,8 +1,115 @@
 'use client';
 
-import { useOwnPets, PET_SPECIES_LABELS, type PetSpecies } from '@pfotennetz/supabase';
+import {
+  useOwnPets,
+  useUpdatePet,
+  PET_SPECIES_LABELS,
+  type Pet,
+  type PetSpecies,
+} from '@pfotennetz/supabase';
 import Image from 'next/image';
 import { WebHeader } from '../../components/WebHeader';
+import { useState } from 'react';
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+function PetHealthEditor({ pet }: { pet: Pet }) {
+  const update = useUpdatePet();
+  const [open, setOpen] = useState(false);
+  const [medications, setMedications] = useState(stringList(pet.medications).join(', '));
+  const [allergies, setAllergies] = useState(pet.allergies?.join(', ') ?? '');
+  const [vetClinic, setVetClinic] = useState(pet.vet_clinic ?? '');
+  const [vetPhone, setVetPhone] = useState(pet.vet_phone ?? '');
+
+  const save = () => {
+    const list = (value: string) =>
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+    update.mutate({
+      petId: pet.id,
+      name: pet.name,
+      species: pet.species as PetSpecies,
+      breed: pet.breed,
+      color: pet.color,
+      specialNeeds: pet.special_needs,
+      birthDate: pet.birth_date,
+      microchipNumber: pet.microchip_number,
+      insurancePolicy: pet.insurance_policy,
+      medications: list(medications),
+      allergies: list(allergies),
+      vetClinic,
+      vetPhone,
+    });
+  };
+
+  return (
+    <section className="mt-6 border-t border-outline-variant/30 pt-5">
+      <button
+        type="button"
+        className="text-sm font-bold text-primary"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+      >
+        {open ? 'Gesundheitsdaten schließen' : 'Gesundheitsdaten bearbeiten'}
+      </button>
+      {open ? (
+        <div className="mt-4 space-y-3">
+          <label className="block text-sm font-bold">
+            Medikamente
+            <input
+              value={medications}
+              onChange={(event) => setMedications(event.target.value)}
+              placeholder="z. B. Insulin, Schilddrüsenmittel"
+              className="input mt-1"
+            />
+          </label>
+          <label className="block text-sm font-bold">
+            Allergien
+            <input
+              value={allergies}
+              onChange={(event) => setAllergies(event.target.value)}
+              placeholder="Kommagetrennte Liste"
+              className="input mt-1"
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-bold">
+              Tierarztpraxis
+              <input
+                value={vetClinic}
+                onChange={(event) => setVetClinic(event.target.value)}
+                className="input mt-1"
+              />
+            </label>
+            <label className="block text-sm font-bold">
+              Tierarzt-Telefon
+              <input
+                type="tel"
+                value={vetPhone}
+                onChange={(event) => setVetPhone(event.target.value)}
+                className="input mt-1"
+              />
+            </label>
+          </div>
+          {update.isError ? (
+            <p role="alert" className="text-sm text-error">
+              Gesundheitsdaten konnten nicht gespeichert werden: {update.error.message}
+            </p>
+          ) : null}
+          <button type="button" className="btn-primary" disabled={update.isPending} onClick={save}>
+            {update.isPending ? 'Wird gespeichert …' : 'Gesundheitsdaten speichern'}
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 function age(birthDate: string | null): string | null {
   if (!birthDate) return null;
@@ -94,6 +201,7 @@ export default function PetsPage() {
                       <strong>Besonderes:</strong> {pet.special_needs}
                     </div>
                   ) : null}
+                  <PetHealthEditor pet={pet} />
                 </div>
               </article>
             ))}
