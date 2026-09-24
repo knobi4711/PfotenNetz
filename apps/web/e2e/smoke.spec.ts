@@ -11,6 +11,8 @@ const routes = [
   '/hazard/radar',
   '/hazard/report',
   '/missing',
+  '/booking/smoke-test',
+  '/chat/smoke-test',
 ];
 
 test.beforeEach(async ({ page }) => {
