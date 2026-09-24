@@ -383,7 +383,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 
 ### Priorität 1 – Produktreife
 
-1. Echte Routenberechnung (z. B. OSRM) und die verbleibenden Kartenfunktionen für Mobile und Web integrieren.
+1. Echte Routenberechnung ist im Web-Live-Tracking über OSRM integriert; verbleibende Kartenfunktionen für Mobile und Web ergänzen.
 2. Native Live-Tracking-Funktionen mit Geofence und Realtime-Broadcast sind technisch vorbereitet; vollständige
    Tests auf realen Android-/iOS-Geräten stehen noch aus.
 3. QR-/Offline-Notfallkarten-Tests auf realen Android-/iOS-Geräten ergänzen.
@@ -392,8 +392,8 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 
 ### Priorität 2 – Plattformfunktionen
 
-1. Web-Buchungsdetail, Web-Chat und Mediengalerie ergänzen.
-2. Native Geräte-/Development-Build-Tests für Push, Tracking, Geofence, QR und Offline-Modus durchführen.
+1. Native Geräte-/Development-Build-Tests für Push, Tracking, Geofence, QR und Offline-Modus durchführen.
+2. Authentifizierte Web-Buchungs- und Chat-Flows als E2E-Tests ergänzen.
 3. Tierprofil-Formular um strukturierte Medikamente, Allergien und Tierarztinformationen erweitern.
 4. Native Passkeys in einem Expo-Development-Build validieren.
 5. Authentifizierte Playwright-/Detox- und native Gerätetests sowie CI-Checks für die Hauptjourneys ausbauen.

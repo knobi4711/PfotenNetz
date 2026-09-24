@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { fetchOsrmWalkingRoute, type RoutingPoint } from '@pfotennetz/shared';
 
 type LeafletMap = {
   setView: (center: [number, number], zoom: number) => LeafletMap;
@@ -77,7 +78,7 @@ export function LiveTrackingMap({
       document.head.appendChild(stylesheet);
     }
     let disposed = false;
-    void loadLeaflet().then((leaflet) => {
+    void loadLeaflet().then(async (leaflet) => {
       if (disposed || !ref.current) return;
       const fresh = !map.current;
       map.current = map.current ?? leaflet.map(ref.current);
@@ -92,10 +93,20 @@ export function LiveTrackingMap({
           })
           .addTo(map.current);
       }
+      let routePoints: RoutingPoint[] = points;
       if (points.length > 1) {
+        try {
+          const calculated = await fetchOsrmWalkingRoute(points);
+          if (!disposed && calculated.length > 1) routePoints = calculated;
+        } catch {
+          // Die lokale GPS-Spur bleibt als robuste Offline-/Fallback-Darstellung sichtbar.
+        }
+      }
+      if (disposed) return;
+      if (routePoints.length > 1) {
         leaflet
           .polyline(
-            points.map((point) => [point.latitude, point.longitude]),
+            routePoints.map((point) => [point.latitude, point.longitude]),
             { color: '#e26d46', weight: 5, opacity: 0.85 }
           )
           .addTo(layers.current);
