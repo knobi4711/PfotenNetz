@@ -14,6 +14,7 @@ import {
   useTimebankAccount,
   useTimebankTransactions,
   useUpdateOwnProfile,
+  type NotificationPreferences,
   type KiezRadius,
   type TimebankTransaction,
 } from '@pfotennetz/supabase';
@@ -21,6 +22,7 @@ import { formatDate, formatTimebankHours, formatTimebankHoursMagnitude } from '@
 import { timebankTxDescription, timebankTxTypeLabels } from '../../lib/booking';
 import { AvailabilityManager } from '../../components/helper-availability';
 import { HelperStatusCard } from '../../components/helper-status';
+import { useTheme, type ThemeMode } from '../../providers/theme';
 import {
   friendlyPasskeyError,
   isPasskeySupported,
@@ -102,6 +104,7 @@ function TransactionRow({ tx }: { tx: TimebankTransaction }) {
 
 export default function ProfileScreen() {
   const c = usePalette();
+  const theme = useTheme();
   const profileQuery = useOwnProfile();
   const updateProfile = useUpdateOwnProfile();
   const accountQuery = useTimebankAccount();
@@ -115,6 +118,11 @@ export default function ProfileScreen() {
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [kiezRadiusKm, setKiezRadiusKm] = useState<KiezRadius>(1.5);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({
+    hazards: true,
+    bookings: true,
+    community: true,
+  });
   const [formHint, setFormHint] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -247,6 +255,21 @@ export default function ProfileScreen() {
     setKiezRadiusKm(
       (KIEZ_RADIUS_OPTIONS as readonly number[]).includes(current) ? (current as KiezRadius) : 1.5
     );
+    const prefs = profile?.notification_prefs;
+    setNotificationPrefs({
+      hazards:
+        typeof prefs === 'object' && prefs !== null && 'hazards' in prefs
+          ? prefs.hazards === true
+          : true,
+      bookings:
+        typeof prefs === 'object' && prefs !== null && 'bookings' in prefs
+          ? prefs.bookings === true
+          : true,
+      community:
+        typeof prefs === 'object' && prefs !== null && 'community' in prefs
+          ? prefs.community === true
+          : true,
+    });
     setFormHint(null);
     setEditing(true);
   };
@@ -254,7 +277,7 @@ export default function ProfileScreen() {
   const handleSave = () => {
     setFormHint(null);
     updateProfile.mutate(
-      { displayName: displayName.trim(), phone, kiezRadiusKm },
+      { displayName: displayName.trim(), phone, kiezRadiusKm, notificationPrefs },
       {
         onSuccess: () => {
           setEditing(false);
@@ -286,6 +309,18 @@ export default function ProfileScreen() {
           subtitle="Vertrauen, Verfügbarkeit und Nachbarschafts-Einstellungen."
           avatarLabel={profile?.display_name.slice(0, 1).toUpperCase() || '🐾'}
         />
+
+        {profile?.role === 'admin' ? (
+          <Card>
+            <SectionTitle>Administration</SectionTitle>
+            <EmptyText>Prüfe Gefahrenmeldungen und verwalte aktive Warnungen.</EmptyText>
+            <ActionButton
+              title="Administration öffnen"
+              variant="secondary"
+              onPress={() => router.push('/hazard/moderation')}
+            />
+          </Card>
+        ) : null}
 
         <Card>
           {profileQuery.isPending ? (
@@ -366,6 +401,34 @@ export default function ProfileScreen() {
                   );
                 })}
               </View>
+              <Text style={[styles.label, { color: c.onSurface }]}>Benachrichtigungen</Text>
+              {(
+                [
+                  ['hazards', 'Akute Gefahren'],
+                  ['bookings', 'Betreuungsanfragen'],
+                  ['community', 'Community-Events'],
+                ] as const
+              ).map(([key, label]) => (
+                <Pressable
+                  key={key}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: notificationPrefs[key] }}
+                  onPress={() =>
+                    setNotificationPrefs((current) => ({ ...current, [key]: !current[key] }))
+                  }
+                  style={styles.preferenceRow}
+                >
+                  <Text
+                    style={[
+                      styles.preferenceBox,
+                      { color: notificationPrefs[key] ? c.primary : c.outline },
+                    ]}
+                  >
+                    {notificationPrefs[key] ? '☑' : '☐'}
+                  </Text>
+                  <Text style={[styles.preferenceText, { color: c.onSurface }]}>{label}</Text>
+                </Pressable>
+              ))}
               {formHint !== null ? (
                 <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
               ) : null}
@@ -425,6 +488,44 @@ export default function ProfileScreen() {
 
         {profile !== null && !editing ? (
           <>
+            <Card>
+              <SectionTitle>Darstellung</SectionTitle>
+              <Text style={[styles.passkeyDescription, { color: c.onSurfaceVariant }]}>
+                Wähle, ob PfotenNetz dem Gerätemodus folgt oder dauerhaft hell bzw. dunkel angezeigt
+                wird.
+              </Text>
+              <View style={styles.themeOptions}>
+                {(
+                  [
+                    ['system', 'System'],
+                    ['light', 'Hell'],
+                    ['dark', 'Dunkel'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Pressable
+                    key={value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: theme.mode === value }}
+                    onPress={() => theme.setMode(value as ThemeMode)}
+                    style={[
+                      styles.themeOption,
+                      {
+                        backgroundColor: theme.mode === value ? c.primary : c.surfaceContainerHigh,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.themeOptionText,
+                        { color: theme.mode === value ? c.onPrimary : c.onSurface },
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Card>
             <HelperStatusCard profile={profile} />
             <AvailabilityManager />
             {profile.role === 'admin' ? (
@@ -437,6 +538,11 @@ export default function ProfileScreen() {
                   title="Gefahrenmeldungen prüfen"
                   variant="secondary"
                   onPress={() => router.push('/hazard/moderation')}
+                />
+                <ActionButton
+                  title="Community-Events prüfen"
+                  variant="secondary"
+                  onPress={() => router.push('/community/moderation')}
                 />
               </Card>
             ) : null}
@@ -628,6 +734,9 @@ const styles = StyleSheet.create({
   radiusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   radiusChip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
   radiusText: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18 },
+  preferenceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
+  preferenceBox: { fontSize: 22, lineHeight: 26 },
+  preferenceText: { fontFamily: appFonts.regular, fontSize: 14 },
   passkeyDescription: {
     fontFamily: appFonts.regular,
     fontSize: 13,
@@ -654,4 +763,7 @@ const styles = StyleSheet.create({
   txAmounts: { alignItems: 'flex-end', gap: 2 },
   txAmount: { fontFamily: appFonts.extrabold, fontSize: 14, lineHeight: 20 },
   txBalance: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
+  themeOptions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  themeOption: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
+  themeOptionText: { fontFamily: appFonts.bold, fontSize: 13 },
 });

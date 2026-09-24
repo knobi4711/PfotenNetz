@@ -2,6 +2,7 @@
 
 import { useBookings, useCurrentUser, type BookingWithRelations } from '@pfotennetz/supabase';
 import { useRouter } from 'next/navigation';
+import { WebHeader } from '../../components/WebHeader';
 
 const STATUS: Record<string, string> = {
   requested: 'Angefragt',
@@ -70,24 +71,7 @@ export default function BookingsPage() {
   const data = bookings.data ?? [];
   return (
     <main className="min-h-screen bg-surface">
-      <header className="border-b border-outline-variant/30 bg-surface-container-lowest">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="text-xl font-extrabold text-on-surface"
-          >
-            🐾 PfotenNetz
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="text-sm font-bold text-primary"
-          >
-            ← Dashboard
-          </button>
-        </div>
-      </header>
+      <WebHeader backHref="/" backLabel="Dashboard" />
       <div className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>

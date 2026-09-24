@@ -5,14 +5,144 @@ import {
   HAZARD_TYPE_LABELS,
   useActiveHazards,
   useHazardSubscription,
+  useOwnProfile,
   type ActiveHazard,
 } from '@pfotennetz/supabase';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { WebHeader } from '../../../components/WebHeader';
 
 const RADII = [0.5, 1, 1.5, 3] as const;
 const SEVERITIES = ['all', 'critical', 'high', 'medium', 'low'] as const;
 const TIME_RANGES = [2, 24, 168] as const;
+
+type LeafletMap = {
+  setView: (center: [number, number], zoom: number) => LeafletMap;
+  remove: () => void;
+};
+type LeafletLayerGroup = { addTo: (map: LeafletMap) => LeafletLayerGroup; clearLayers: () => void };
+type LeafletApi = {
+  map: (element: HTMLDivElement) => LeafletMap;
+  tileLayer: (
+    url: string,
+    options: { maxZoom: number; attribution: string }
+  ) => { addTo: (map: LeafletMap) => void };
+  layerGroup: () => LeafletLayerGroup;
+  circle: (
+    center: [number, number],
+    options: Record<string, number | string>
+  ) => { addTo: (map: LeafletMap) => void };
+  marker: (center: [number, number]) => {
+    addTo: (target: LeafletLayerGroup) => {
+      bindPopup: (content: string) => { on: (event: string, callback: () => void) => void };
+    };
+  };
+};
+
+function loadLeaflet(): Promise<LeafletApi> {
+  const script =
+    document.querySelector<HTMLScriptElement>('script[data-pfotennetz-leaflet]') ??
+    document.createElement('script');
+  if (!script.src) {
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.async = true;
+    script.dataset.pfotennetzLeaflet = 'true';
+    document.head.appendChild(script);
+  }
+  return new Promise((resolve, reject) => {
+    const check = () => {
+      const leaflet = (window as unknown as { L?: LeafletApi }).L;
+      if (leaflet) resolve(leaflet);
+      else window.setTimeout(check, 50);
+    };
+    script.addEventListener('load', check, { once: true });
+    script.addEventListener(
+      'error',
+      () => reject(new Error('Kartenbibliothek konnte nicht geladen werden.')),
+      { once: true }
+    );
+    check();
+  });
+}
+
+function hazardColor(severity: string): string {
+  if (severity === 'critical' || severity === 'high') return 'bg-error text-on-error';
+  if (severity === 'medium') return 'bg-primary text-on-primary';
+  return 'bg-secondary text-on-secondary';
+}
+
+function OSMHazardMap({
+  center,
+  radiusKm,
+  hazards,
+  onOpen,
+}: {
+  center: { latitude: number; longitude: number };
+  radiusKm: number;
+  hazards: ActiveHazard[];
+  onOpen: (id: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const map = useRef<LeafletMap | null>(null);
+  const layers = useRef<LeafletLayerGroup | null>(null);
+  useEffect(() => {
+    const link = 'pfotennetz-leaflet-css';
+    if (!document.getElementById(link)) {
+      const stylesheet = document.createElement('link');
+      stylesheet.id = link;
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(stylesheet);
+    }
+    let disposed = false;
+    void loadLeaflet().then((leaflet) => {
+      if (disposed || !ref.current) return;
+      const fresh = !map.current;
+      map.current = map.current ?? leaflet.map(ref.current);
+      map.current.setView(
+        [center.latitude, center.longitude],
+        Math.max(10, Math.round(15 - Math.log2(radiusKm)))
+      );
+      layers.current = layers.current ?? leaflet.layerGroup().addTo(map.current);
+      layers.current.clearLayers();
+      if (fresh)
+        leaflet
+          .tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap-Mitwirkende',
+          })
+          .addTo(map.current);
+      leaflet
+        .circle([center.latitude, center.longitude], {
+          radius: radiusKm * 1000,
+          color: '#ba1a1a',
+          fillColor: '#ba1a1a',
+          fillOpacity: 0.1,
+        })
+        .addTo(map.current);
+      hazards.forEach((hazard) => {
+        const marker = leaflet
+          .marker([hazard.latitude, hazard.longitude])
+          .addTo(layers.current as LeafletLayerGroup)
+          .bindPopup(
+            `${HAZARD_TYPE_LABELS[hazard.type as keyof typeof HAZARD_TYPE_LABELS]} · ${HAZARD_SEVERITY_LABELS[hazard.severity as keyof typeof HAZARD_SEVERITY_LABELS]}`
+          );
+        marker.on('click', () => onOpen(hazard.id));
+      });
+    });
+    return () => {
+      disposed = true;
+    };
+  }, [center, radiusKm, hazards, onOpen]);
+  useEffect(() => () => map.current?.remove(), []);
+  return (
+    <div
+      ref={ref}
+      className="h-[560px] w-full rounded-3xl"
+      aria-label="OpenStreetMap-Gefahrenkarte"
+    />
+  );
+}
 
 function locate(): Promise<{ latitude: number; longitude: number }> {
   return new Promise((resolve, reject) => {
@@ -26,29 +156,9 @@ function locate(): Promise<{ latitude: number; longitude: number }> {
   });
 }
 
-function point(
-  center: { latitude: number; longitude: number },
-  hazard: ActiveHazard,
-  radius: number
-) {
-  const latitudeKm = (hazard.latitude - center.latitude) * 111.32;
-  const longitudeKm =
-    (hazard.longitude - center.longitude) * 111.32 * Math.cos((center.latitude * Math.PI) / 180);
-  const clamp = (value: number) => Math.min(94, Math.max(6, value));
-  return {
-    left: `${clamp(50 + (longitudeKm / Math.max(radius, 0.5)) * 42)}%`,
-    top: `${clamp(50 - (latitudeKm / Math.max(radius, 0.5)) * 42)}%`,
-  };
-}
-
-function hazardColor(severity: string): string {
-  if (severity === 'critical' || severity === 'high') return 'bg-error text-on-error';
-  if (severity === 'medium') return 'bg-primary text-on-primary';
-  return 'bg-secondary text-on-secondary';
-}
-
 export default function WebHazardRadarPage() {
   const router = useRouter();
+  const profile = useOwnProfile();
   useHazardSubscription();
   const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radius, setRadius] = useState<(typeof RADII)[number]>(1.5);
@@ -74,7 +184,20 @@ export default function WebHazardRadarPage() {
 
   return (
     <main className="min-h-screen bg-surface">
-      <header className="border-b border-outline-variant/30 bg-surface-container-lowest">
+      <WebHeader
+        backHref="/"
+        backLabel="Dashboard"
+        rightContent={
+          <button
+            type="button"
+            onClick={() => router.push('/explore')}
+            className="text-sm font-bold text-on-surface-variant"
+          >
+            Helfer:innen
+          </button>
+        }
+      />
+      {/*
         <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-5 lg:px-10">
           <button
             type="button"
@@ -103,7 +226,7 @@ export default function WebHazardRadarPage() {
             </button>
           </div>
         </div>
-      </header>
+      </header>*/}
       <div className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">
         <div className="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
@@ -122,6 +245,15 @@ export default function WebHazardRadarPage() {
           >
             Gefahr melden
           </button>
+          {profile.data?.role === 'admin' ? (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => router.push('/hazard/moderation')}
+            >
+              Meldungen prüfen
+            </button>
+          ) : null}
         </div>
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <button type="button" className="btn-primary" onClick={handleLocate}>
@@ -194,38 +326,13 @@ export default function WebHazardRadarPage() {
               ))}
             </div>
             <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-              <div className="relative h-[560px] overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-[var(--shadow-level-1)]">
-                <div
-                  className="absolute inset-0 opacity-40"
-                  style={{
-                    backgroundImage:
-                      'linear-gradient(var(--color-outline-variant) 1px, transparent 1px), linear-gradient(90deg, var(--color-outline-variant) 1px, transparent 1px)',
-                    backgroundSize: '84px 84px',
-                  }}
+              <div className="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-[var(--shadow-level-1)]">
+                <OSMHazardMap
+                  center={center}
+                  radiusKm={radius}
+                  hazards={hazards}
+                  onOpen={(id) => router.push(`/hazard/${id}`)}
                 />
-                <div className="absolute left-1/2 top-1/2 flex h-48 w-48 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-error/40 bg-error/5">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-surface bg-secondary text-xs font-bold text-on-secondary">
-                    Du
-                  </span>
-                </div>
-                {hazards.map((hazard) => (
-                  <button
-                    type="button"
-                    key={hazard.id}
-                    onClick={() => router.push(`/hazard/${hazard.id}`)}
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full border-4 border-surface text-lg font-extrabold shadow-lg ${hazardColor(hazard.severity)}`}
-                    style={point(center, hazard, radius)}
-                    aria-label={`${HAZARD_TYPE_LABELS[hazard.type as keyof typeof HAZARD_TYPE_LABELS]} öffnen`}
-                  >
-                    !
-                  </button>
-                ))}
-                <span className="absolute right-5 top-5 rounded-lg bg-surface-container-lowest/90 px-3 py-2 text-xs font-bold text-on-surface-variant">
-                  {hazards.length} Warnungen · ±{radius} km
-                </span>
-                <span className="absolute bottom-5 left-5 rounded-lg bg-surface-container-lowest/90 px-3 py-2 text-xs font-bold text-on-surface-variant">
-                  Norden ↑
-                </span>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">

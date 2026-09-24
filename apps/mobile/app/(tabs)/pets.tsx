@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { File } from 'expo-file-system';
 import {
@@ -96,6 +96,7 @@ function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
 
 export default function PetsScreen() {
   const c = usePalette();
+  const { editPetId } = useLocalSearchParams<{ editPetId?: string }>();
   const petsQuery = useOwnPets();
   const createPet = useCreatePet();
   const updatePet = useUpdatePet();
@@ -110,6 +111,12 @@ export default function PetsScreen() {
   const [breed, setBreed] = useState('');
   const [color, setColor] = useState('');
   const [specialNeeds, setSpecialNeeds] = useState('');
+  const [microchipNumber, setMicrochipNumber] = useState('');
+  const [insurancePolicy, setInsurancePolicy] = useState('');
+  const [vetClinic, setVetClinic] = useState('');
+  const [vetPhone, setVetPhone] = useState('');
+  const [medications, setMedications] = useState('');
+  const [allergies, setAllergies] = useState('');
   const [birthYear, setBirthYear] = useState('');
   const [birthMonth, setBirthMonth] = useState('');
   const [birthDay, setBirthDay] = useState('');
@@ -149,12 +156,24 @@ export default function PetsScreen() {
     setBreed(pet.breed ?? '');
     setColor(pet.color ?? '');
     setSpecialNeeds(pet.special_needs ?? '');
+    setMicrochipNumber(pet.microchip_number ?? '');
+    setInsurancePolicy(pet.insurance_policy ?? '');
+    setVetClinic(pet.vet_clinic ?? '');
+    setVetPhone(pet.vet_phone ?? '');
+    setMedications(Array.isArray(pet.medications) ? pet.medications.join(', ') : '');
+    setAllergies(pet.allergies?.join(', ') ?? '');
     setBirthYear(pet.birth_date?.slice(0, 4) ?? '');
     setBirthMonth(pet.birth_date?.slice(5, 7).replace(/^0/, '') ?? '');
     setBirthDay(pet.birth_date?.slice(8, 10).replace(/^0/, '') ?? '');
     setFormHint(null);
     setShowForm(true);
   };
+
+  useEffect(() => {
+    if (editPetId === undefined || editingPet !== null || petsQuery.isPending) return;
+    const pet = (petsQuery.data ?? []).find((candidate) => candidate.id === editPetId);
+    if (pet !== undefined) openEditForm(pet);
+  }, [editPetId, editingPet, petsQuery.data, petsQuery.isPending]);
 
   const closeForm = () => {
     setShowForm(false);
@@ -163,6 +182,12 @@ export default function PetsScreen() {
     setBreed('');
     setColor('');
     setSpecialNeeds('');
+    setMicrochipNumber('');
+    setInsurancePolicy('');
+    setVetClinic('');
+    setVetPhone('');
+    setMedications('');
+    setAllergies('');
     setBirthYear('');
     setBirthMonth('');
     setBirthDay('');
@@ -196,6 +221,18 @@ export default function PetsScreen() {
       color: color.trim() === '' ? null : color.trim(),
       specialNeeds: specialNeeds.trim() === '' ? null : specialNeeds.trim(),
       birthDate: year === '' ? null : `${year}-${month}-${day}`,
+      microchipNumber,
+      insurancePolicy,
+      vetClinic,
+      vetPhone,
+      medications: medications
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+      allergies: allergies
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
     };
     if (editingPet === null) {
       createPet.mutate(input, { onSuccess: closeForm });
@@ -480,6 +517,112 @@ export default function PetsScreen() {
                     />
                   </View>
                 </View>
+                <Text style={[styles.label, { color: c.onSurface }]}>Chipnummer (optional)</Text>
+                <TextInput
+                  editable={!pending}
+                  onChangeText={setMicrochipNumber}
+                  placeholder="z. B. 276..."
+                  placeholderTextColor={c.outline}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: c.surfaceContainerLow,
+                      borderColor: c.outlineVariant,
+                      color: c.onSurface,
+                    },
+                  ]}
+                  value={microchipNumber}
+                />
+                <Text style={[styles.label, { color: c.onSurface }]}>
+                  Medikamente (kommagetrennt)
+                </Text>
+                <TextInput
+                  editable={!pending}
+                  onChangeText={setMedications}
+                  placeholder="z. B. Apoquel 16 mg"
+                  placeholderTextColor={c.outline}
+                  style={[
+                    styles.input,
+                    styles.multiline,
+                    {
+                      backgroundColor: c.surfaceContainerLow,
+                      borderColor: c.outlineVariant,
+                      color: c.onSurface,
+                    },
+                  ]}
+                  value={medications}
+                />
+                <Text style={[styles.label, { color: c.onSurface }]}>
+                  Allergien (kommagetrennt)
+                </Text>
+                <TextInput
+                  editable={!pending}
+                  onChangeText={setAllergies}
+                  placeholder="z. B. Huhn, Gräser"
+                  placeholderTextColor={c.outline}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: c.surfaceContainerLow,
+                      borderColor: c.outlineVariant,
+                      color: c.onSurface,
+                    },
+                  ]}
+                  value={allergies}
+                />
+                <Text style={[styles.label, { color: c.onSurface }]}>
+                  Tierarztpraxis (optional)
+                </Text>
+                <TextInput
+                  editable={!pending}
+                  onChangeText={setVetClinic}
+                  placeholder="Name der Praxis"
+                  placeholderTextColor={c.outline}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: c.surfaceContainerLow,
+                      borderColor: c.outlineVariant,
+                      color: c.onSurface,
+                    },
+                  ]}
+                  value={vetClinic}
+                />
+                <Text style={[styles.label, { color: c.onSurface }]}>
+                  Tierarzt-Telefon (optional)
+                </Text>
+                <TextInput
+                  editable={!pending}
+                  keyboardType="phone-pad"
+                  onChangeText={setVetPhone}
+                  placeholder="Telefonnummer"
+                  placeholderTextColor={c.outline}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: c.surfaceContainerLow,
+                      borderColor: c.outlineVariant,
+                      color: c.onSurface,
+                    },
+                  ]}
+                  value={vetPhone}
+                />
+                <Text style={[styles.label, { color: c.onSurface }]}>Versicherung (optional)</Text>
+                <TextInput
+                  editable={!pending}
+                  onChangeText={setInsurancePolicy}
+                  placeholder="Versicherungsnummer"
+                  placeholderTextColor={c.outline}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: c.surfaceContainerLow,
+                      borderColor: c.outlineVariant,
+                      color: c.onSurface,
+                    },
+                  ]}
+                  value={insurancePolicy}
+                />
                 {formHint !== null ? (
                   <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
                 ) : null}
@@ -512,6 +655,12 @@ export default function PetsScreen() {
                   setBreed('');
                   setColor('');
                   setSpecialNeeds('');
+                  setMicrochipNumber('');
+                  setInsurancePolicy('');
+                  setVetClinic('');
+                  setVetPhone('');
+                  setMedications('');
+                  setAllergies('');
                   setBirthYear('');
                   setBirthMonth('');
                   setBirthDay('');

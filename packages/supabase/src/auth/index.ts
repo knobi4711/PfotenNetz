@@ -35,16 +35,6 @@ export async function signUpWithEmail(
   return data;
 }
 
-export async function signInWithOAuth(provider: 'google' | 'facebook') {
-  const { data, error } = await (
-    await import('../client/createClient')
-  )
-    .getSupabaseClient()
-    .auth.signInWithOAuth({ provider });
-  if (error) throw error;
-  return data;
-}
-
 export async function signOut() {
   const { getSupabaseClient } = await import('../client/createClient');
   const client = getSupabaseClient();

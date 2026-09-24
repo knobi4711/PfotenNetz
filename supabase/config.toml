@@ -89,12 +89,12 @@ max_frequency = "5s"
 
 # OAuth placeholders – fill in via Dashboard (hosted) or env for local.
 [auth.external.google]
-enabled = true
+enabled = false
 client_id = "your-google-client-id"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 
 [auth.external.facebook]
-enabled = true
+enabled = false
 client_id = "your-facebook-app-id"
 secret = "env(SUPABASE_AUTH_EXTERNAL_FACEBOOK_SECRET)"
 

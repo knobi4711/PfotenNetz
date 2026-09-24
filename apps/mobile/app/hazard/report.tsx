@@ -15,6 +15,7 @@ import {
 import {
   ActionButton,
   AppHeader,
+  BackButton,
   Card,
   Chip,
   ChipRow,
@@ -117,6 +118,7 @@ export default function HazardReportScreen() {
       contentContainerStyle={styles.content}
     >
       <AppHeader title="Gefahr melden" subtitle={`Schritt ${step} von 3`} />
+      <BackButton onPress={() => router.back()} />
       <View style={styles.progress}>
         <View
           style={[

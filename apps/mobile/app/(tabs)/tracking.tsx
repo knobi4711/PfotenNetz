@@ -12,6 +12,8 @@ import {
   useNotifications,
   useNotificationSubscription,
   useUnreadCount,
+  useActiveTrackingSessions,
+  useTrackingSubscription,
   type BookingWithRelations,
   type Notification,
 } from '@pfotennetz/supabase';
@@ -96,6 +98,8 @@ export default function TrackingScreen() {
   const unreadQuery = useUnreadCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const activeTracking = useActiveTrackingSessions();
+  useTrackingSubscription();
   const [filter, setFilter] = useState<'all' | 'toMe' | 'mine'>('all');
 
   const bookings = bookingsQuery.data ?? [];
@@ -182,6 +186,41 @@ export default function TrackingScreen() {
             <BookingRow key={booking.id} booking={booking} currentUserId={currentUserId} />
           ))
         )}
+
+        {activeTracking.data?.length ? (
+          <Card>
+            <Text style={[styles.notifTitle, { color: c.onSurface }]}>Live-Betreuung</Text>
+            <Text style={[styles.notifBody, { color: c.onSurfaceVariant }]}>
+              Aktive GPS-Sitzungen werden automatisch aktualisiert.
+            </Text>
+            {activeTracking.data.map((session) => {
+              const booking = bookings.find((item) => item.id === session.booking_id);
+              return (
+                <Pressable
+                  key={session.id}
+                  accessibilityRole="button"
+                  accessibilityLabel="Live-Tracking öffnen"
+                  onPress={() =>
+                    booking &&
+                    router.push({ pathname: '/booking/[id]', params: { id: booking.id } })
+                  }
+                  style={styles.notifRow}
+                >
+                  <View style={[styles.notifDot, { backgroundColor: c.secondary }]} />
+                  <View style={styles.notifMain}>
+                    <Text style={[styles.notifSubject, { color: c.onSurface }]}>
+                      ● Live unterwegs
+                    </Text>
+                    <Text style={[styles.notifBody, { color: c.onSurfaceVariant }]}>
+                      {booking?.booking_number ?? 'Betreuung'} · seit{' '}
+                      {formatDate(session.started_at, { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </Card>
+        ) : null}
 
         <Card>
           <View style={styles.notifHeader}>

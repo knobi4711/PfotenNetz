@@ -166,7 +166,7 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full font-label-lg px-6 py-3 min-h-[52px] transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-full text-label-lg px-6 py-3 min-h-[52px] transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-primary {
@@ -174,7 +174,7 @@
   }
 
   .btn-secondary {
-    @apply btn bg-transparent border-2 border-primary text-primary hover:bg-primary/10;
+    @apply btn bg-transparent border-2 border-primary text-primary hover:bg-primary;
   }
 
   .btn-ghost {
@@ -182,11 +182,11 @@
   }
 
   .btn-emergency {
-    @apply btn bg-error text-on-error shadow-[0_4px_16px_rgba(186,26,26,0.3)] hover:bg-error/90;
+    @apply btn bg-error text-on-error shadow-[0_4px_16px_rgba(186,26,26,0.3)] hover:bg-error;
   }
 
   .card {
-    @apply bg-surface-container-lowest rounded-lg border border-outline-variant/30 shadow-[var(--shadow-level-1)] transition-shadow hover:shadow-[var(--shadow-level-2)];
+    @apply bg-surface-container-lowest rounded-lg border border-outline-variant shadow-[var(--shadow-level-1)] transition-shadow hover:shadow-[var(--shadow-level-2)];
   }
 
   .card-elevated {
@@ -194,7 +194,7 @@
   }
 
   .input {
-    @apply w-full h-[52px] rounded-lg bg-surface-container-low border border-transparent placeholder:text-on-surface-variant/60 px-4 text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all;
+    @apply w-full h-[52px] rounded-lg bg-surface-container-low border border-transparent placeholder:text-on-surface-variant px-4 text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary transition-all;
   }
 
   .chip {

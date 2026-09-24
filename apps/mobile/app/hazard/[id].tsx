@@ -13,6 +13,7 @@ import { getSupabaseClient } from '@pfotennetz/supabase';
 import {
   ActionButton,
   AppHeader,
+  BackButton,
   Card,
   ErrorBox,
   LoadingView,
@@ -29,19 +30,37 @@ export default function HazardDetailScreen() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoVisible, setPhotoVisible] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [feedbackPending, setFeedbackPending] = useState(false);
   const hazard = hazardQuery.data ?? null;
 
   const sendFeedback = (description: string) => {
     setFeedbackError(null);
+    setFeedbackPending(true);
     void (async () => {
       try {
         const permission = await Location.requestForegroundPermissionsAsync();
         if (!permission.granted) throw new Error('Standortfreigabe wurde nicht erteilt.');
-        const position = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
+        let position: Location.LocationObject;
+        try {
+          position = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            new Promise<never>((_, reject) =>
+              setTimeout(
+                () => reject(new Error('Standort konnte nicht rechtzeitig bestimmt werden.')),
+                15000
+              )
+            ),
+          ]);
+        } catch (locationError) {
+          const cached = await Location.getLastKnownPositionAsync({
+            maxAge: 5 * 60 * 1000,
+            requiredAccuracy: 1000,
+          });
+          if (!cached) throw locationError;
+          position = cached;
+        }
         if (hazard === null) return;
-        sighting.mutate({
+        await sighting.mutateAsync({
           hazardId: hazard.id,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -51,6 +70,8 @@ export default function HazardDetailScreen() {
         setFeedbackError(
           error instanceof Error ? error.message : 'Standort konnte nicht bestimmt werden.'
         );
+      } finally {
+        setFeedbackPending(false);
       }
     })();
   };
@@ -78,6 +99,7 @@ export default function HazardDetailScreen() {
       contentContainerStyle={styles.content}
     >
       <AppHeader title="Gefahrendetails" subtitle="Gemeinsam aufmerksam bleiben." />
+      <BackButton onPress={() => router.back()} />
       <Card>
         <SectionTitle>{HAZARD_TYPE_LABELS[hazard.type]}</SectionTitle>
         <View
@@ -114,12 +136,12 @@ export default function HazardDetailScreen() {
         <ActionButton
           title="Bereich gesäubert"
           variant="secondary"
-          pending={sighting.isPending}
+          pending={feedbackPending}
           onPress={() => sendFeedback('Bereich gesäubert')}
         />
         <ActionButton
           title="Gefahr besteht weiterhin"
-          pending={sighting.isPending}
+          pending={feedbackPending}
           onPress={() => sendFeedback('Gefahr besteht weiterhin')}
         />
         {sighting.isSuccess ? (

@@ -22,6 +22,12 @@ export interface CreatePetInput {
   color: string | null;
   specialNeeds: string | null;
   birthDate: string | null;
+  microchipNumber?: string | null;
+  insurancePolicy?: string | null;
+  vetClinic?: string | null;
+  vetPhone?: string | null;
+  medications?: string[];
+  allergies?: string[];
 }
 
 export interface UpdatePetInput extends CreatePetInput {
@@ -47,7 +53,7 @@ export function validateCreatePet(input: CreatePetInput): string | null {
 }
 
 function toInsertRow(ownerId: string, input: CreatePetInput) {
-  return {
+  const row = {
     owner_id: ownerId,
     name: input.name.trim(),
     species: input.species,
@@ -59,6 +65,17 @@ function toInsertRow(ownerId: string, input: CreatePetInput) {
         : input.specialNeeds.trim(),
     birth_date: input.birthDate,
   };
+  return input.microchipNumber !== undefined
+    ? {
+        ...row,
+        microchip_number: input.microchipNumber?.trim() || null,
+        insurance_policy: input.insurancePolicy?.trim() || null,
+        vet_clinic: input.vetClinic?.trim() || null,
+        vet_phone: input.vetPhone?.trim() || null,
+        medications: input.medications ?? [],
+        allergies: input.allergies ?? [],
+      }
+    : row;
 }
 
 /** Loads the caller's own pets, newest first (RLS: owners only). */
@@ -120,6 +137,16 @@ export async function updatePet(
           ? null
           : input.specialNeeds.trim(),
       birth_date: input.birthDate,
+      ...(input.microchipNumber !== undefined
+        ? {
+            microchip_number: input.microchipNumber?.trim() || null,
+            insurance_policy: input.insurancePolicy?.trim() || null,
+            vet_clinic: input.vetClinic?.trim() || null,
+            vet_phone: input.vetPhone?.trim() || null,
+            medications: input.medications ?? [],
+            allergies: input.allergies ?? [],
+          }
+        : {}),
     })
     .eq('id', input.petId)
     .eq('owner_id', userId)

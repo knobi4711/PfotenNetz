@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { getSupabaseClient } from '../client/createClient';
 import { petsKeys } from './keys';
+import { fetchOwnEmergencyCardLinks, revokeEmergencyCardLink } from './emergencyLinks';
 import {
   createPet,
   fetchOwnPets,
@@ -19,6 +20,25 @@ export function useOwnPets(): UseQueryResult<Pet[], Error> {
   return useQuery({
     queryKey: petsKeys.own,
     queryFn: () => fetchOwnPets(client),
+  });
+}
+
+export function useOwnEmergencyCardLinks() {
+  const client = getSupabaseClient();
+  return useQuery({
+    queryKey: petsKeys.emergencyLinks,
+    queryFn: () => fetchOwnEmergencyCardLinks(client),
+  });
+}
+
+export function useRevokeEmergencyCardLink() {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (linkId: string) => revokeEmergencyCardLink(client, linkId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: petsKeys.emergencyLinks });
+    },
   });
 }
 

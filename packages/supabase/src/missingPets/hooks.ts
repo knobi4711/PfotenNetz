@@ -5,6 +5,9 @@ import {
   createMissingPet,
   fetchNearbyMissingPets,
   fetchOwnMissingPets,
+  fetchMissingPetSightings,
+  createMissingPetSighting,
+  uploadMissingPetSightingPhoto,
   markMissingPetFound,
 } from './queries';
 
@@ -40,5 +43,40 @@ export function useMarkMissingPetFound() {
   return useMutation({
     mutationFn: (missingPetId: string) => markMissingPetFound(client, missingPetId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: missingPetKeys.all }),
+  });
+}
+
+export function useMissingPetSightings(missingPetId: string | undefined) {
+  const client = getSupabaseClient();
+  return useQuery({
+    queryKey: [...missingPetKeys.all, 'sightings', missingPetId ?? 'unknown'],
+    queryFn: () => fetchMissingPetSightings(client, missingPetId as string),
+    enabled: missingPetId !== undefined,
+  });
+}
+
+export function useCreateMissingPetSighting() {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof createMissingPetSighting>[1]) =>
+      createMissingPetSighting(client, input),
+    onSuccess: (_sighting, input) =>
+      queryClient.invalidateQueries({
+        queryKey: [...missingPetKeys.all, 'sightings', input.missingPetId],
+      }),
+  });
+}
+
+export function useUploadMissingPetSightingPhoto() {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { sightingId: string; fileData: ArrayBuffer; contentType?: string }) =>
+      uploadMissingPetSightingPhoto(client, input.sightingId, input.fileData, input.contentType),
+    onSuccess: (sighting) =>
+      queryClient.invalidateQueries({
+        queryKey: [...missingPetKeys.all, 'sightings', sighting.missing_pet_id],
+      }),
   });
 }

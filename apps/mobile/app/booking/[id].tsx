@@ -35,6 +35,7 @@ import {
   bookingWorkflowSteps,
   keyHandoffLabel,
 } from '../../lib/booking';
+import { TrackingRecorder } from '../../components/tracking-recorder';
 
 type BookingStatus = Database['public']['Enums']['booking_status'];
 
@@ -346,6 +347,10 @@ export default function BookingDetailScreen() {
                   }}
                 />
               </Card>
+            ) : null}
+
+            {booking.status === 'in_progress' && isHelper && bookingId ? (
+              <TrackingRecorder bookingId={bookingId} />
             ) : null}
 
             {(booking.status === 'requested' || booking.status === 'confirmed') && isSeeker ? (

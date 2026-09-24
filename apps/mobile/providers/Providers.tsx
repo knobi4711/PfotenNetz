@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { configureSupabaseStorage } from '@pfotennetz/supabase';
+import { ThemeProvider } from './theme';
 
 configureSupabaseStorage({
   getItem: (key) => SecureStore.getItemAsync(key),
@@ -34,7 +35,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          {children}
+          <ThemeProvider>{children}</ThemeProvider>
           {/* Devtools render a DOM div and must never mount on native (Fabric has no 'div' view config). */}
           {Platform.OS === 'web' ? <ReactQueryDevtools initialIsOpen={false} /> : null}
         </QueryClientProvider>

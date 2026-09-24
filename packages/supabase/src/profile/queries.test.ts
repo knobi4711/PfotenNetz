@@ -95,4 +95,27 @@ describe('profile queries', () => {
       validateUpdateOwnProfile({ displayName: 'Anna', phone: null, kiezRadiusKm: 1.5 })
     ).toBeNull();
   });
+
+  it('stores notification preferences without allowing server-managed fields', async () => {
+    const { client, calls } = clientWithStubs({
+      userId: 'user-1',
+      queryResult: { data: null, error: null },
+      updateResult: { data: { id: 'user-1' }, error: null },
+    });
+
+    await updateOwnProfile(client, {
+      displayName: 'Anna',
+      phone: null,
+      kiezRadiusKm: 1.5,
+      notificationPrefs: { hazards: true, bookings: false, community: true },
+    });
+
+    const updateCall = calls.find((call) => call.values !== undefined);
+    expect(updateCall?.values).toEqual({
+      display_name: 'Anna',
+      phone: null,
+      kiez_radius_km: 1.5,
+      notification_prefs: { hazards: true, bookings: false, community: true },
+    });
+  });
 });

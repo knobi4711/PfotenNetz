@@ -1,7 +1,16 @@
 'use client';
 
-import { useBookings, useCurrentUser, type BookingWithRelations } from '@pfotennetz/supabase';
+import {
+  useActiveTrackingSessions,
+  useBookings,
+  useCurrentUser,
+  useTrackingPoints,
+  useTrackingSubscription,
+  type BookingWithRelations,
+} from '@pfotennetz/supabase';
 import { useRouter } from 'next/navigation';
+import { LiveTrackingMap } from '../../components/LiveTrackingMap';
+import { WebHeader } from '../../components/WebHeader';
 
 function progress(booking: BookingWithRelations): number {
   const start = new Date(booking.start_at).getTime();
@@ -14,28 +23,17 @@ export default function TrackingPage() {
   const router = useRouter();
   const bookings = useBookings();
   const user = useCurrentUser();
+  const sessions = useActiveTrackingSessions();
+  useTrackingSubscription();
   const active = (bookings.data ?? []).find((booking) => booking.status === 'in_progress');
+  const activeSession = active
+    ? (sessions.data ?? []).find((session) => session.booking_id === active.id)
+    : undefined;
+  const points = useTrackingPoints(activeSession?.id ?? null);
   const confirmed = (bookings.data ?? []).filter((booking) => booking.status === 'confirmed');
   return (
     <main className="min-h-screen bg-surface">
-      <header className="border-b border-outline-variant/30 bg-surface-container-lowest">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="text-xl font-extrabold text-on-surface"
-          >
-            🐾 PfotenNetz
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/bookings')}
-            className="text-sm font-bold text-primary"
-          >
-            ← Anfragen
-          </button>
-        </div>
-      </header>
+      <WebHeader backHref="/bookings" backLabel="Anfragen" />
       <div className="mx-auto max-w-6xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">Betreuung</p>
         <h1 className="mt-2 text-4xl font-extrabold text-on-surface">Live-Tracking & Chat</h1>
@@ -54,29 +52,23 @@ export default function TrackingPage() {
         ) : (
           <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             <section className="card overflow-hidden">
-              <div className="relative h-[430px] bg-surface-container-low">
-                <div
-                  className="absolute inset-0 opacity-35"
-                  style={{
-                    backgroundImage:
-                      'linear-gradient(var(--color-outline-variant) 1px, transparent 1px), linear-gradient(90deg, var(--color-outline-variant) 1px, transparent 1px)',
-                    backgroundSize: '76px 76px',
-                  }}
+              {activeSession?.latest_latitude !== null &&
+              activeSession?.latest_latitude !== undefined &&
+              activeSession.latest_longitude !== null &&
+              activeSession.latest_longitude !== undefined ? (
+                <LiveTrackingMap
+                  latitude={activeSession.latest_latitude}
+                  longitude={activeSession.latest_longitude}
+                  recordedAt={activeSession.latest_recorded_at}
+                  points={points.data ?? []}
                 />
-                <div className="absolute left-[18%] top-[68%] h-3/4 w-1/2 -rotate-12 rounded-[50%] border-4 border-secondary/40" />
-                <div className="absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-surface bg-primary text-xs font-bold text-on-primary">
-                  {active ? 'Live' : 'Du'}
+              ) : (
+                <div className="flex h-[430px] items-center justify-center bg-surface-container-low p-8 text-center text-on-surface-variant">
+                  {active
+                    ? 'Warte auf die erste sichere GPS-Position …'
+                    : 'Keine aktive Tracking-Position'}
                 </div>
-                {active ? (
-                  <div className="absolute left-[28%] top-[58%] h-4 w-4 rounded-full bg-error ring-4 ring-error/20" />
-                ) : null}
-                <span className="absolute left-5 top-5 rounded-lg bg-surface-container-lowest/90 px-3 py-2 text-xs font-bold text-on-surface-variant">
-                  Mauerpark · Live-Karte
-                </span>
-                <span className="absolute bottom-5 left-5 rounded-lg bg-surface-container-lowest/90 px-3 py-2 text-xs font-bold text-on-surface-variant">
-                  Tracking-Daten werden geschützt übertragen
-                </span>
-              </div>
+              )}
               <div className="p-6">
                 {active ? (
                   <>
@@ -113,7 +105,11 @@ export default function TrackingPage() {
                     <div className="mt-5 grid gap-3 sm:grid-cols-3">
                       <div className="rounded-xl bg-surface-container-low p-3">
                         <p className="text-xs text-on-surface-variant">Distanz</p>
-                        <p className="mt-1 font-extrabold">Live-Daten folgen</p>
+                        <p className="mt-1 font-extrabold">
+                          {activeSession
+                            ? `${(activeSession.total_distance_meters / 1000).toFixed(2)} km`
+                            : 'Wird verbunden …'}
+                        </p>
                       </div>
                       <div className="rounded-xl bg-surface-container-low p-3">
                         <p className="text-xs text-on-surface-variant">Pausen</p>
@@ -121,7 +117,16 @@ export default function TrackingPage() {
                       </div>
                       <div className="rounded-xl bg-surface-container-low p-3">
                         <p className="text-xs text-on-surface-variant">Sicherheit</p>
-                        <p className="mt-1 font-extrabold text-secondary">Aktiv</p>
+                        <p className="mt-1 font-extrabold text-secondary">
+                          {activeSession?.latest_recorded_at
+                            ? `Stand ${new Date(
+                                activeSession.latest_recorded_at
+                              ).toLocaleTimeString('de-DE', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}`
+                            : 'Wird verbunden …'}
+                        </p>
                       </div>
                     </div>
                   </>
@@ -137,7 +142,7 @@ export default function TrackingPage() {
               </div>
             </section>
             <aside className="space-y-6">
-              <section className="card p-6">
+              <section className="card p-6" aria-live="polite" aria-label="Live-Tracking-Status">
                 <h2 className="text-xl font-extrabold text-on-surface">Nächste Betreuung</h2>
                 {confirmed.length ? (
                   <div className="mt-4 space-y-3">

@@ -11,6 +11,7 @@ import {
 import {
   ActionButton,
   AppHeader,
+  BackButton,
   Card,
   EmptyText,
   ErrorBox,
@@ -33,6 +34,7 @@ export default function HazardModerationScreen() {
       contentContainerStyle={styles.content}
     >
       <AppHeader title="Gefahrenprüfung" subtitle="Meldungen prüfen und Status setzen." />
+      <BackButton onPress={() => router.back()} />
       {query.isPending ? (
         <LoadingView label="Meldungen werden geladen …" />
       ) : query.isError ? (

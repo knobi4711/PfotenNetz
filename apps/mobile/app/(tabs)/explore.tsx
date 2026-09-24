@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
+import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { useNearbyHelpers, type NearbyHelper } from '@pfotennetz/supabase';
 import {
   ActionButton,
@@ -32,6 +33,17 @@ function helperInitial(name: string): string {
   return name.trim().slice(0, 1).toUpperCase() || '🐾';
 }
 
+function osmMapHtml(center: MapCoordinate, radiusKm: number, helpers: NearbyHelper[]): string {
+  const markers = helpers.map((helper) => ({
+    id: helper.helper_id,
+    name: helper.display_name,
+    latitude: helper.latitude,
+    longitude: helper.longitude,
+    distance: `${Number(helper.distance_km).toLocaleString('de-DE')} km entfernt`,
+  }));
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${Math.max(10, Math.round(15 - Math.log2(radiusKm)))});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.circle(center,{radius:${radiusKm * 1000},color:'#e26d46',fillColor:'#e26d46',fillOpacity:.12}).addTo(map);L.marker(center).addTo(map).bindPopup('Dein Standort');${JSON.stringify(markers)}.forEach(h=>L.marker([h.latitude,h.longitude]).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.distance).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
+}
+
 function NeighborhoodMap({
   center,
   radiusKm,
@@ -46,6 +58,24 @@ function NeighborhoodMap({
   onSelect: (helperId: string) => void;
 }) {
   const c = usePalette();
+  if (Platform.OS !== 'web') {
+    const handleMapMessage = (event: WebViewMessageEvent) => onSelect(event.nativeEvent.data);
+    return (
+      <View
+        accessibilityLabel={`OpenStreetMap-Karte der Nachbarschaft mit ${helpers.length} Helferinnen und Helfern`}
+        style={[styles.map, { borderColor: c.outlineVariant }]}
+      >
+        <WebView
+          accessibilityLabel="OpenStreetMap-Nachbarschaftskarte"
+          javaScriptEnabled
+          onMessage={handleMapMessage}
+          originWhitelist={['*']}
+          source={{ html: osmMapHtml(center, radiusKm, helpers) }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+    );
+  }
   return (
     <View
       accessibilityLabel={`Kartenübersicht der Nachbarschaft mit ${helpers.length} Helferinnen und Helfern`}
@@ -320,6 +350,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     overflow: 'hidden',
     position: 'relative',
+  },
+  mapAttribution: {
+    position: 'absolute',
+    right: 8,
+    bottom: 6,
+    backgroundColor: '#ffffffcc',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    fontSize: 10,
   },
   mapGridHorizontal: {
     position: 'absolute',

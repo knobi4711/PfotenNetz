@@ -692,6 +692,57 @@ export type Database = {
           },
         ];
       };
+      missing_pet_sightings: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          location: unknown;
+          missing_pet_id: string;
+          photos: string[];
+          reporter_id: string;
+          seen_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          location: unknown;
+          missing_pet_id: string;
+          photos?: string[];
+          reporter_id: string;
+          seen_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          location?: unknown;
+          missing_pet_id?: string;
+          photos?: string[];
+          reporter_id?: string;
+          seen_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'missing_pet_sightings_missing_pet_id_fkey';
+            columns: ['missing_pet_id'];
+            isOneToOne: false;
+            referencedRelation: 'missing_pets';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'missing_pet_sightings_reporter_id_fkey';
+            columns: ['reporter_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       notifications: {
         Row: {
           body: string;
@@ -838,6 +889,33 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
+      };
+      emergency_card_links: {
+        Row: {
+          id: string;
+          pet_id: string;
+          token_hash: string;
+          expires_at: string;
+          revoked_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pet_id: string;
+          token_hash: string;
+          expires_at?: string;
+          revoked_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          pet_id?: string;
+          token_hash?: string;
+          expires_at?: string;
+          revoked_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       profiles: {
         Row: {
@@ -1093,6 +1171,12 @@ export type Database = {
           created_at: string;
           ended_at: string | null;
           id: string;
+          latest_accuracy_meters: number | null;
+          latest_heading_degrees: number | null;
+          latest_latitude: number | null;
+          latest_longitude: number | null;
+          latest_recorded_at: string | null;
+          latest_speed_mps: number | null;
           milestones: Json;
           started_at: string;
           total_distance_meters: number;
@@ -1105,6 +1189,12 @@ export type Database = {
           created_at?: string;
           ended_at?: string | null;
           id?: string;
+          latest_accuracy_meters?: number | null;
+          latest_heading_degrees?: number | null;
+          latest_latitude?: number | null;
+          latest_longitude?: number | null;
+          latest_recorded_at?: string | null;
+          latest_speed_mps?: number | null;
           milestones?: Json;
           started_at?: string;
           total_distance_meters?: number;
@@ -1117,6 +1207,12 @@ export type Database = {
           created_at?: string;
           ended_at?: string | null;
           id?: string;
+          latest_accuracy_meters?: number | null;
+          latest_heading_degrees?: number | null;
+          latest_latitude?: number | null;
+          latest_longitude?: number | null;
+          latest_recorded_at?: string | null;
+          latest_speed_mps?: number | null;
           milestones?: Json;
           started_at?: string;
           total_distance_meters?: number;
@@ -1277,6 +1373,30 @@ export type Database = {
       };
     };
     Functions: {
+      create_emergency_card_link: {
+        Args: { p_pet_id: string; p_token: string };
+        Returns: { id: string; expires_at: string }[];
+      };
+      get_public_emergency_card: {
+        Args: { p_token: string };
+        Returns: {
+          name: string;
+          species: string;
+          breed: string | null;
+          color: string | null;
+          birth_date: string | null;
+          microchip_number: string | null;
+          medications: Json;
+          allergies: string[] | null;
+          special_needs: string | null;
+          vet_clinic: string | null;
+          vet_phone: string | null;
+          insurance_policy: string | null;
+          avatar_url: string | null;
+          expires_at: string;
+        }[];
+      };
+      revoke_emergency_card_link: { Args: { p_id: string }; Returns: undefined };
       _postgis_deprecate: {
         Args: { newname: string; oldname: string; version: string };
         Returns: undefined;
@@ -1584,6 +1704,15 @@ export type Database = {
           severity: string;
           type: string;
         }[];
+      };
+      record_hazard_sighting: {
+        Args: {
+          p_description?: string;
+          p_hazard_id: string;
+          p_latitude: number;
+          p_longitude: number;
+        };
+        Returns: Database['public']['Tables']['hazard_sightings']['Row'];
       };
       get_helper_detail: {
         Args: { p_helper_id: string };

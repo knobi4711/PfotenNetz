@@ -9,6 +9,7 @@ import {
   type HazardType,
 } from '@pfotennetz/supabase';
 import { useRouter } from 'next/navigation';
+import { WebHeader } from '../../../components/WebHeader';
 import { useState } from 'react';
 
 const TYPES: HazardType[] = [
@@ -73,7 +74,7 @@ export default function WebHazardReportPage() {
           fileData: photo.data,
           contentType: photo.type,
         });
-      router.replace('/hazard/radar');
+      router.replace(`/hazard/${hazard.id}`);
     } catch (cause: unknown) {
       setError(
         cause instanceof Error ? cause.message : 'Gefahr konnte nicht veröffentlicht werden.'
@@ -83,18 +84,13 @@ export default function WebHazardReportPage() {
 
   return (
     <main className="min-h-screen bg-surface">
-      <header className="border-b border-outline-variant/30 bg-surface-container-lowest">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-          <button
-            type="button"
-            onClick={() => router.push('/hazard/radar')}
-            className="text-xl font-extrabold text-on-surface"
-          >
-            🐾 PfotenNetz
-          </button>
+      <WebHeader
+        backHref="/hazard/radar"
+        backLabel="Gefahrenradar"
+        rightContent={
           <span className="text-sm font-bold text-on-surface-variant">Schritt {step} von 3</span>
-        </div>
-      </header>
+        }
+      />
       <div className="mx-auto max-w-3xl px-6 py-10">
         <div className="mb-8">
           <p className="text-sm font-bold uppercase tracking-[0.16em] text-error">
@@ -202,8 +198,8 @@ export default function WebHazardReportPage() {
               </p>
             </div>
             <p className="mt-5 text-sm leading-6 text-on-surface-variant">
-              Die Meldung wird zunächst geprüft. Erst nach Freigabe wird sie als aktive Warnung im
-              Radar angezeigt.
+              Die Meldung wird aufgrund ihrer Dringlichkeit sofort als aktive Warnung im Radar
+              veröffentlicht. Administrator:innen können sie nachträglich prüfen und entwarnen.
             </p>
           </section>
         ) : null}

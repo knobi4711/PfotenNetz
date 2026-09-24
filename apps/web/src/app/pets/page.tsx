@@ -1,7 +1,8 @@
 'use client';
 
 import { useOwnPets, PET_SPECIES_LABELS, type PetSpecies } from '@pfotennetz/supabase';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { WebHeader } from '../../components/WebHeader';
 
 function age(birthDate: string | null): string | null {
   if (!birthDate) return null;
@@ -18,28 +19,10 @@ function age(birthDate: string | null): string | null {
 }
 
 export default function PetsPage() {
-  const router = useRouter();
   const pets = useOwnPets();
   return (
     <main className="min-h-screen bg-surface">
-      <header className="border-b border-outline-variant/30 bg-surface-container-lowest">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="text-xl font-extrabold text-on-surface"
-          >
-            🐾 PfotenNetz
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="text-sm font-bold text-primary"
-          >
-            ← Dashboard
-          </button>
-        </div>
-      </header>
+      <WebHeader backHref="/" backLabel="Dashboard" />
       <div className="mx-auto max-w-5xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">
           Meine Schutzlinge
@@ -63,9 +46,12 @@ export default function PetsPage() {
               <article key={pet.id} className="card overflow-hidden">
                 <div className="flex h-48 items-center justify-center bg-primary-fixed text-7xl">
                   {pet.avatar_url ? (
-                    <img
+                    <Image
                       src={pet.avatar_url}
                       alt={`Foto von ${pet.name}`}
+                      width={640}
+                      height={384}
+                      unoptimized
                       className="h-full w-full object-cover"
                     />
                   ) : pet.species === 'cat' ? (

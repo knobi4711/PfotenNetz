@@ -46,10 +46,31 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/pfotennetz-logo.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#FFFFFF",
+            "image": "./assets/pfotennetz-logo.png"
+          }
+        }
+      ],
       "expo-secure-store",
       "expo-local-authentication",
       "expo-location",
       "expo-notifications",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "PfotenNetz benötigt Zugriff auf dein Mikrofon für Sprachnachrichten.",
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
       "expo-task-manager",
       "expo-background-fetch",
       [

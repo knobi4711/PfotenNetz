@@ -2,13 +2,16 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import {
   EVENT_TYPE_LABELS,
+  useCurrentUser,
   useJoinCommunityEvent,
   useLeaveCommunityEvent,
   useOwnEventParticipants,
+  useParticipantProfilesForEvents,
   useUpcomingCommunityEvents,
 } from '@pfotennetz/supabase';
 import {
   ActionButton,
+  BackButton,
   AppHeader,
   Card,
   EmptyText,
@@ -22,7 +25,11 @@ import {
 export default function CommunityScreen() {
   const c = usePalette();
   const events = useUpcomingCommunityEvents();
+  const user = useCurrentUser();
   const participants = useOwnEventParticipants();
+  const participantProfiles = useParticipantProfilesForEvents(
+    events.data?.map((event) => event.id) ?? []
+  );
   const join = useJoinCommunityEvent();
   const leave = useLeaveCommunityEvent();
   const joined = new Set(
@@ -34,6 +41,7 @@ export default function CommunityScreen() {
       contentContainerStyle={styles.content}
     >
       <AppHeader title="Nachbarschafts-Treff" subtitle="Gemeinsam unterwegs, füreinander da." />
+      <BackButton onPress={() => router.back()} />
       {events.isPending || participants.isPending ? (
         <LoadingView label="Events werden geladen …" />
       ) : events.isError ? (
@@ -64,6 +72,15 @@ export default function CommunityScreen() {
                 {new Date(event.starts_at).toLocaleString('de-DE')} ·{' '}
                 {event.address ?? 'Ort in der Nachbarschaft'}
               </Text>
+              {event.organizer_id === user.data?.id &&
+              participantProfiles.data?.[event.id]?.length ? (
+                <Text style={[styles.meta, { color: c.secondary }]}>
+                  Teilnehmende:{' '}
+                  {participantProfiles.data[event.id]
+                    ?.map((profile) => profile.display_name ?? 'Person')
+                    .join(' · ')}
+                </Text>
+              ) : null}
               <ActionButton
                 title={isJoined ? 'Teilnahme zurücknehmen' : 'Teilnehmen'}
                 variant={isJoined ? 'secondary' : 'primary'}

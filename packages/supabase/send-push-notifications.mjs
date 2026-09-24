@@ -17,10 +17,12 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import {
   EXPO_PUSH_ENDPOINT,
-  buildExpoMessage,
+  buildExpoMessages,
   chunk,
+  isNotificationEnabled,
   mapTickets,
   partitionTokens,
+  summarizeDeliveries,
 } from './send-push-lib.mjs';
 
 config({ path: resolve(process.cwd(), '.env') });
@@ -70,10 +72,38 @@ async function main() {
   if ((pending ?? []).length === 0) return;
 
   const userIds = [...new Set(pending.map((n) => n.user_id))];
+  const { data: profiles, error: profileErr } = await admin
+    .from('profiles')
+    .select('id,notification_prefs')
+    .in('id', userIds);
+  if (profileErr) throw new Error(`Profile lesen: ${profileErr.message}`);
+  const preferences = new Map(
+    (profiles ?? []).map((profile) => [profile.id, profile.notification_prefs])
+  );
+  const disabled = pending.filter(
+    (notification) => !isNotificationEnabled(notification, preferences.get(notification.user_id))
+  );
+  for (const notification of disabled) {
+    if (DRY_RUN) {
+      console.log(`  would skip ${notification.id} (preference-disabled)`);
+    } else {
+      await admin
+        .from('notifications')
+        .update({
+          push_sent: true,
+          data: { ...(notification.data ?? {}), push_skipped: 'preference-disabled' },
+        })
+        .eq('id', notification.id);
+    }
+  }
+  const eligible = pending.filter((notification) =>
+    isNotificationEnabled(notification, preferences.get(notification.user_id))
+  );
+  const eligibleUserIds = [...new Set(eligible.map((n) => n.user_id))];
   const { data: devices, error: devErr } = await admin
     .from('devices')
     .select('user_id,push_token')
-    .in('user_id', userIds)
+    .in('user_id', eligibleUserIds)
     .eq('is_active', true)
     .not('push_token', 'is', null);
   if (devErr) throw new Error(`devices lesen: ${devErr.message}`);
@@ -81,13 +111,18 @@ async function main() {
 
   const messages = [];
   const skipped = [];
-  for (const n of pending) {
+  for (const n of eligible) {
     const tokens = expo.get(n.user_id) ?? [];
     if (tokens.length === 0) {
       skipped.push(n);
       continue;
     }
-    messages.push({ ...buildExpoMessage(n, tokens[0]), _notificationId: n.id });
+    messages.push(
+      ...buildExpoMessages(n, tokens).map((message) => ({
+        ...message,
+        _notificationId: n.id,
+      }))
+    );
   }
   console.log(`Versandbar (Expo-Token): ${messages.length}, ohne Expo-Token: ${skipped.length}`);
 
@@ -101,6 +136,8 @@ async function main() {
   }
 
   let sent = 0;
+  const successfulDeliveries = [];
+  const failedDeliveries = [];
   for (const batch of chunk(messages)) {
     let tickets;
     try {
@@ -110,29 +147,42 @@ async function main() {
       continue;
     }
     const { sent: ok, failed, deadTokens } = mapTickets(batch, tickets);
-    for (const s of ok) {
+    successfulDeliveries.push(...ok);
+    failedDeliveries.push(...failed);
+    for (const token of deadTokens) {
+      await admin.from('devices').update({ is_active: false }).eq('push_token', token);
+      console.log(`  Gerät deaktiviert (DeviceNotRegistered): ${token.slice(0, 24)}…`);
+    }
+  }
+
+  for (const result of summarizeDeliveries(successfulDeliveries, failedDeliveries)) {
+    const original = pending.find((notification) => notification.id === result.notificationId);
+    if (result.sentTokens.length > 0) {
       const { error } = await admin
         .from('notifications')
-        .update({ push_sent: true, push_token: s.token })
-        .eq('id', s.notificationId);
+        .update({
+          push_sent: true,
+          push_token: result.sentTokens[0],
+          data: original?.data ?? {},
+        })
+        .eq('id', result.notificationId);
       if (!error) sent += 1;
-    }
-    for (const f of failed) {
-      console.error(`  Ticket-Fehler ${f.notificationId}: ${f.error}`);
+      for (const failure of result.failures) {
+        console.warn(`  Teilfehler ${result.notificationId}: ${failure.error}`);
+      }
+    } else if (result.failures.length > 0) {
+      const firstFailure = result.failures[0];
+      console.error(`  Ticket-Fehler ${result.notificationId}: ${firstFailure.error}`);
       await admin
         .from('notifications')
         .update({
           push_sent: true,
           data: {
-            ...(pending.find((n) => n.id === f.notificationId)?.data ?? {}),
-            push_error: f.error,
+            ...(original?.data ?? {}),
+            push_error: firstFailure.error,
           },
         })
-        .eq('id', f.notificationId);
-    }
-    for (const token of deadTokens) {
-      await admin.from('devices').update({ is_active: false }).eq('push_token', token);
-      console.log(`  Gerät deaktiviert (DeviceNotRegistered): ${token.slice(0, 24)}…`);
+        .eq('id', result.notificationId);
     }
   }
 

@@ -1,15 +1,17 @@
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { StyleSheet, useColorScheme } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import type { ComponentProps, ReactNode } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '@pfotennetz/design-system';
 import { bookingStatusLabels, type BookingStatus } from '../lib/booking';
+import { useTheme } from '../providers/theme';
+import logo from '../assets/pfotennetz-logo.png';
 
 type Mode = 'light' | 'dark';
 
 export function usePalette() {
-  const scheme = useColorScheme();
-  const mode: Mode = scheme === 'dark' ? 'dark' : 'light';
+  const { effectiveMode } = useTheme();
+  const mode: Mode = effectiveMode;
   return colors[mode];
 }
 
@@ -202,7 +204,7 @@ export function AppHeader({
       <View style={styles.brandRow}>
         <View style={styles.brandLockup}>
           <View style={[styles.brandMark, { backgroundColor: c.primaryFixed }]}>
-            <MaterialCommunityIcons name="paw" size={23} color={c.primary} />
+            <Image source={logo} style={styles.brandLogo} />
           </View>
           <Text style={[styles.brandName, { color: c.onSurface }]}>PfotenNetz</Text>
         </View>
@@ -239,6 +241,20 @@ export function AppHeader({
         ) : null}
       </View>
     </View>
+  );
+}
+
+export function BackButton({ onPress }: { onPress: () => void }) {
+  const c = usePalette();
+  return (
+    <Pressable
+      accessibilityLabel="Zurück"
+      accessibilityRole="button"
+      onPress={onPress}
+      style={styles.backButton}
+    >
+      <Text style={[styles.backButtonText, { color: c.primary }]}>‹ Zurück</Text>
+    </Pressable>
   );
 }
 
@@ -331,6 +347,8 @@ export function AlertBanner({
 }
 
 const styles = StyleSheet.create({
+  backButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  backButtonText: { fontFamily: appFonts.bold, fontSize: 16 },
   card: {
     borderRadius: 22,
     borderWidth: 1,
@@ -423,7 +441,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
   },
-  appHeaderWrap: { marginBottom: 24 },
+  appHeaderWrap: { paddingTop: 24, marginBottom: 4 },
   brandRow: {
     minHeight: 48,
     flexDirection: 'row',
@@ -439,6 +457,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  brandLogo: { width: 40, height: 40, borderRadius: 8 },
   brandName: { fontFamily: appFonts.extrabold, fontSize: 17, letterSpacing: -0.2 },
   appHeaderMain: { flexShrink: 1, flex: 1 },
   appHeaderTitle: {

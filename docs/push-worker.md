@@ -41,3 +41,7 @@ Expo-Quotas).
 cd pfotennetz
 pnpm --filter @pfotennetz/supabase test send-push.test.mjs
 ```
+
+Für GitHub Actions muss unter **Settings → Secrets and variables → Actions**
+mindestens das Repository-Secret `SUPABASE_SERVICE_ROLE_KEY` hinterlegt sein.
+`EXPO_ACCESS_TOKEN` ist nur bei aktivierter Expo Push Security erforderlich.

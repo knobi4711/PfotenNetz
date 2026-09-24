@@ -36,14 +36,32 @@ export function useAuth(): AuthState {
     let active = true;
     const client = getSupabaseClient();
 
-    void client.auth.getSession().then(({ data, error }) => {
-      if (!active) return;
-      if (error !== null && !isSessionMissingError(error)) {
-        setState({ status: 'error', userId: null, error });
-        return;
+    void (async () => {
+      try {
+        const result = await Promise.race([
+          client.auth.getSession(),
+          new Promise<never>((_, reject) =>
+            globalThis.setTimeout(
+              () => reject(new Error('Supabase-Sitzungsprüfung hat zu lange gedauert.')),
+              10000
+            )
+          ),
+        ]);
+        if (!active) return;
+        if (result.error !== null && !isSessionMissingError(result.error)) {
+          setState({ status: 'error', userId: null, error: result.error });
+          return;
+        }
+        setState(toAuthState(result.data.session?.user.id ?? null));
+      } catch (error: unknown) {
+        if (active)
+          setState({
+            status: 'error',
+            userId: null,
+            error: error instanceof Error ? error : new Error('Sitzungsprüfung fehlgeschlagen.'),
+          });
       }
-      setState(toAuthState(data.session?.user.id ?? null));
-    });
+    })();
 
     const {
       data: { subscription },

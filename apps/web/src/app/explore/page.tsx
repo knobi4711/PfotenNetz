@@ -3,22 +3,147 @@
 import { useNearbyHelpers, type NearbyHelper } from '@pfotennetz/supabase';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { WebHeader } from '../../components/WebHeader';
 
 const RADII = [1.5, 3, 5, 10] as const;
 
-function projectPoint(
-  center: { latitude: number; longitude: number },
-  helper: NearbyHelper,
-  radiusKm: number
-) {
-  const latitudeKm = (helper.latitude - center.latitude) * 111.32;
-  const longitudeKm =
-    (helper.longitude - center.longitude) * 111.32 * Math.cos((center.latitude * Math.PI) / 180);
-  const clamp = (value: number) => Math.min(94, Math.max(6, value));
-  return {
-    left: `${clamp(50 + (longitudeKm / Math.max(radiusKm, 0.5)) * 42)}%`,
-    top: `${clamp(50 - (latitudeKm / Math.max(radiusKm, 0.5)) * 42)}%`,
+type MapHelper = Pick<
+  NearbyHelper,
+  'helper_id' | 'display_name' | 'latitude' | 'longitude' | 'distance_km'
+>;
+
+type LeafletMap = {
+  setView: (center: [number, number], zoom: number) => LeafletMap;
+  remove: () => void;
+};
+
+type LeafletLayerGroup = {
+  addTo: (map: LeafletMap) => LeafletLayerGroup;
+  clearLayers: () => void;
+};
+
+type LeafletApi = {
+  map: (element: HTMLDivElement) => LeafletMap;
+  tileLayer: (
+    url: string,
+    options: { maxZoom: number; attribution: string }
+  ) => { addTo: (map: LeafletMap) => void };
+  layerGroup: () => LeafletLayerGroup;
+  circle: (
+    center: [number, number],
+    options: Record<string, number | string>
+  ) => { addTo: (map: LeafletMap) => void };
+  marker: (center: [number, number]) => {
+    addTo: (target: LeafletLayerGroup) => {
+      bindPopup: (content: string) => { on: (event: string, callback: () => void) => void };
+    };
   };
+};
+
+function loadLeaflet(): Promise<LeafletApi> {
+  const existing = document.querySelector<HTMLScriptElement>('script[data-pfotennetz-leaflet]');
+  if (existing) {
+    return new Promise((resolve) => {
+      const check = () => {
+        const leaflet = (window as unknown as { L?: LeafletApi }).L;
+        if (leaflet) resolve(leaflet);
+        else window.setTimeout(check, 50);
+      };
+      check();
+    });
+  }
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  script.async = true;
+  script.dataset.pfotennetzLeaflet = 'true';
+  document.head.appendChild(script);
+  return new Promise((resolve, reject) => {
+    script.onload = () => {
+      const leaflet = (window as unknown as { L?: LeafletApi }).L;
+      if (leaflet) resolve(leaflet);
+      else reject(new Error('Kartenbibliothek konnte nicht geladen werden.'));
+    };
+    script.onerror = () => reject(new Error('Kartenbibliothek konnte nicht geladen werden.'));
+  });
+}
+
+function OSMMap({
+  center,
+  radiusKm,
+  helpers,
+  onSelect,
+}: {
+  center: { latitude: number; longitude: number };
+  radiusKm: number;
+  helpers: MapHelper[];
+  onSelect: (id: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const layersRef = useRef<LeafletLayerGroup | null>(null);
+
+  useEffect(() => {
+    const linkId = 'pfotennetz-leaflet-css';
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+    let disposed = false;
+    void loadLeaflet().then((leaflet) => {
+      if (disposed || !containerRef.current) return;
+      const isNewMap = !mapRef.current;
+      const map = mapRef.current ?? leaflet.map(containerRef.current);
+      mapRef.current = map;
+      map.setView(
+        [center.latitude, center.longitude],
+        Math.max(10, Math.round(15 - Math.log2(radiusKm)))
+      );
+      if (!layersRef.current) layersRef.current = leaflet.layerGroup().addTo(map);
+      layersRef.current.clearLayers();
+      if (isNewMap) {
+        leaflet
+          .tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap-Mitwirkende',
+          })
+          .addTo(map);
+      }
+      leaflet
+        .circle([center.latitude, center.longitude], {
+          radius: radiusKm * 1000,
+          color: '#e26d46',
+          fillColor: '#e26d46',
+          fillOpacity: 0.12,
+        })
+        .addTo(map);
+      helpers.forEach((helper) => {
+        leaflet
+          .marker([helper.latitude, helper.longitude])
+          .addTo(layersRef.current as LeafletLayerGroup)
+          .bindPopup(
+            `<strong>${helper.display_name}</strong><br>${Number(helper.distance_km).toLocaleString('de-DE')} km`
+          )
+          .on('click', () => onSelect(helper.helper_id));
+      });
+    });
+    return () => {
+      disposed = true;
+    };
+  }, [center, radiusKm, helpers, onSelect]);
+
+  useEffect(() => () => mapRef.current?.remove(), []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-[520px] w-full rounded-3xl"
+      aria-label="OpenStreetMap-Karte"
+    />
+  );
 }
 
 function locate(): Promise<{ latitude: number; longitude: number }> {
@@ -106,27 +231,7 @@ export default function ExplorePage() {
 
   return (
     <main className="min-h-screen bg-surface">
-      <header className="border-b border-outline-variant/30 bg-surface-container-lowest">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-5 lg:px-10">
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="flex items-center gap-3 text-xl font-extrabold text-on-surface"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-fixed text-xl">
-              🐾
-            </span>
-            PfotenNetz
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="text-sm font-bold text-primary"
-          >
-            ← Zum Dashboard
-          </button>
-        </div>
-      </header>
+      <WebHeader backHref="/" backLabel="Dashboard" />
       <div className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">
         <div className="mb-8">
           <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">Entdecken</p>
@@ -177,40 +282,13 @@ export default function ExplorePage() {
         ) : (
           <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             <div>
-              <div className="relative h-[520px] overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-[var(--shadow-level-1)]">
-                <div
-                  className="absolute inset-0 opacity-40"
-                  style={{
-                    backgroundImage:
-                      'linear-gradient(var(--color-outline-variant) 1px, transparent 1px), linear-gradient(90deg, var(--color-outline-variant) 1px, transparent 1px)',
-                    backgroundSize: '72px 72px',
-                  }}
+              <div className="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-[var(--shadow-level-1)]">
+                <OSMMap
+                  center={center}
+                  radiusKm={radiusKm}
+                  helpers={helpers}
+                  onSelect={setSelectedId}
                 />
-                <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-primary/50 bg-primary/10">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full border-4 border-surface bg-secondary text-xs font-bold text-on-secondary">
-                    Du
-                  </span>
-                </div>
-                {helpers.map((helper) => {
-                  const point = projectPoint(center, helper, radiusKm);
-                  return (
-                    <button
-                      type="button"
-                      key={helper.helper_id}
-                      onClick={() => setSelectedId(helper.helper_id)}
-                      className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-surface px-3 py-2 text-xs font-extrabold shadow-md ${selectedId === helper.helper_id ? 'z-10 bg-tertiary text-on-tertiary' : 'bg-primary text-on-primary'}`}
-                      style={point}
-                    >
-                      {helper.display_name.slice(0, 1).toUpperCase()}
-                    </button>
-                  );
-                })}
-                <span className="absolute right-5 top-5 rounded-lg bg-surface-container-lowest/90 px-3 py-2 text-xs font-bold text-on-surface-variant">
-                  Radius ±{radiusKm} km
-                </span>
-                <span className="absolute bottom-5 left-5 rounded-lg bg-surface-container-lowest/90 px-3 py-2 text-xs font-bold text-on-surface-variant">
-                  Norden ↑
-                </span>
               </div>
             </div>
             <div className="space-y-3">

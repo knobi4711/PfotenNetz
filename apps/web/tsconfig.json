@@ -2,7 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -14,22 +18,41 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "plugins": [{ "name": "next" }],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@pfotennetz/design-system/*": ["../../packages/design-system/src/*"],
-      "@pfotennetz/supabase/*": ["../../packages/supabase/src/*"],
-      "@pfotennetz/shared/*": ["../../packages/shared/src/*"],
-      "@pfotennetz/native/*": ["../../packages/native/src/*"],
-      "@pfotennetz/testing/*": ["../../packages/testing/src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@pfotennetz/design-system/*": [
+        "../../packages/design-system/src/*"
+      ],
+      "@pfotennetz/supabase/*": [
+        "../../packages/supabase/src/*"
+      ],
+      "@pfotennetz/shared/*": [
+        "../../packages/shared/src/*"
+      ],
+      "@pfotennetz/native/*": [
+        "../../packages/native/src/*"
+      ],
+      "@pfotennetz/testing/*": [
+        "../../packages/testing/src/*"
+      ]
     }
   },
   "include": [
-    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    ".next/types/**/*.ts",
+    "next-env.d.ts",
     "src/app/.well-known/**/*.ts",
-    ".next/types/**/*.ts"
+    ".next-dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

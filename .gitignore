@@ -7,11 +7,13 @@ node_modules/
 dist/
 build/
 .next/
+.next-dev/
 .expo/
 .expo-shared/
 .webpack/
 .turbo/
 coverage/
+test-results/
 .nyc_output/
 *.tsbuildinfo
 .eslintcache

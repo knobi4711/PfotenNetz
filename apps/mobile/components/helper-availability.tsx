@@ -33,6 +33,84 @@ const WEEKDAYS = [
   { value: 6, label: 'Sa' },
 ] as const;
 
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
+  const hour = Math.floor(index / 2)
+    .toString()
+    .padStart(2, '0');
+  const minute = index % 2 === 0 ? '00' : '30';
+  return `${hour}:${minute}`;
+});
+
+function TimeDropdown({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  const c = usePalette();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <View style={styles.dropdownContainer}>
+      <Text style={[styles.label, { color: c.onSurface }]}>{label}</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label} auswählen`}
+        accessibilityState={{ expanded: open }}
+        disabled={disabled}
+        onPress={() => setOpen((current) => !current)}
+        style={[
+          styles.dropdownButton,
+          { backgroundColor: c.surfaceContainerLow, borderColor: c.outlineVariant },
+        ]}
+      >
+        <Text style={[styles.dropdownValue, { color: c.onSurface }]}>{value} Uhr</Text>
+        <Text style={[styles.dropdownArrow, { color: c.onSurfaceVariant }]}>
+          {open ? '▲' : '▼'}
+        </Text>
+      </Pressable>
+      {open ? (
+        <View
+          style={[
+            styles.dropdownMenu,
+            { backgroundColor: c.surfaceContainerLowest, borderColor: c.outlineVariant },
+          ]}
+        >
+          {TIME_OPTIONS.map((option) => (
+            <Pressable
+              key={option}
+              accessibilityRole="button"
+              accessibilityState={{ selected: option === value }}
+              onPress={() => {
+                onChange(option);
+                setOpen(false);
+              }}
+              style={[
+                styles.dropdownOption,
+                { backgroundColor: option === value ? c.primaryContainer : 'transparent' },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.dropdownOptionText,
+                  { color: option === value ? c.onPrimaryContainer : c.onSurface },
+                ]}
+              >
+                {option} Uhr
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function SlotRow({ slot }: { slot: Availability }) {
   const c = usePalette();
   const update = useUpdateAvailability();
@@ -94,25 +172,35 @@ export function AvailabilityManager() {
   const listQuery = useOwnAvailabilities();
   const create = useCreateAvailability();
 
-  const [day, setDay] = useState<number>(1);
+  const [days, setDays] = useState<number[]>([1]);
   const [start, setStart] = useState('09:00');
   const [end, setEnd] = useState('12:00');
   const [types, setTypes] = useState<BookingType[]>(['walk']);
   const [radius, setRadius] = useState('5');
+  const [formError, setFormError] = useState<string | null>(null);
 
   const toggleType = (type: BookingType) => {
     setTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
   };
 
   const handleCreate = () => {
-    const input: UpsertAvailabilityInput = {
-      dayOfWeek: day,
+    setFormError(null);
+    if (days.length === 0) {
+      setFormError('Bitte wähle mindestens einen Wochentag.');
+      return;
+    }
+
+    const input = (dayOfWeek: number): UpsertAvailabilityInput => ({
+      dayOfWeek,
       startTime: start,
       endTime: end,
       bookingTypes: types,
       maxDistanceKm: Number(radius.replace(',', '.')),
-    };
-    create.mutate(input);
+    });
+
+    void Promise.all(days.map((dayOfWeek) => create.mutateAsync(input(dayOfWeek)))).catch(() => {
+      // The mutation exposes the server-side validation error in the form below.
+    });
   };
 
   return (
@@ -136,10 +224,10 @@ export function AvailabilityManager() {
         (listQuery.data ?? []).map((slot) => <SlotRow key={slot.id} slot={slot} />)
       )}
 
-      <Text style={[styles.label, { color: c.onSurface }]}>Wochentag</Text>
+      <Text style={[styles.label, { color: c.onSurface }]}>Wochentage</Text>
       <View style={styles.chipRow}>
         {WEEKDAYS.map((d) => {
-          const selected = d.value === day;
+          const selected = days.includes(d.value);
           return (
             <Pressable
               key={d.value}
@@ -147,7 +235,11 @@ export function AvailabilityManager() {
               accessibilityState={{ selected }}
               disabled={create.isPending}
               onPress={() => {
-                setDay(d.value);
+                setDays((current) =>
+                  current.includes(d.value)
+                    ? current.filter((value) => value !== d.value)
+                    : [...current, d.value]
+                );
               }}
               style={[
                 styles.chip,
@@ -164,40 +256,10 @@ export function AvailabilityManager() {
 
       <View style={styles.twoColumns}>
         <View style={styles.column}>
-          <Text style={[styles.label, { color: c.onSurface }]}>Von (HH:MM)</Text>
-          <TextInput
-            editable={!create.isPending}
-            onChangeText={setStart}
-            placeholder="09:00"
-            placeholderTextColor={c.outline}
-            style={[
-              styles.input,
-              {
-                backgroundColor: c.surfaceContainerLow,
-                borderColor: c.outlineVariant,
-                color: c.onSurface,
-              },
-            ]}
-            value={start}
-          />
+          <TimeDropdown label="Von" value={start} disabled={create.isPending} onChange={setStart} />
         </View>
         <View style={styles.column}>
-          <Text style={[styles.label, { color: c.onSurface }]}>Bis (HH:MM)</Text>
-          <TextInput
-            editable={!create.isPending}
-            onChangeText={setEnd}
-            placeholder="12:00"
-            placeholderTextColor={c.outline}
-            style={[
-              styles.input,
-              {
-                backgroundColor: c.surfaceContainerLow,
-                borderColor: c.outlineVariant,
-                color: c.onSurface,
-              },
-            ]}
-            value={end}
-          />
+          <TimeDropdown label="Bis" value={end} disabled={create.isPending} onChange={setEnd} />
         </View>
       </View>
 
@@ -245,6 +307,7 @@ export function AvailabilityManager() {
         value={radius}
       />
 
+      {formError ? <ErrorBox message={formError} /> : null}
       {create.isError ? (
         <ErrorBox message={`Speichern fehlgeschlagen: ${create.error.message}`} />
       ) : null}
@@ -273,6 +336,32 @@ const styles = StyleSheet.create({
     fontFamily: appFonts.regular,
     fontSize: 15,
   },
+  dropdownContainer: { flex: 1, position: 'relative', zIndex: 2 },
+  dropdownButton: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownValue: { fontFamily: appFonts.regular, fontSize: 15 },
+  dropdownArrow: { fontSize: 11 },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 78,
+    left: 0,
+    right: 0,
+    maxHeight: 220,
+    borderWidth: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
+    zIndex: 10,
+    elevation: 6,
+  },
+  dropdownOption: { paddingHorizontal: 14, paddingVertical: 10 },
+  dropdownOptionText: { fontFamily: appFonts.regular, fontSize: 14, lineHeight: 18 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
   chipText: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18 },

@@ -2,12 +2,14 @@
 
 import {
   HAZARD_SEVERITY_LABELS,
+  HAZARD_STATUS_LABELS,
   HAZARD_TYPE_LABELS,
   useCreateHazardSighting,
   useHazard,
 } from '@pfotennetz/supabase';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { WebHeader } from '../../../components/WebHeader';
 
 function locate(): Promise<{ latitude: number; longitude: number }> {
   return new Promise((resolve, reject) => {
@@ -22,7 +24,6 @@ function locate(): Promise<{ latitude: number; longitude: number }> {
 }
 
 export default function WebHazardDetailPage() {
-  const router = useRouter();
   const params = useParams<{ id: string }>();
   const query = useHazard(params.id ?? null);
   const sighting = useCreateHazardSighting();
@@ -63,24 +64,7 @@ export default function WebHazardDetailPage() {
   const hazard = query.data;
   return (
     <main className="min-h-screen bg-surface">
-      <header className="border-b border-outline-variant/30 bg-surface-container-lowest">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-          <button
-            type="button"
-            onClick={() => router.push('/hazard/radar')}
-            className="text-xl font-extrabold text-on-surface"
-          >
-            🐾 PfotenNetz
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/hazard/radar')}
-            className="text-sm font-bold text-primary"
-          >
-            ← Zum Radar
-          </button>
-        </div>
-      </header>
+      <WebHeader backHref="/hazard/radar" backLabel="Gefahrenradar" />
       <div className="mx-auto max-w-3xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-error">
           Warnung {hazard.hazard_number}
@@ -88,9 +72,19 @@ export default function WebHazardDetailPage() {
         <h1 className="mt-2 text-4xl font-extrabold text-on-surface">
           {HAZARD_TYPE_LABELS[hazard.type]}
         </h1>
-        <span className="mt-5 inline-flex rounded-full bg-error px-4 py-2 text-sm font-bold text-on-error">
-          {HAZARD_SEVERITY_LABELS[hazard.severity]}
-        </span>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <span className="inline-flex rounded-full bg-error px-4 py-2 text-sm font-bold text-on-error">
+            {HAZARD_SEVERITY_LABELS[hazard.severity]}
+          </span>
+          <span className="inline-flex rounded-full bg-surface-container px-4 py-2 text-sm font-bold text-on-surface-variant">
+            {HAZARD_STATUS_LABELS[hazard.status]}
+          </span>
+        </div>
+        {hazard.status === 'active' ? (
+          <p className="mt-5 rounded-xl bg-secondary-container p-4 font-semibold text-on-secondary-container">
+            Diese Meldung ist veröffentlicht und wird im Gefahrenradar angezeigt.
+          </p>
+        ) : null}
         <section className="card mt-6 p-7">
           <p className="text-sm text-on-surface-variant">
             {hazard.address ?? 'Standort in deiner Nachbarschaft'} · Warnradius {hazard.radius_km}{' '}

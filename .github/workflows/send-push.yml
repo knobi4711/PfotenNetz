@@ -14,11 +14,20 @@ permissions:
 
 jobs:
   send-push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+
+      - name: Validate push-worker secrets
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error title=Push-Worker nicht konfiguriert::Repository-Secret SUPABASE_SERVICE_ROLE_KEY fehlt. Hinterlege es unter Settings > Secrets and variables > Actions."
+            exit 1
+          fi
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -39,6 +48,6 @@ jobs:
         working-directory: packages/supabase
         run: node send-push-notifications.mjs
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: https://njkyujhbcolvtcnlahsk.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}

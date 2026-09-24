@@ -10,6 +10,7 @@ import {
   useUnreadCount,
 } from '@pfotennetz/supabase';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useState } from 'react';
 import { PasskeyPanel } from './PasskeyPanel';
 
@@ -68,9 +69,14 @@ export function Dashboard() {
       <header className="sticky top-0 z-10 border-b border-outline-variant/30 bg-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6 px-6 py-4 lg:px-10">
           <a href="/" className="flex items-center gap-3" aria-label="PfotenNetz Startseite">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-fixed text-2xl">
-              🐾
-            </span>
+            <Image
+              src="/pfotennetz-logo.png"
+              alt=""
+              width={44}
+              height={44}
+              className="h-11 w-11 rounded-xl object-cover"
+              priority
+            />
             <span className="text-xl font-extrabold text-on-surface">PfotenNetz</span>
           </a>
           <nav className="hidden items-center gap-2 lg:flex" aria-label="Hauptnavigation">
@@ -158,9 +164,12 @@ export function Dashboard() {
                     >
                       <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-primary-fixed text-2xl">
                         {pet.avatar_url ? (
-                          <img
+                          <Image
                             src={pet.avatar_url}
                             alt={`Foto von ${pet.name}`}
+                            width={56}
+                            height={56}
+                            unoptimized
                             className="h-full w-full object-cover"
                           />
                         ) : pet.species === 'cat' ? (

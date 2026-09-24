@@ -2,6 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
 
 export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type NotificationPreferences = {
+  hazards: boolean;
+  bookings: boolean;
+  community: boolean;
+};
 
 export const KIEZ_RADIUS_OPTIONS = [0.5, 1.0, 1.5, 3.0] as const;
 export type KiezRadius = (typeof KIEZ_RADIUS_OPTIONS)[number];
@@ -10,6 +15,7 @@ export interface UpdateOwnProfileInput {
   displayName: string;
   phone: string | null;
   kiezRadiusKm: KiezRadius;
+  notificationPrefs?: NotificationPreferences;
 }
 
 async function requireUserId(client: SupabaseClient<Database>): Promise<string> {
@@ -59,6 +65,7 @@ export async function updateOwnProfile(
       display_name: input.displayName.trim(),
       phone,
       kiez_radius_km: input.kiezRadiusKm,
+      ...(input.notificationPrefs ? { notification_prefs: input.notificationPrefs } : {}),
     })
     .eq('id', userId)
     .select('*')

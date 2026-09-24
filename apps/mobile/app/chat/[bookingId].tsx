@@ -1,4 +1,16 @@
 import { useMemo, useState } from 'react';
+import { Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from 'expo-audio';
+import { File } from 'expo-file-system';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -17,12 +29,15 @@ import {
   useBookingMessages,
   useCurrentUser,
   useSendBookingMessage,
-  type Message,
+  useUploadBookingMessageImage,
+  useUploadBookingMessageVoice,
+  type MessageWithMedia,
 } from '@pfotennetz/supabase';
 import { formatDate } from '@pfotennetz/shared';
 import { ErrorBox, LoadingView, appFonts, usePalette } from '../../components/ui';
+import { QUICK_REPLIES } from '../../lib/chat';
 
-function MessageBubble({ message, own }: { message: Message; own: boolean }) {
+function MessageBubble({ message, own }: { message: MessageWithMedia; own: boolean }) {
   const c = usePalette();
   return (
     <View style={[styles.messageRow, own ? styles.messageRowOwn : styles.messageRowOther]}>
@@ -35,14 +50,49 @@ function MessageBubble({ message, own }: { message: Message; own: boolean }) {
           },
         ]}
       >
-        <Text style={[styles.messageText, { color: own ? c.onPrimary : c.onSurface }]}>
-          {message.content ?? ''}
-        </Text>
+        {message.type === 'image' && message.mediaUrl ? (
+          <Image
+            source={{ uri: message.mediaUrl }}
+            style={styles.messageImage}
+            resizeMode="cover"
+          />
+        ) : message.type === 'voice' && message.mediaUrl ? (
+          <VoiceMessage url={message.mediaUrl} own={own} />
+        ) : (
+          <Text style={[styles.messageText, { color: own ? c.onPrimary : c.onSurface }]}>
+            {message.content ?? ''}
+          </Text>
+        )}
         <Text style={[styles.messageTime, { color: own ? c.primaryFixed : c.onSurfaceVariant }]}>
           {formatDate(message.created_at, { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </View>
     </View>
+  );
+}
+
+function VoiceMessage({ url, own }: { url: string; own: boolean }) {
+  const c = usePalette();
+  const player = useAudioPlayer(url);
+  const status = useAudioPlayerStatus(player);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={
+        status.playing ? 'Sprachnachricht pausieren' : 'Sprachnachricht abspielen'
+      }
+      onPress={() => (status.playing ? player.pause() : player.play())}
+      style={styles.voiceMessage}
+    >
+      <MaterialCommunityIcons
+        name={status.playing ? 'pause' : 'play'}
+        size={24}
+        color={own ? c.onPrimary : c.primary}
+      />
+      <Text style={[styles.messageText, { color: own ? c.onPrimary : c.onSurface }]}>
+        Sprachnachricht
+      </Text>
+    </Pressable>
   );
 }
 
@@ -55,6 +105,10 @@ export default function ChatScreen() {
   const messagesQuery = useBookingMessages(bookingId);
   const userQuery = useCurrentUser();
   const sendMessage = useSendBookingMessage();
+  const uploadImage = useUploadBookingMessageImage();
+  const uploadVoice = useUploadBookingMessageVoice();
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder);
   const [draft, setDraft] = useState('');
 
   const booking = bookingQuery.data ?? null;
@@ -69,6 +123,44 @@ export default function ChatScreen() {
     const content = draft;
     setDraft('');
     sendMessage.mutate({ bookingId, content }, { onError: () => setDraft(content) });
+  };
+
+  const chooseImage = async () => {
+    if (!bookingId) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.85,
+    });
+    const asset = result.canceled ? null : result.assets[0];
+    if (!asset) return;
+    uploadImage.mutate({
+      bookingId,
+      fileData: await new File(asset.uri).arrayBuffer(),
+      contentType: asset.mimeType ?? 'image/jpeg',
+    });
+  };
+
+  const toggleRecording = async () => {
+    if (!bookingId || uploadVoice.isPending) return;
+    if (recorderState.isRecording) {
+      await recorder.stop();
+      if (recorder.uri) {
+        uploadVoice.mutate({
+          bookingId,
+          fileData: await new File(recorder.uri).arrayBuffer(),
+          contentType: 'audio/mp4',
+        });
+      }
+      return;
+    }
+    const permission = await AudioModule.requestRecordingPermissionsAsync();
+    if (!permission.granted) return;
+    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+    await recorder.prepareToRecordAsync();
+    recorder.record();
   };
 
   return (
@@ -124,6 +216,24 @@ export default function ChatScreen() {
         )}
 
         {sendMessage.isError ? <ErrorBox message={sendMessage.error.message} /> : null}
+        {uploadImage.isError ? <ErrorBox message={uploadImage.error.message} /> : null}
+        {uploadVoice.isError ? <ErrorBox message={uploadVoice.error.message} /> : null}
+        <View style={styles.quickReplies}>
+          {QUICK_REPLIES.map((reply) => (
+            <Pressable
+              key={reply}
+              accessibilityRole="button"
+              accessibilityLabel={`Schnellantwort ${reply}`}
+              onPress={() => setDraft(reply)}
+              style={[
+                styles.quickReply,
+                { borderColor: c.outlineVariant, backgroundColor: c.surfaceContainerLow },
+              ]}
+            >
+              <Text style={[styles.quickReplyText, { color: c.onSurface }]}>{reply}</Text>
+            </Pressable>
+          ))}
+        </View>
         <View
           style={[
             styles.composer,
@@ -133,9 +243,26 @@ export default function ChatScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Anhang hinzufügen"
+            disabled={uploadImage.isPending}
+            onPress={() => void chooseImage()}
             style={styles.composerIcon}
           >
             <MaterialCommunityIcons name="plus-circle-outline" size={27} color={c.primary} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              recorderState.isRecording ? 'Sprachnachricht beenden' : 'Sprachnachricht aufnehmen'
+            }
+            disabled={uploadVoice.isPending}
+            onPress={() => void toggleRecording()}
+            style={styles.composerIcon}
+          >
+            <MaterialCommunityIcons
+              name={recorderState.isRecording ? 'stop-circle-outline' : 'microphone-outline'}
+              size={27}
+              color={recorderState.isRecording ? c.error : c.primary}
+            />
           </Pressable>
           <TextInput
             accessibilityLabel="Nachricht"
@@ -199,6 +326,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   messageText: { fontFamily: appFonts.regular, fontSize: 14, lineHeight: 21 },
+  messageImage: { width: 220, height: 165, borderRadius: 12 },
+  voiceMessage: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 170 },
   messageTime: {
     fontFamily: appFonts.regular,
     fontSize: 10,
@@ -215,6 +344,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   composerIcon: { width: 38, height: 44, alignItems: 'center', justifyContent: 'center' },
+  quickReplies: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingBottom: 6 },
+  quickReply: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 7 },
+  quickReplyText: { fontFamily: appFonts.semibold, fontSize: 11 },
   input: {
     flex: 1,
     maxHeight: 100,

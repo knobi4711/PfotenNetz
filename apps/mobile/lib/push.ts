@@ -3,7 +3,7 @@ import * as Device from 'expo-device';
 import type * as NotificationsType from 'expo-notifications';
 import Constants from 'expo-constants';
 import type { DevicePlatform } from '@pfotennetz/supabase';
-
+export { notificationActionUrl, type NotificationActionData } from './push-actions';
 export interface PushRegistration {
   platform: DevicePlatform;
   pushToken: string;
@@ -38,6 +38,16 @@ export function getNotificationsModule(): typeof NotificationsType | null {
 export function isPushAvailable(): boolean {
   if (Platform.OS === 'web') return false;
   return getNotificationsModule() !== null;
+}
+
+/** Registers a callback for native/Expo token rotation in a development or production build. */
+export function subscribeToPushTokenChanges(onToken: (token: string) => void): () => void {
+  const notifications = getNotificationsModule();
+  if (notifications === null || Platform.OS === 'web') return () => undefined;
+  const subscription = notifications.addPushTokenListener((event) => {
+    if (typeof event.data === 'string' && event.data.length > 0) onToken(event.data);
+  });
+  return () => subscription.remove();
 }
 
 function currentPlatform(): DevicePlatform {
@@ -101,7 +111,37 @@ export async function ensurePushRegistration(): Promise<PushRegistration | null>
 
 /** Foreground presentation: banner + list, no sound, no badge. No-op ohne Push. */
 export function configureForegroundPresentation(): void {
-  getNotificationsModule()?.setNotificationHandler({
+  const notifications = getNotificationsModule();
+  if (notifications === null) return;
+  void Promise.all([
+    notifications.setNotificationCategoryAsync('booking', [
+      {
+        identifier: 'OPEN_BOOKING',
+        buttonTitle: 'Buchung öffnen',
+        options: { opensAppToForeground: true },
+      },
+      {
+        identifier: 'OPEN_CHAT',
+        buttonTitle: 'Chat öffnen',
+        options: { opensAppToForeground: true },
+      },
+    ]),
+    notifications.setNotificationCategoryAsync('community', [
+      {
+        identifier: 'OPEN_EVENT',
+        buttonTitle: 'Event öffnen',
+        options: { opensAppToForeground: true },
+      },
+    ]),
+    notifications.setNotificationCategoryAsync('safety', [
+      {
+        identifier: 'OPEN_ALERT',
+        buttonTitle: 'Warnung öffnen',
+        options: { opensAppToForeground: true },
+      },
+    ]),
+  ]).catch(() => undefined);
+  notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldPlaySound: false,
       shouldSetBadge: false,

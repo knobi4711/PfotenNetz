@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
+import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { router } from 'expo-router';
 import {
   useActiveHazards,
@@ -35,6 +36,24 @@ function severityColor(severity: string, colors: ReturnType<typeof usePalette>):
   if (severity === 'critical' || severity === 'high') return colors.error;
   if (severity === 'medium') return colors.primary;
   return colors.secondary;
+}
+
+function osmHazardMapHtml(
+  center: MapCoordinate,
+  radiusKm: number,
+  hazards: ActiveHazard[]
+): string {
+  const markers = hazards.map((hazard) => ({
+    id: hazard.id,
+    name: HAZARD_TYPE_LABELS[hazard.type as keyof typeof HAZARD_TYPE_LABELS] ?? hazard.type,
+    latitude: hazard.latitude,
+    longitude: hazard.longitude,
+    severity:
+      HAZARD_SEVERITY_LABELS[hazard.severity as keyof typeof HAZARD_SEVERITY_LABELS] ??
+      hazard.severity,
+  }));
+  const markerJson = JSON.stringify(markers).replace(/</g, '\\u003c');
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}.hazard{background:#c62828;border:2px solid #fff;border-radius:50%;color:#fff;font:bold 16px sans-serif;text-align:center;width:28px;height:28px;line-height:28px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${Math.max(10, Math.round(15 - Math.log2(radiusKm)))});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.circle(center,{radius:${radiusKm * 1000},color:'#e26d46',fillColor:'#e26d46',fillOpacity:.12}).addTo(map);L.marker(center).addTo(map).bindPopup('Dein Standort');${markerJson}.forEach(h=>L.marker([h.latitude,h.longitude],{icon:L.divIcon({className:'hazard',html:'!',iconSize:[32,32],iconAnchor:[16,16]})}).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.severity).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
 }
 
 function HazardRow({ hazard }: { hazard: ActiveHazard }) {
@@ -113,6 +132,26 @@ function HazardMap({
   hazards: ActiveHazard[];
 }) {
   const c = usePalette();
+  if (Platform.OS !== 'web') {
+    const openHazard = (event: WebViewMessageEvent) => {
+      router.push({ pathname: '/hazard/[id]', params: { id: event.nativeEvent.data } });
+    };
+    return (
+      <View
+        accessibilityLabel={`OpenStreetMap-Gefahrenkarte mit ${hazards.length} aktiven Gefahren`}
+        style={[styles.map, { borderColor: c.outlineVariant }]}
+      >
+        <WebView
+          accessibilityLabel="OpenStreetMap-Gefahrenkarte"
+          javaScriptEnabled
+          onMessage={openHazard}
+          originWhitelist={['*']}
+          source={{ html: osmHazardMapHtml(center, radiusKm, hazards) }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+    );
+  }
   return (
     <View
       accessibilityLabel={`Karte mit ${hazards.length} aktiven Gefahren`}
@@ -186,14 +225,19 @@ export default function HazardRadarScreen() {
       try {
         const permission = await Location.requestForegroundPermissionsAsync();
         if (!permission.granted) throw new Error('Standortfreigabe wurde nicht erteilt.');
-        const cached = await Location.getLastKnownPositionAsync({
-          maxAge: 5 * 60 * 1000,
-          requiredAccuracy: 1000,
-        });
-        const position =
-          cached ??
-          (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+        let position: Location.LocationObject;
+        try {
+          position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        } catch {
+          const cached = await Location.getLastKnownPositionAsync({
+            maxAge: 60 * 1000,
+            requiredAccuracy: 100,
+          });
+          if (!cached) throw new Error('Kein aktueller Standort verfügbar.');
+          position = cached;
+        }
         setCenter({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+        if (center !== null) void hazardsQuery.refetch();
       } catch (error: unknown) {
         setLocationError(
           error instanceof Error ? error.message : 'Standort konnte nicht bestimmt werden.'
@@ -210,6 +254,17 @@ export default function HazardRadarScreen() {
       contentContainerStyle={styles.content}
     >
       <AppHeader title="Gefahrenradar" subtitle="Aktive Warnungen in deiner Nachbarschaft." />
+      <Pressable
+        accessibilityLabel="Zurück"
+        accessibilityRole="button"
+        onPress={() => {
+          if (router.canGoBack()) router.back();
+          else router.replace('/(tabs)/home');
+        }}
+        style={styles.backButton}
+      >
+        <Text style={[styles.backText, { color: c.primary }]}>‹ Zurück</Text>
+      </Pressable>
       <View style={styles.actions}>
         <ActionButton title="Gefahr melden" onPress={() => router.push('/hazard/report')} />
         <ActionButton
@@ -296,6 +351,8 @@ export default function HazardRadarScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 40 },
+  backButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  backText: { fontFamily: appFonts.bold, fontSize: 16 },
   actions: { gap: 10, marginBottom: 12 },
   heading: {
     flexDirection: 'row',

@@ -12,11 +12,14 @@ import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sa
 import { useFonts } from 'expo-font';
 import { useAuth, useRegisterDevice } from '@pfotennetz/supabase';
 import { Providers } from '../providers/Providers';
+import '../lib/geofence';
 import { ErrorBox, LoadingView, usePalette } from '../components/ui';
 import {
   configureForegroundPresentation,
   ensurePushRegistration,
   getNotificationsModule,
+  notificationActionUrl,
+  subscribeToPushTokenChanges,
 } from '../lib/push';
 
 function usePushSetup(enabled: boolean) {
@@ -32,19 +35,24 @@ function usePushSetup(enabled: boolean) {
   useEffect(() => {
     const notifications = getNotificationsModule();
     if (notifications === null) return;
-    const navigate = (notification: Notifications.Notification) => {
-      const url = notification.request.content.data?.['url'];
-      if (typeof url === 'string' && url.startsWith('/')) {
+    const navigate = (response: Notifications.NotificationResponse) => {
+      const data = response.notification.request.content.data;
+      const url = notificationActionUrl(
+        typeof data === 'object' && data !== null ? data : {},
+        response.actionIdentifier,
+        notifications.DEFAULT_ACTION_IDENTIFIER
+      );
+      if (url !== null) {
         router.push(url);
       }
     };
     const lastResponse = notifications.getLastNotificationResponse();
-    if (lastResponse?.notification !== undefined) {
-      navigate(lastResponse.notification);
+    if (lastResponse !== null && lastResponse !== undefined) {
+      navigate(lastResponse);
       void notifications.clearLastNotificationResponseAsync().catch(() => undefined);
     }
     const subscription = notifications.addNotificationResponseReceivedListener((response) => {
-      navigate(response.notification);
+      navigate(response);
     });
     return () => {
       subscription.remove();
@@ -69,6 +77,22 @@ function usePushSetup(enabled: boolean) {
         registered.current = false;
       }
     })();
+  }, [enabled, registerDevice]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    return subscribeToPushTokenChanges((pushToken) => {
+      void (async () => {
+        const registration = await ensurePushRegistration();
+        if (registration === null) return;
+        await registerDevice.mutateAsync({
+          platform: registration?.platform ?? 'web',
+          pushToken,
+          deviceName: registration?.deviceName ?? undefined,
+          appVersion: registration?.appVersion ?? undefined,
+        });
+      })().catch(() => undefined);
+    });
   }, [enabled, registerDevice]);
 }
 

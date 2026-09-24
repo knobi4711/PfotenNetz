@@ -8,6 +8,8 @@ export type ActiveHazard =
   Database['public']['Functions']['get_active_hazards_in_radius_v2']['Returns'][number];
 export type HazardSighting = Database['public']['Tables']['hazard_sightings']['Row'];
 
+let hazardSubscriptionSequence = 0;
+
 export const HAZARD_TYPE_LABELS: Record<HazardType, string> = {
   poison_bait: 'Giftköderverdacht',
   glass_shards: 'Glasscherben / Müll',
@@ -115,7 +117,7 @@ export function subscribeHazards(
   onEvent: () => void
 ): () => void {
   const channel: RealtimeChannel = client
-    .channel('hazards:nearby')
+    .channel(`hazards:nearby:${++hazardSubscriptionSequence}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'hazards' }, onEvent)
     .subscribe();
   return () => {
@@ -143,7 +145,7 @@ export async function createHazard(
       reporter_id: reporterId,
       type: input.type,
       severity: input.severity,
-      status: 'pending_review',
+      status: 'active',
       location: `SRID=4326;POINT(${input.longitude} ${input.latitude})`,
       radius_km: input.radiusKm,
       address: input.address,
@@ -189,17 +191,12 @@ export async function createHazardSighting(
   client: SupabaseClient<Database>,
   input: { hazardId: string; latitude: number; longitude: number; description: string }
 ): Promise<HazardSighting> {
-  const reporterId = await requireUserId(client);
-  const { data, error } = await client
-    .from('hazard_sightings')
-    .insert({
-      hazard_id: input.hazardId,
-      reporter_id: reporterId,
-      location: `SRID=4326;POINT(${input.longitude} ${input.latitude})`,
-      description: input.description.trim() || null,
-    })
-    .select('*')
-    .single();
+  const { data, error } = await client.rpc('record_hazard_sighting', {
+    p_hazard_id: input.hazardId,
+    p_latitude: input.latitude,
+    p_longitude: input.longitude,
+    p_description: input.description,
+  });
   if (error) throw error;
   return data;
 }

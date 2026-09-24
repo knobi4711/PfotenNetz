@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import {
@@ -11,6 +11,7 @@ import {
 import {
   ActionButton,
   AppHeader,
+  BackButton,
   Card,
   EmptyText,
   ErrorBox,
@@ -64,6 +65,7 @@ export default function MissingPetsScreen() {
       contentContainerStyle={styles.content}
     >
       <AppHeader title="Vermisstes Tier" subtitle="Schnelle Hilfe aus der Nachbarschaft." />
+      <BackButton onPress={() => router.back()} />
       <ActionButton
         title="Vermissten-Radar öffnen"
         variant="secondary"
@@ -95,7 +97,15 @@ export default function MissingPetsScreen() {
                     },
                   ]}
                 >
-                  <Text style={styles.petEmoji}>{pet.species === 'cat' ? '🐱' : '🐶'}</Text>
+                  {pet.avatar_url ? (
+                    <Image
+                      source={{ uri: pet.avatar_url }}
+                      style={styles.petPhoto}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={styles.petEmoji}>{pet.species === 'cat' ? '🐱' : '🐶'}</Text>
+                  )}
                   <Text style={[styles.petName, { color: c.onSurface }]}>{pet.name}</Text>
                 </Pressable>
               ))}
@@ -176,6 +186,7 @@ const styles = StyleSheet.create({
   petChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
   petChoice: { alignItems: 'center', borderWidth: 2, borderRadius: 16, minWidth: 92, padding: 12 },
   petEmoji: { fontSize: 30 },
+  petPhoto: { width: 68, height: 68, borderRadius: 12 },
   petName: { fontFamily: appFonts.bold, marginTop: 4 },
   input: {
     borderWidth: 1,

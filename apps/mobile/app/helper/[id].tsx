@@ -7,6 +7,7 @@ import { formatAvailableDays } from '../../lib/helper-map';
 import {
   ActionButton,
   AppHeader,
+  BackButton,
   Card,
   EmptyText,
   ErrorBox,
@@ -37,6 +38,7 @@ export default function HelperDetailScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <AppHeader title="Helfer-Profil" subtitle="Verifiziert, erfahren und in deiner Nähe." />
+        <BackButton onPress={() => router.back()} />
 
         {detailQuery.isPending ? (
           <LoadingView label="Helper-Profil wird geladen …" />

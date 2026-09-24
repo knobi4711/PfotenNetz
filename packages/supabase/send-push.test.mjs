@@ -1,12 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildExpoMessage,
+  buildExpoMessages,
   chunk,
+  isNotificationEnabled,
   isExpoPushToken,
   mapTickets,
   partitionTokens,
   sanitizeData,
+  summarizeDeliveries,
 } from './send-push-lib.mjs';
+
+describe('notification preferences', () => {
+  it('suppresses disabled categories and keeps unspecified preferences enabled', () => {
+    expect(isNotificationEnabled({ type: 'hazard_alert' }, { hazards: false })).toBe(false);
+    expect(isNotificationEnabled({ type: 'community_event' }, { community: false })).toBe(false);
+    expect(isNotificationEnabled({ type: 'booking_request' }, { hazards: false })).toBe(true);
+    expect(
+      isNotificationEnabled(
+        { type: 'system' },
+        { hazards: false, bookings: false, community: false }
+      )
+    ).toBe(true);
+  });
+});
 
 describe('expo token detection', () => {
   it('accepts only well-formed Expo tokens', () => {
@@ -49,6 +66,72 @@ describe('message building', () => {
       channelId: 'default',
     });
     expect(msg.data).toEqual({ booking_id: 'b-1', url: '/booking/b-1' });
+  });
+
+  it('forwards rich-push categories and only internal action URLs', () => {
+    const msg = buildExpoMessage(
+      {
+        title: 'Neue Buchung',
+        body: 'Bitte prüfen',
+        data: {
+          categoryIdentifier: 'booking',
+          actionUrls: {
+            OPEN_BOOKING: '/booking/b-1',
+            OPEN_CHAT: '/chat/b-1',
+            BAD: 'https://example.com',
+          },
+        },
+      },
+      'ExponentPushToken[a]'
+    );
+    expect(msg.categoryIdentifier).toBe('booking');
+    expect(msg.data.actionUrls).toEqual({ OPEN_BOOKING: '/booking/b-1', OPEN_CHAT: '/chat/b-1' });
+  });
+
+  it('classifies booking notifications and creates booking/chat actions', () => {
+    const msg = buildExpoMessage(
+      {
+        type: 'booking_request',
+        title: 'Neue Anfrage',
+        body: 'Bitte prüfen',
+        data: { booking_id: 'b-2', url: '/booking/b-2' },
+      },
+      'ExponentPushToken[a]'
+    );
+    expect(msg.data.categoryIdentifier).toBe('booking');
+    expect(msg.data.actionUrls).toEqual({ OPEN_BOOKING: '/booking/b-2', OPEN_CHAT: '/chat/b-2' });
+  });
+
+  it('creates one message per unique Expo device token', () => {
+    const messages = buildExpoMessages(
+      { type: 'system', title: 'Hinweis', body: 'Text', data: {} },
+      ['ExponentPushToken[a]', 'ExponentPushToken[b]', 'ExponentPushToken[a]']
+    );
+
+    expect(messages.map((message) => message.to)).toEqual([
+      'ExponentPushToken[a]',
+      'ExponentPushToken[b]',
+    ]);
+  });
+});
+
+describe('multi-device delivery results', () => {
+  it('treats a notification as delivered when at least one device succeeds', () => {
+    const [result] = summarizeDeliveries(
+      [{ notificationId: 'n-1', token: 'ExponentPushToken[current]' }],
+      [
+        {
+          notificationId: 'n-1',
+          token: 'ExponentPushToken[old]',
+          error: 'DeviceNotRegistered',
+        },
+      ]
+    );
+
+    expect(result.sentTokens).toEqual(['ExponentPushToken[current]']);
+    expect(result.failures).toEqual([
+      { token: 'ExponentPushToken[old]', error: 'DeviceNotRegistered' },
+    ]);
   });
 });
 

@@ -1,16 +1,14 @@
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   useBookings,
-  useOwnPets,
   useOwnProfile,
   useTimebankAccount,
   useUnreadCount,
   type BookingWithRelations,
-  type Pet,
 } from '@pfotennetz/supabase';
 import { formatDate, formatTimebankHours, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
 import { bookingTypeLabels } from '../../lib/booking';
@@ -39,12 +37,6 @@ function greeting(): string {
   if (hour < 11) return 'Guten Morgen';
   if (hour < 18) return 'Hallo';
   return 'Guten Abend';
-}
-
-function petEmoji(pet: Pet): string {
-  if (pet.species === 'cat') return '🐱';
-  if (pet.species === 'dog') return '🐶';
-  return '🐾';
 }
 
 function HighlightCard({
@@ -136,7 +128,6 @@ export default function HomeScreen() {
   const bookingsQuery = useBookings();
   const accountQuery = useTimebankAccount();
   const profileQuery = useOwnProfile();
-  const petsQuery = useOwnPets();
   const unreadQuery = useUnreadCount();
 
   const bookings = bookingsQuery.data ?? [];
@@ -146,7 +137,6 @@ export default function HomeScreen() {
   const disputed = bookings.find((booking) => booking.status === 'disputed') ?? null;
   const firstName = profileQuery.data?.display_name.trim().split(/\s+/)[0] ?? '';
   const avatarLabel = firstName.slice(0, 1).toUpperCase() || '🐾';
-  const pets = petsQuery.data ?? [];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
@@ -203,65 +193,6 @@ export default function HomeScreen() {
           </Card>
         ) : (
           <HighlightCard booking={highlighted.booking} kind={highlighted.kind} />
-        )}
-
-        <View style={styles.sectionHeading}>
-          <SectionTitle>Meine Haustiere</SectionTitle>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              router.push('/(tabs)/pets');
-            }}
-          >
-            <Text style={[styles.sectionLink, { color: c.primary }]}>Verwalten</Text>
-          </Pressable>
-        </View>
-        {petsQuery.isPending ? (
-          <LoadingView label="Tiere werden geladen …" />
-        ) : pets.length === 0 ? (
-          <Card>
-            <EmptyText>Lege dein erstes Tier an, um Betreuung zu buchen.</EmptyText>
-            <ActionButton
-              title="Tier hinzufügen"
-              variant="secondary"
-              onPress={() => {
-                router.push('/(tabs)/pets');
-              }}
-            />
-          </Card>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.petRail}
-            style={styles.petRailWrap}
-          >
-            {pets.map((pet) => (
-              <Pressable
-                key={pet.id}
-                accessibilityRole="button"
-                onPress={() => {
-                  router.push('/(tabs)/pets');
-                }}
-                style={[
-                  styles.petCard,
-                  { backgroundColor: c.surfaceContainerLowest, borderColor: `${c.outline}22` },
-                ]}
-              >
-                <View style={[styles.petPortrait, { backgroundColor: c.primaryFixed }]}>
-                  {pet.avatar_url !== null ? (
-                    <Image source={{ uri: pet.avatar_url }} style={styles.petPortraitImage} />
-                  ) : (
-                    <Text style={styles.petEmoji}>{petEmoji(pet)}</Text>
-                  )}
-                </View>
-                <Text style={[styles.petName, { color: c.onSurface }]}>{pet.name}</Text>
-                <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
-                  {pet.breed ?? 'PfotenNetz-Mitglied'}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
         )}
 
         <Card>
@@ -418,13 +349,6 @@ const styles = StyleSheet.create({
   },
   bookingNumber: { fontFamily: appFonts.bold, fontSize: 15, lineHeight: 20 },
   rowSub: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18 },
-  petRailWrap: { marginHorizontal: -16, marginBottom: 20 },
-  petRail: { paddingHorizontal: 16, gap: 12 },
-  petCard: { width: 146, borderRadius: 20, borderWidth: 1, padding: 10 },
-  petPortrait: { height: 92, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  petPortraitImage: { width: '100%', height: '100%', borderRadius: 15 },
-  petEmoji: { fontSize: 42 },
-  petName: { fontFamily: appFonts.bold, fontSize: 15, lineHeight: 20, marginTop: 9 },
   petMeta: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
   row: {
     flexDirection: 'row',

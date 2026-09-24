@@ -5,4 +5,5 @@ export const petsKeys = {
   all: ['pets'] as const,
   /** The caller's own pets, newest first. */
   own: ['pets', 'own'] as const,
+  emergencyLinks: ['pets', 'emergency-links'] as const,
 } as const;
