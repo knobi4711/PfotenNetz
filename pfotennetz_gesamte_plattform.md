@@ -27,7 +27,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Rich-Push-Kategorien mit internen Deep-Links für Gefahren- und Vermisst-Tier-Warnungen
 - Admin-Zugangspunkt „Administration“ im Profil/Header; sichere Gefahrenmoderation für Admins
 - Helfer:innen-Verfügbarkeiten mit Mehrfachauswahl beliebiger Wochentage und Zeit-Dropdowns in 30-Minuten-Schritten
-- Community-Events mit Teilnahme vormerken/zurücknehmen
+- Community-Events mit Erstellung, Teilnahme vormerken/zurücknehmen, Teilnehmerübersicht und Moderation
 - Vermisste-Tiere-Meldung, eigene Suchmeldungen, Status „gefunden“ und Vermissten-Radar
 - Hintergrund-/Foreground-Tracking-Service mit Expo-Background-Location-Task, Geofence-Sicherheitszone,
   serverseitiger Positions-/Telemetrie-Synchronisierung und Web-Live-Tracking
@@ -393,7 +393,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 ### Priorität 2 – Plattformfunktionen
 
 1. Web-Buchungsdetail, Web-Chat und Mediengalerie ergänzen.
-2. Event-Erstellung, Teilnehmerübersicht und Community-Moderation ergänzen.
+2. Native Geräte-/Development-Build-Tests für Push, Tracking, Geofence, QR und Offline-Modus durchführen.
 3. Tierprofil-Formular um strukturierte Medikamente, Allergien und Tierarztinformationen erweitern.
 4. Native Passkeys in einem Expo-Development-Build validieren.
 5. Authentifizierte Playwright-/Detox- und native Gerätetests sowie CI-Checks für die Hauptjourneys ausbauen.

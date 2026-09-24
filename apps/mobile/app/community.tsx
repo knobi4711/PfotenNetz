@@ -1,11 +1,15 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as Location from 'expo-location';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import {
   EVENT_TYPE_LABELS,
+  useCreateCommunityEvent,
   useCurrentUser,
   useJoinCommunityEvent,
   useLeaveCommunityEvent,
   useOwnEventParticipants,
+  useOwnProfile,
   useParticipantProfilesForEvents,
   useUpcomingCommunityEvents,
 } from '@pfotennetz/supabase';
@@ -26,15 +30,55 @@ export default function CommunityScreen() {
   const c = usePalette();
   const events = useUpcomingCommunityEvents();
   const user = useCurrentUser();
+  const profile = useOwnProfile();
   const participants = useOwnEventParticipants();
   const participantProfiles = useParticipantProfilesForEvents(
     events.data?.map((event) => event.id) ?? []
   );
   const join = useJoinCommunityEvent();
   const leave = useLeaveCommunityEvent();
+  const create = useCreateCommunityEvent();
+  const [showCreate, setShowCreate] = useState(false);
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState<keyof typeof EVENT_TYPE_LABELS>('group_walk');
+  const [description, setDescription] = useState('');
+  const [address, setAddress] = useState('');
+  const [startsAt, setStartsAt] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
   const joined = new Set(
     (participants.data ?? []).filter((item) => item.status === 'going').map((item) => item.event_id)
   );
+  const createEvent = async () => {
+    setFormError(null);
+    const starts = new Date(startsAt);
+    if (!title.trim() || Number.isNaN(starts.getTime())) {
+      setFormError('Bitte gib einen Titel und einen gültigen Beginn ein.');
+      return;
+    }
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) throw new Error('Standortfreigabe wurde nicht erteilt.');
+      const current = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      await create.mutateAsync({
+        title: title.trim(),
+        type,
+        description: description.trim(),
+        address: address.trim(),
+        startsAt: starts.toISOString(),
+        latitude: current.coords.latitude,
+        longitude: current.coords.longitude,
+      });
+      setTitle('');
+      setDescription('');
+      setAddress('');
+      setStartsAt('');
+      setShowCreate(false);
+    } catch (cause: unknown) {
+      setFormError(cause instanceof Error ? cause.message : 'Event konnte nicht erstellt werden.');
+    }
+  };
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: c.surface }]}
@@ -42,6 +86,76 @@ export default function CommunityScreen() {
     >
       <AppHeader title="Nachbarschafts-Treff" subtitle="Gemeinsam unterwegs, füreinander da." />
       <BackButton onPress={() => router.back()} />
+      <ActionButton
+        title={showCreate ? 'Erstellung schließen' : 'Neues Event erstellen'}
+        variant="secondary"
+        onPress={() => setShowCreate((visible) => !visible)}
+      />
+      {profile.data?.role === 'admin' ? (
+        <ActionButton
+          title="Community-Moderation"
+          variant="secondary"
+          onPress={() => router.push('/community/moderation')}
+        />
+      ) : null}
+      {showCreate ? (
+        <Card>
+          <SectionTitle>Neues Community-Event</SectionTitle>
+          <TextInput
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Titel, z. B. Sonntags-Rudelrunde"
+            placeholderTextColor={c.outline}
+            style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
+          />
+          <View style={styles.typeRow}>
+            {(Object.entries(EVENT_TYPE_LABELS) as [keyof typeof EVENT_TYPE_LABELS, string][]).map(
+              ([value, label]) => (
+                <Pressable
+                  key={value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: type === value }}
+                  onPress={() => setType(value)}
+                  style={[
+                    styles.typeChip,
+                    { backgroundColor: type === value ? c.primary : c.surfaceContainerHigh },
+                  ]}
+                >
+                  <Text style={{ color: type === value ? c.onPrimary : c.onSurface }}>{label}</Text>
+                </Pressable>
+              )
+            )}
+          </View>
+          <TextInput
+            value={startsAt}
+            onChangeText={setStartsAt}
+            placeholder="Beginn (z. B. 2026-10-04T10:00)"
+            placeholderTextColor={c.outline}
+            style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
+          />
+          <TextInput
+            value={address}
+            onChangeText={setAddress}
+            placeholder="Adresse oder Treffpunkt (optional)"
+            placeholderTextColor={c.outline}
+            style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
+          />
+          <TextInput
+            multiline
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Beschreibung (optional)"
+            placeholderTextColor={c.outline}
+            style={[styles.textarea, { color: c.onSurface, borderColor: c.outlineVariant }]}
+          />
+          {formError ? <ErrorBox message={formError} /> : null}
+          <ActionButton
+            title="Event speichern"
+            pending={create.isPending}
+            onPress={() => void createEvent()}
+          />
+        </Card>
+      ) : null}
       {events.isPending || participants.isPending ? (
         <LoadingView label="Events werden geladen …" />
       ) : events.isError ? (
@@ -123,5 +237,24 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 14,
   },
+  input: {
+    borderWidth: 1,
+    borderRadius: 14,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    marginTop: 12,
+    fontFamily: appFonts.regular,
+  },
+  textarea: {
+    borderWidth: 1,
+    borderRadius: 14,
+    minHeight: 90,
+    padding: 14,
+    marginTop: 12,
+    textAlignVertical: 'top',
+    fontFamily: appFonts.regular,
+  },
+  typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  typeChip: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 9 },
   back: { fontFamily: appFonts.bold, textAlign: 'center', padding: 16 },
 });
