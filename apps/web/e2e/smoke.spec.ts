@@ -81,4 +81,126 @@ test.describe('Web smoke flows', () => {
     await expect(page.getByText('Offline-Modus: zuletzt synchronisierte Karte.')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Testtier' })).toBeVisible();
   });
+
+  test('edits structured pet health data in an authenticated flow', async ({ page }) => {
+    const userId = '00000000-0000-0000-0000-000000000001';
+    const petId = '00000000-0000-0000-0000-000000000002';
+    const pet = {
+      id: petId,
+      owner_id: userId,
+      name: 'Testtier',
+      species: 'dog',
+      breed: 'Mischling',
+      birth_date: '2020-01-01',
+      weight_kg: 12,
+      color: 'Braun',
+      microchip_number: null,
+      tattoo_number: null,
+      insurance_policy: null,
+      vet_clinic: 'Testpraxis',
+      vet_phone: '+49 30 123456',
+      medications: ['Bisheriges Mittel'],
+      allergies: ['Keine bekannt'],
+      special_needs: null,
+      emergency_card: {},
+      avatar_url: null,
+      is_active: true,
+      is_deceased: false,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    };
+    const profile = {
+      id: userId,
+      display_name: 'Testkonto',
+      role: 'user',
+      trust_level: 'new',
+      avatar_url: null,
+      phone: null,
+      bio: null,
+      address: null,
+      city: null,
+      postal_code: null,
+      notification_prefs: {},
+      kiez_radius_km: 5,
+    };
+
+    const authUser = {
+      id: userId,
+      aud: 'authenticated',
+      role: 'authenticated',
+      email: 'test@example.invalid',
+      app_metadata: { provider: 'email', providers: ['email'] },
+      user_metadata: {},
+      created_at: '2026-01-01T00:00:00.000Z',
+    };
+    const authSession = {
+      access_token: 'test-access-token',
+      refresh_token: 'test-refresh-token',
+      expires_in: 3600,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      token_type: 'bearer',
+      user: authUser,
+    };
+    await page.addInitScript(
+      ({ session }) => {
+        window.localStorage.setItem('sb-njkyujhbcolvtcnlahsk-auth-token', JSON.stringify(session));
+      },
+      { session: authSession }
+    );
+    await page.unroute('**/auth/v1/session');
+    await page.unroute('**/rest/v1/**');
+    await page.route('**/auth/v1/session', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...authSession,
+        }),
+      })
+    );
+    await page.route('**/auth/v1/user', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(authUser),
+      })
+    );
+    await page.route('**/rest/v1/**', async (route) => {
+      const url = new URL(route.request().url());
+      if (url.pathname.endsWith('/pets')) {
+        if (route.request().method() === 'PATCH') {
+          const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>;
+          expect(body.medications).toEqual(['Insulin', 'Vitamin B']);
+          expect(body.allergies).toEqual(['Huhn']);
+          expect(body.vet_clinic).toBe('Neue Testpraxis');
+          expect(body.vet_phone).toBe('+49 30 987654');
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([pet]),
+        });
+        return;
+      }
+      if (url.pathname.endsWith('/profiles')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([profile]),
+        });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    });
+
+    await page.goto('/pets', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Testtier' })).toBeVisible();
+    await page.getByRole('button', { name: 'Gesundheitsdaten bearbeiten' }).click();
+    await page.getByLabel('Medikamente').fill('Insulin, Vitamin B');
+    await page.getByLabel('Allergien').fill('Huhn');
+    await page.getByLabel('Tierarztpraxis').fill('Neue Testpraxis');
+    await page.getByLabel('Tierarzt-Telefon').fill('+49 30 987654');
+    await page.getByRole('button', { name: 'Gesundheitsdaten speichern' }).click();
+    await expect(page.getByRole('button', { name: 'Gesundheitsdaten speichern' })).toBeVisible();
+  });
 });
