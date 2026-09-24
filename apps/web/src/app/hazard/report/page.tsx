@@ -8,6 +8,7 @@ import {
   type HazardSeverity,
   type HazardType,
 } from '@pfotennetz/supabase';
+import { searchOpenStreetMap, type GeocodingResult } from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { WebHeader } from '../../../components/WebHeader';
 import { useState } from 'react';
@@ -46,6 +47,8 @@ export default function WebHazardReportPage() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [photo, setPhoto] = useState<{ data: ArrayBuffer; type: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<GeocodingResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const setCurrentLocation = () => {
     setError(null);
@@ -54,6 +57,24 @@ export default function WebHazardReportPage() {
       .catch((cause: unknown) =>
         setError(cause instanceof Error ? cause.message : 'Standort konnte nicht bestimmt werden.')
       );
+  };
+  const searchAddress = async () => {
+    setError(null);
+    setSearchResults([]);
+    if (address.trim().length < 3) {
+      setError('Bitte gib mindestens drei Zeichen für die Ortssuche ein.');
+      return;
+    }
+    setSearching(true);
+    try {
+      const results = await searchOpenStreetMap(address);
+      setSearchResults(results);
+      if (results.length === 0) setError('Kein passender Ort gefunden.');
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : 'Ort konnte nicht gesucht werden.');
+    } finally {
+      setSearching(false);
+    }
   };
   const publish = async () => {
     setError(null);
@@ -125,12 +146,49 @@ export default function WebHazardReportPage() {
                 {location ? 'Fundort aktualisiert' : 'Aktuellen Fundort verwenden'}
               </button>
               <input
+                aria-label="Adresse oder Ort suchen"
                 value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                placeholder="Adresse oder Ort (optional)"
+                onChange={(event) => {
+                  setAddress(event.target.value);
+                  setSearchResults([]);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void searchAddress();
+                  }
+                }}
+                placeholder="Adresse oder Ort suchen"
                 className="input max-w-md"
               />
+              <button
+                type="button"
+                onClick={() => void searchAddress()}
+                disabled={searching}
+                className="btn-secondary"
+              >
+                {searching ? 'Suche …' : 'Ort suchen'}
+              </button>
             </div>
+            {searchResults.length > 0 ? (
+              <div className="mt-3 grid gap-2" aria-label="Suchergebnisse">
+                {searchResults.map((result) => (
+                  <button
+                    type="button"
+                    key={`${result.latitude}:${result.longitude}:${result.displayName}`}
+                    onClick={() => {
+                      setAddress(result.displayName);
+                      setLocation({ latitude: result.latitude, longitude: result.longitude });
+                      setSearchResults([]);
+                      setError(null);
+                    }}
+                    className="rounded-xl border border-outline-variant/50 p-3 text-left text-sm font-semibold hover:bg-surface-container"
+                  >
+                    {result.displayName}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </section>
         ) : null}
         {step === 2 ? (

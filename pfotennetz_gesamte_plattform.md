@@ -18,6 +18,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Dashboard ohne den separaten Abschnitt „Meine Haustiere“; Haustiere bleiben über den eigenen Tab verwaltbar
 - Digitale Tier-Notfallkarte mit Chipnummer, Medikamenten, Allergien, Tierarzt- und Versicherungsdaten, inklusive Teilen-Funktion
 - Helfer:innen-Suche mit Standortfreigabe, Radius und schematischer Karte
+- OpenStreetMap/Nominatim-Ortssuche im Web-Gefahrenmelder mit Übernahme der gefundenen Koordinaten
 - OpenStreetMap-/Leaflet-Karten für Helfer:innen-Suche, Gefahrenradar und Tracking-Flows
 - Buchungsworkflow inklusive Statuswechseln, Zeitbank und Benachrichtigungen
 - Buchungs-Chat mit Nachrichtenliste und Realtime-Grundlage
@@ -378,7 +379,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 
 ### Priorität 1 – Produktreife
 
-1. Geocoding, echte Routenberechnung und die verbleibenden Kartenfunktionen für Mobile und Web integrieren.
+1. Echte Routenberechnung (z. B. OSRM) und die verbleibenden Kartenfunktionen für Mobile und Web integrieren.
 2. Native Live-Tracking-Funktionen mit Geofence, Broadcast und vollständigen Gerätetests fertigstellen.
 3. Offline-Synchronisierung der öffentlichen Notfallkarte und QR-/Gerätetests ergänzen.
 4. Vermisst-Tier-Sichtungen inklusive Foto-Upload, Detailansicht und Tasso-Prozess ergänzen.

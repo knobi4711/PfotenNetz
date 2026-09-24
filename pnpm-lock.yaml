@@ -204,6 +204,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@pfotennetz/shared':
+        specifier: workspace:^
+        version: link:../../packages/shared
       '@pfotennetz/supabase':
         specifier: workspace:^
         version: link:../../packages/supabase

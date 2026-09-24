@@ -13,6 +13,7 @@
     "clean": "rm -rf .next dist node_modules/.cache"
   },
   "dependencies": {
+    "@pfotennetz/shared": "workspace:^",
     "@pfotennetz/supabase": "workspace:^",
     "@supabase/supabase-js": "^2.116.0",
     "@tanstack/react-query": "^5.0.0",
