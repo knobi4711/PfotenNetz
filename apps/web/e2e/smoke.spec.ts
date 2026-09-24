@@ -10,6 +10,7 @@ const routes = [
   '/tracking',
   '/hazard/radar',
   '/hazard/report',
+  '/missing',
 ];
 
 test.beforeEach(async ({ page }) => {

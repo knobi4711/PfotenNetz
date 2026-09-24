@@ -40,6 +40,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - `/bookings`: Buchungsübersicht
 - `/profile`: Profil und Zeitbank-Verlauf
 - `/pets`: Tierprofile
+- `/missing` und `/missing/[id]`: Vermisst-Tier-Übersicht, Sichtungsverlauf und Foto-Upload
 - `/tracking`: Betreuung-/Tracking-Übersicht
 - `/community`: kommende Community-Events
 - `/hazard/moderation`: Admin-Moderation aktiver Gefahrenmeldungen
@@ -53,7 +54,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Mobile-Typecheck und Mobile-Lint: erfolgreich
 - Supabase-Tests: 81 erfolgreich
 - Mobile-Tests: 54 erfolgreich
-- Web-E2E: 11/11 erfolgreich, inklusive Offline-Notfallkarten-Smoke-Test
+- Web-E2E: 12/12 erfolgreich, inklusive Offline-Notfallkarten-Smoke-Test
 - Web-Build: erfolgreich
 - Expo-Android-Bundle: erfolgreich erzeugt
 - Remote-Migrationen bis `049_fix_hazard_sighting_geography_assignment.sql` angewendet
@@ -385,7 +386,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 2. Native Live-Tracking-Funktionen mit Geofence und Realtime-Broadcast sind technisch vorbereitet; vollständige
    Tests auf realen Android-/iOS-Geräten stehen noch aus.
 3. QR-/Offline-Notfallkarten-Tests auf realen Android-/iOS-Geräten ergänzen.
-4. Vermisst-Tier-Sichtungen inklusive Foto-Upload, Detailansicht und Tasso-Prozess ergänzen.
+4. Tasso-Anbindung und automatische Vermisst-Tier-Synchronisierung ergänzen.
 5. Rich-Push-Flows, Notification-Deep-Links und Entwarnungsaktionen auf realen Android-Geräten testen.
 
 ### Priorität 2 – Plattformfunktionen
