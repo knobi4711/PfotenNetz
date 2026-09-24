@@ -106,6 +106,16 @@ export function buildExpoMessage(notification, token) {
     )
   ) {
     data.categoryIdentifier = 'safety';
+    const safetyUrl =
+      typeof data.hazard_id === 'string'
+        ? `/hazard/${data.hazard_id}`
+        : typeof data.missing_pet_id === 'string'
+          ? '/missing/radar'
+          : null;
+    if (safetyUrl) {
+      data.url = safetyUrl;
+      data.actionUrls = { OPEN_ALERT: safetyUrl };
+    }
   } else if (notification.type === 'community_event') {
     data.categoryIdentifier = 'community';
   }
@@ -118,8 +128,8 @@ export function buildExpoMessage(notification, token) {
   if (notification.data && typeof notification.data.url === 'string') {
     message.channelId = 'default';
   }
-  if (notification.data && typeof notification.data.categoryIdentifier === 'string') {
-    message.categoryIdentifier = notification.data.categoryIdentifier;
+  if (typeof data.categoryIdentifier === 'string') {
+    message.categoryIdentifier = data.categoryIdentifier;
   }
   return message;
 }

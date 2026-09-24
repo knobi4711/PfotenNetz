@@ -102,6 +102,35 @@ describe('message building', () => {
     expect(msg.data.actionUrls).toEqual({ OPEN_BOOKING: '/booking/b-2', OPEN_CHAT: '/chat/b-2' });
   });
 
+  it('creates a hazard deep link for rich safety actions', () => {
+    const msg = buildExpoMessage(
+      {
+        type: 'hazard_alert',
+        title: 'Warnung',
+        body: 'Gefahr in deiner Nähe',
+        data: { hazard_id: 'hazard-1' },
+      },
+      'ExponentPushToken[a]'
+    );
+    expect(msg.categoryIdentifier).toBe('safety');
+    expect(msg.data.url).toBe('/hazard/hazard-1');
+    expect(msg.data.actionUrls).toEqual({ OPEN_ALERT: '/hazard/hazard-1' });
+  });
+
+  it('opens the missing-pet radar for missing-pet safety actions', () => {
+    const msg = buildExpoMessage(
+      {
+        type: 'missing_pet_alert',
+        title: 'Vermisstes Tier',
+        body: 'Eine Suchmeldung ist aktiv',
+        data: { missing_pet_id: 'missing-1' },
+      },
+      'ExponentPushToken[a]'
+    );
+    expect(msg.data.url).toBe('/missing/radar');
+    expect(msg.data.actionUrls).toEqual({ OPEN_ALERT: '/missing/radar' });
+  });
+
   it('creates one message per unique Expo device token', () => {
     const messages = buildExpoMessages(
       { type: 'system', title: 'Hinweis', body: 'Text', data: {} },

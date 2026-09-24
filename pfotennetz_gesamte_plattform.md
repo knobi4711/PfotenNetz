@@ -24,6 +24,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Buchungsworkflow inklusive Statuswechseln, Zeitbank und Benachrichtigungen
 - Buchungs-Chat mit Nachrichtenliste und Realtime-Grundlage
 - Gefahrenmeldung, Gefahrenradar, Foto-Upload, Zeit-/Dringlichkeitsfilter, Realtime-Aktualisierung und Moderationsansicht
+- Rich-Push-Kategorien mit internen Deep-Links für Gefahren- und Vermisst-Tier-Warnungen
 - Admin-Zugangspunkt „Administration“ im Profil/Header; sichere Gefahrenmoderation für Admins
 - Helfer:innen-Verfügbarkeiten mit Mehrfachauswahl beliebiger Wochentage und Zeit-Dropdowns in 30-Minuten-Schritten
 - Community-Events mit Teilnahme vormerken/zurücknehmen
@@ -52,7 +53,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Mobile-Lint: erfolgreich
 - Web-Typecheck und Web-Lint: erfolgreich
 - Mobile-Typecheck und Mobile-Lint: erfolgreich
-- Supabase-Tests: 81 erfolgreich
+- Supabase-Tests: 83 erfolgreich
 - Mobile-Tests: 54 erfolgreich
 - Web-E2E: 12/12 erfolgreich, inklusive Offline-Notfallkarten-Smoke-Test
 - Web-Build: erfolgreich
@@ -387,7 +388,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
    Tests auf realen Android-/iOS-Geräten stehen noch aus.
 3. QR-/Offline-Notfallkarten-Tests auf realen Android-/iOS-Geräten ergänzen.
 4. Tasso-Anbindung und automatische Vermisst-Tier-Synchronisierung ergänzen.
-5. Rich-Push-Flows, Notification-Deep-Links und Entwarnungsaktionen auf realen Android-Geräten testen.
+5. Rich-Push-Flows, Notification-Deep-Links und Entwarnungsaktionen auf realen Android-/iOS-Geräten testen.
 
 ### Priorität 2 – Plattformfunktionen
 

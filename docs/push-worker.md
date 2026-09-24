@@ -29,6 +29,9 @@ Expo-Quotas).
 
 - Expo-Tickets mit `DeviceNotRegistered` → Gerät wird deaktiviert
   (`devices.is_active = false`).
+- Gefahrenmeldungen mit `data.hazard_id` öffnen per Standardklick oder
+  `OPEN_ALERT` direkt `/hazard/:id`; Vermisst-Tier-Pushes öffnen den
+  `/missing/radar`-Flow.
 - Abgelehnte Tickets (z. B. `MessageTooBig`) → `push_sent = true` mit
   `data.push_error` (Retry würde nie helfen).
 - Netzwerkfehler beim Expo-Call → Zeile bleibt offen, Retry beim nächsten Lauf.
