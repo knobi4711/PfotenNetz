@@ -13,6 +13,7 @@ import { useFonts } from 'expo-font';
 import { useAuth, useRegisterDevice } from '@pfotennetz/supabase';
 import { Providers } from '../providers/Providers';
 import '../lib/geofence';
+import '../lib/tracking-background';
 import { ErrorBox, LoadingView, usePalette } from '../components/ui';
 import {
   configureForegroundPresentation,

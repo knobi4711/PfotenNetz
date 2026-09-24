@@ -61,7 +61,16 @@
       ],
       "expo-secure-store",
       "expo-local-authentication",
-      "expo-location",
+      [
+        "expo-location",
+        {
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "locationWhenInUsePermission": "PfotenNetz benötigt deinen Standort für Karten und Live-Tracking.",
+          "locationAlwaysAndWhenInUsePermission": "PfotenNetz benötigt deinen Standort für Hintergrund-Tracking bei aktiven Gassi-Runden."
+        }
+      ],
       "expo-notifications",
       [
         "expo-audio",

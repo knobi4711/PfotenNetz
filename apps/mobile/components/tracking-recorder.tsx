@@ -1,22 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
-import {
-  useCreateTrackingSession,
-  useFinishTrackingSession,
-  useInsertTrackingPoints,
-} from '@pfotennetz/supabase';
+import { useCreateTrackingSession, useFinishTrackingSession } from '@pfotennetz/supabase';
 import { ActionButton, Card, EmptyText, ErrorBox, SectionTitle } from './ui';
 import { distanceMeters } from '../lib/tracking';
 import { startTrackingGeofence, stopTrackingGeofence } from '../lib/geofence';
+import { startBackgroundTracking, stopBackgroundTracking } from '../lib/tracking-background';
 
 export function TrackingRecorder({ bookingId }: { bookingId: string }) {
   const create = useCreateTrackingSession();
-  const insert = useInsertTrackingPoints();
   const finish = useFinishTrackingSession();
   const subscription = useRef<Location.LocationSubscription | null>(null);
   const previous = useRef<Location.LocationObjectCoords | null>(null);
   const distance = useRef(0);
   const startedAt = useRef<number | null>(null);
+  const backgroundEnabled = useRef(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [displayedDistanceMeters, setDisplayedDistanceMeters] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +36,15 @@ export function TrackingRecorder({ bookingId }: { bookingId: string }) {
       });
       previous.current = initial.coords;
       try {
+        await startBackgroundTracking(session.id);
+        backgroundEnabled.current = true;
+      } catch {
+        backgroundEnabled.current = false;
+        setError(
+          'Hintergrund-Tracking konnte nicht aktiviert werden; Vordergrund-Tracking läuft weiter.'
+        );
+      }
+      try {
         await startTrackingGeofence(bookingId, initial.coords);
       } catch {
         setError(
@@ -53,28 +59,7 @@ export function TrackingRecorder({ bookingId }: { bookingId: string }) {
             setDisplayedDistanceMeters(distance.current);
           }
           previous.current = location.coords;
-          void insert
-            .mutateAsync({
-              sessionId: session.id,
-              point: {
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-                accuracy: location.coords.accuracy ?? 0,
-                timestamp: location.timestamp,
-                ...(location.coords.speed !== null ? { speed: location.coords.speed } : {}),
-                ...(location.coords.heading !== null ? { heading: location.coords.heading } : {}),
-                ...(location.coords.altitude !== null
-                  ? { altitude: location.coords.altitude }
-                  : {}),
-              },
-            })
-            .catch((reason: unknown) =>
-              setError(
-                reason instanceof Error
-                  ? reason.message
-                  : 'GPS-Punkt konnte nicht gespeichert werden.'
-              )
-            );
+          if (!backgroundEnabled.current) return;
         }
       );
     } catch (reason: unknown) {
@@ -89,12 +74,14 @@ export function TrackingRecorder({ bookingId }: { bookingId: string }) {
     subscription.current?.remove();
     subscription.current = null;
     try {
+      await stopBackgroundTracking().catch(() => undefined);
       await finish.mutateAsync({
         sessionId,
         distanceMeters: distance.current,
         durationSeconds: Math.max(0, (Date.now() - (startedAt.current ?? Date.now())) / 1000),
       });
       await stopTrackingGeofence().catch(() => undefined);
+      backgroundEnabled.current = false;
       setSessionId(null);
       previous.current = null;
       distance.current = 0;

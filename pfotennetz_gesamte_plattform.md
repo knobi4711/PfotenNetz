@@ -27,7 +27,8 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Helfer:innen-Verfügbarkeiten mit Mehrfachauswahl beliebiger Wochentage und Zeit-Dropdowns in 30-Minuten-Schritten
 - Community-Events mit Teilnahme vormerken/zurücknehmen
 - Vermisste-Tiere-Meldung, eigene Suchmeldungen, Status „gefunden“ und Vermissten-Radar
-- Hintergrund-/Foreground-Tracking-Service, serverseitige Positions-/Telemetrie-Synchronisierung und Web-Live-Tracking
+- Hintergrund-/Foreground-Tracking-Service mit Expo-Background-Location-Task, Geofence-Sicherheitszone,
+  serverseitiger Positions-/Telemetrie-Synchronisierung und Web-Live-Tracking
 
 ### Umgesetzt – Web-App
 
@@ -380,7 +381,8 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 ### Priorität 1 – Produktreife
 
 1. Echte Routenberechnung (z. B. OSRM) und die verbleibenden Kartenfunktionen für Mobile und Web integrieren.
-2. Native Live-Tracking-Funktionen mit Geofence, Broadcast und vollständigen Gerätetests fertigstellen.
+2. Native Live-Tracking-Funktionen mit Geofence und Realtime-Broadcast sind technisch vorbereitet; vollständige
+   Tests auf realen Android-/iOS-Geräten stehen noch aus.
 3. Offline-Synchronisierung der öffentlichen Notfallkarte und QR-/Gerätetests ergänzen.
 4. Vermisst-Tier-Sichtungen inklusive Foto-Upload, Detailansicht und Tasso-Prozess ergänzen.
 5. Rich-Push-Flows, Notification-Deep-Links und Entwarnungsaktionen auf realen Android-Geräten testen.
