@@ -155,6 +155,7 @@ test.describe('Web smoke flows', () => {
       metadata: {},
       created_at: '2026-01-01T00:00:00.000Z',
     };
+    let bookingStatus = 'confirmed';
 
     const authUser = {
       id: userId,
@@ -226,7 +227,18 @@ test.describe('Web smoke flows', () => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(booking),
+          body: JSON.stringify({ ...booking, status: bookingStatus }),
+        });
+        return;
+      }
+      if (url.pathname.endsWith('/rpc/seeker_cancel_booking')) {
+        const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>;
+        expect(body.p_booking_id).toBe(bookingId);
+        bookingStatus = 'cancelled';
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ...booking, status: bookingStatus }),
         });
         return;
       }
@@ -269,6 +281,10 @@ test.describe('Web smoke flows', () => {
     await page.getByLabel('Tierarzt-Telefon').fill('+49 30 987654');
     await page.getByRole('button', { name: 'Gesundheitsdaten speichern' }).click();
     await expect(page.getByRole('button', { name: 'Gesundheitsdaten speichern' })).toBeVisible();
+    await page.goto(`/booking/${bookingId}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Betreuung für Testtier' })).toBeVisible();
+    await page.getByRole('button', { name: 'Buchung stornieren' }).click();
+    await expect(page.getByText('Storniert')).toBeVisible();
     await page.goto(`/chat/${bookingId}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Betreuung für Testtier')).toBeVisible();
     await page.getByRole('textbox', { name: 'Nachricht' }).fill('Bin gleich da.');
