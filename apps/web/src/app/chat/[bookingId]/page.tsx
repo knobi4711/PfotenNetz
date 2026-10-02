@@ -6,10 +6,11 @@ import {
   useCurrentUser,
   useSendBookingMessage,
   useUploadBookingMessageImage,
+  useUploadBookingMessageVoice,
 } from '@pfotennetz/supabase';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { WebHeader } from '../../../components/WebHeader';
 
 export default function BookingChatPage() {
@@ -19,7 +20,11 @@ export default function BookingChatPage() {
   const user = useCurrentUser();
   const send = useSendBookingMessage();
   const upload = useUploadBookingMessageImage();
+  const uploadVoice = useUploadBookingMessageVoice();
   const [draft, setDraft] = useState('');
+  const [recording, setRecording] = useState(false);
+  const recorder = useRef<MediaRecorder | null>(null);
+  const chunks = useRef<Blob[]>([]);
   const otherPerson = useMemo(() => {
     if (!booking.data || !user.data) return null;
     return booking.data.seeker_id === user.data.id
@@ -33,6 +38,28 @@ export default function BookingChatPage() {
     const content = draft.trim();
     setDraft('');
     send.mutate({ bookingId, content }, { onError: () => setDraft(content) });
+  };
+
+  const startRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') return;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+    chunks.current = [];
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunks.current.push(event.data);
+    };
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach((track) => track.stop());
+      const blob = new Blob(chunks.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+      void blob
+        .arrayBuffer()
+        .then((fileData) => uploadVoice.mutate({ bookingId, fileData, contentType: blob.type }));
+      recorder.current = null;
+      setRecording(false);
+    };
+    recorder.current = mediaRecorder;
+    mediaRecorder.start();
+    setRecording(true);
   };
 
   return (
@@ -120,7 +147,7 @@ export default function BookingChatPage() {
             </button>
           ))}
         </div>
-        <form onSubmit={submit} className="mt-4 flex gap-3">
+        <form onSubmit={submit} className="mt-4 flex flex-wrap gap-3">
           <label className="btn-secondary cursor-pointer whitespace-nowrap">
             Foto
             <input
@@ -140,6 +167,24 @@ export default function BookingChatPage() {
               }}
             />
           </label>
+          <button
+            type="button"
+            className={recording ? 'btn-emergency' : 'btn-secondary'}
+            disabled={uploadVoice.isPending}
+            onClick={() => {
+              if (recording) recorder.current?.stop();
+              else
+                void startRecording().catch((cause: unknown) =>
+                  setDraft(
+                    cause instanceof Error
+                      ? `Mikrofonfehler: ${cause.message}`
+                      : 'Mikrofonzugriff fehlgeschlagen.'
+                  )
+                );
+            }}
+          >
+            {recording ? 'Aufnahme stoppen' : 'Sprachnachricht'}
+          </button>
           <input
             aria-label="Nachricht"
             value={draft}
@@ -160,6 +205,11 @@ export default function BookingChatPage() {
         {upload.isError ? (
           <p role="alert" className="mt-3 text-sm text-error">
             Foto konnte nicht gesendet werden: {upload.error.message}
+          </p>
+        ) : null}
+        {uploadVoice.isError ? (
+          <p role="alert" className="mt-3 text-sm text-error">
+            Sprachnachricht konnte nicht gesendet werden: {uploadVoice.error.message}
           </p>
         ) : null}
       </div>

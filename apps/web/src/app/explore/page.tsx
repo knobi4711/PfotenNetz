@@ -10,6 +10,7 @@ import {
   type NearbyHelper,
 } from '@pfotennetz/supabase';
 import { searchOpenStreetMap, type GeocodingResult } from '@pfotennetz/shared';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useEffect, useRef } from 'react';
 import { WebHeader } from '../../components/WebHeader';
@@ -223,6 +224,7 @@ function HelperCard({
 }
 
 export default function ExplorePage() {
+  const router = useRouter();
   const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<(typeof RADII)[number]>(3);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -512,6 +514,13 @@ export default function ExplorePage() {
                       {createContact.isPending ? 'Wird gesendet …' : 'Kennenlernen anfragen'}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    className="btn-secondary mt-3 w-full"
+                    onClick={() => router.push(`/booking/new?helperId=${selected.helper_id}`)}
+                  >
+                    Betreuung anfragen
+                  </button>
                 </div>
               ) : null}
             </div>

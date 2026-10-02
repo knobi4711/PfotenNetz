@@ -72,6 +72,9 @@ export default function MissingPetsPage() {
             Der aktuelle Browserstandort wird als letzter bekannter Ort gespeichert. Der Suchradius
             beträgt 3 km.
           </p>
+          <Link href="/missing/radar" className="btn-secondary mt-5 inline-flex">
+            Vermissten-Radar öffnen
+          </Link>
           <label className="mt-5 block text-sm font-bold">
             Tier auswählen
             <select

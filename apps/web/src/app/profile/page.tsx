@@ -5,11 +5,14 @@ import {
   useTimebankAccount,
   useTimebankTransactions,
   useUpdateOwnProfile,
+  useUploadOwnAvatar,
   KIEZ_RADIUS_OPTIONS,
   type KiezRadius,
   type NotificationPreferences,
 } from '@pfotennetz/supabase';
 import { WebHeader } from '../../components/WebHeader';
+import { AvailabilityManager } from '../../components/AvailabilityManager';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
 export default function ProfilePage() {
@@ -17,6 +20,7 @@ export default function ProfilePage() {
   const account = useTimebankAccount();
   const transactions = useTimebankTransactions();
   const updateProfile = useUpdateOwnProfile();
+  const uploadAvatar = useUploadOwnAvatar();
   const value = profile.data;
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     hazards: true,
@@ -28,6 +32,9 @@ export default function ProfilePage() {
   const [postalCode, setPostalCode] = useState('');
   const [profileBio, setProfileBio] = useState('');
   const [radius, setRadius] = useState<KiezRadius>(1.5);
+  const avatarUrl = value?.avatar_url
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${value.avatar_url}`
+    : null;
   useEffect(() => {
     if (value) {
       setDisplayName(value.display_name);
@@ -66,9 +73,35 @@ export default function ProfilePage() {
           <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
             <section className="card p-7">
               <div className="flex items-center gap-4">
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary-container text-2xl font-extrabold text-on-secondary-container">
-                  {value.display_name.slice(0, 1).toUpperCase()}
-                </span>
+                <label className="relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-secondary-container text-2xl font-extrabold text-on-secondary-container">
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt="Profilfoto"
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  ) : (
+                    value.display_name.slice(0, 1).toUpperCase()
+                  )}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    disabled={uploadAvatar.isPending}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      void file
+                        .arrayBuffer()
+                        .then((fileData) =>
+                          uploadAvatar.mutate({ fileData, contentType: file.type })
+                        );
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
                 <div>
                   <h2 className="text-2xl font-extrabold text-on-surface">{value.display_name}</h2>
                   <p className="text-sm text-secondary">Nachbarschafts-Mitglied</p>
@@ -161,6 +194,7 @@ export default function ProfilePage() {
               </div>
             </section>
             <div className="space-y-6">
+              <AvailabilityManager />
               <section className="card p-7">
                 <h2 className="text-xl font-extrabold text-on-surface">Benachrichtigungen</h2>
                 <p className="mt-2 text-sm text-on-surface-variant">

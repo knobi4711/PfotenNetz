@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { NotificationBell } from './NotificationBell';
 
 export function WebHeader({
   rightContent,
@@ -66,6 +67,7 @@ export function WebHeader({
             <span className="hidden rounded-full bg-secondary-container px-4 py-2 text-sm font-bold text-on-secondary-container md:inline-flex">
               {Number(account.data?.balance_hours ?? 0).toLocaleString('de-DE')} Std. Zeitbank
             </span>
+            <NotificationBell />
             <button
               type="button"
               disabled={signingOut}

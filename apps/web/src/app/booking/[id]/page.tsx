@@ -11,6 +11,7 @@ import {
 } from '@pfotennetz/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import { WebHeader } from '../../../components/WebHeader';
+import { WebTrackingRecorder } from '../../../components/WebTrackingRecorder';
 
 const STATUS: Record<string, string> = {
   requested: 'Angefragt',
@@ -73,6 +74,8 @@ export default function BookingDetailPage() {
                   <Row label="Start" value={new Date(value.start_at).toLocaleString('de-DE')} />
                   <Row label="Ende" value={new Date(value.end_at).toLocaleString('de-DE')} />
                   <Row label="Treffpunkt" value={value.meeting_address ?? 'Nicht angegeben'} />
+                  <Row label="Dringend" value={value.is_urgent ? 'Ja' : 'Nein'} />
+                  <Row label="Betreuungsnotizen" value={value.care_notes ?? 'Keine'} />
                   <Row label="Suchende:r" value={value.seekerProfile?.display_name ?? '–'} />
                   <Row
                     label="Helfer:in"
@@ -146,6 +149,9 @@ export default function BookingDetailPage() {
                 ) : null}
               </section>
             </div>
+            {value.status === 'in_progress' && isHelper ? (
+              <WebTrackingRecorder bookingId={id} />
+            ) : null}
           </>
         ) : null}
       </div>

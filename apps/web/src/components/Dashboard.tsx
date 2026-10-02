@@ -17,6 +17,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { PasskeyPanel } from './PasskeyPanel';
+import { NotificationBell } from './NotificationBell';
 
 function statusLabel(status: string): string {
   const labels: Record<string, string> = {
@@ -117,6 +118,7 @@ export function Dashboard() {
             <span className="hidden rounded-full bg-secondary-container px-4 py-2 text-sm font-bold text-on-secondary-container md:inline-flex">
               {Number(account.data?.balance_hours ?? 0).toLocaleString('de-DE')} Std. Zeitbank
             </span>
+            <NotificationBell />
             <button
               type="button"
               disabled={signingOut}
