@@ -5,6 +5,7 @@ import {
   useTimebankAccount,
   useTimebankTransactions,
   useUpdateOwnProfile,
+  KIEZ_RADIUS_OPTIONS,
   type KiezRadius,
   type NotificationPreferences,
 } from '@pfotennetz/supabase';
@@ -22,7 +23,22 @@ export default function ProfilePage() {
     bookings: true,
     community: true,
   });
+  const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [profileBio, setProfileBio] = useState('');
+  const [radius, setRadius] = useState<KiezRadius>(1.5);
   useEffect(() => {
+    if (value) {
+      setDisplayName(value.display_name);
+      setPhone(value.phone ?? '');
+      setPostalCode(value.postal_code ?? '');
+      setProfileBio(value.profile_bio ?? '');
+      const currentRadius = Number(value.kiez_radius_km);
+      if ((KIEZ_RADIUS_OPTIONS as readonly number[]).includes(currentRadius)) {
+        setRadius(currentRadius as KiezRadius);
+      }
+    }
     const current = value?.notification_prefs;
     if (typeof current !== 'object' || current === null) return;
     setPreferences({
@@ -58,22 +74,91 @@ export default function ProfilePage() {
                   <p className="text-sm text-secondary">Nachbarschafts-Mitglied</p>
                 </div>
               </div>
-              <dl className="mt-8 space-y-4 text-sm">
+              <div className="mt-8 space-y-4">
                 <div>
-                  <dt className="font-bold text-on-surface-variant">E-Mail</dt>
-                  <dd className="mt-1 text-on-surface">{value.email}</dd>
+                  <label className="font-bold text-on-surface-variant" htmlFor="profile-name">
+                    Anzeigename
+                  </label>
+                  <input
+                    id="profile-name"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
+                  />
                 </div>
                 <div>
-                  <dt className="font-bold text-on-surface-variant">Telefon</dt>
-                  <dd className="mt-1 text-on-surface">{value.phone ?? 'Nicht hinterlegt'}</dd>
+                  <p className="font-bold text-on-surface-variant">E-Mail</p>
+                  <p className="mt-1 text-sm text-on-surface">{value.email}</p>
                 </div>
                 <div>
-                  <dt className="font-bold text-on-surface-variant">Nachbarschafts-Radius</dt>
-                  <dd className="mt-1 text-on-surface">
-                    {Number(value.kiez_radius_km).toLocaleString('de-DE')} km
-                  </dd>
+                  <label className="font-bold text-on-surface-variant" htmlFor="profile-phone">
+                    Telefon (optional)
+                  </label>
+                  <input
+                    id="profile-phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
+                  />
                 </div>
-              </dl>
+                <div>
+                  <label className="font-bold text-on-surface-variant" htmlFor="profile-postal">
+                    Postleitzahl (optional)
+                  </label>
+                  <input
+                    id="profile-postal"
+                    inputMode="numeric"
+                    value={postalCode}
+                    onChange={(event) => setPostalCode(event.target.value)}
+                    className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-on-surface-variant" htmlFor="profile-bio">
+                    Kurzvorstellung (optional)
+                  </label>
+                  <textarea
+                    id="profile-bio"
+                    maxLength={500}
+                    value={profileBio}
+                    onChange={(event) => setProfileBio(event.target.value)}
+                    className="mt-1 min-h-24 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <p className="font-bold text-on-surface-variant">Suchradius</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {KIEZ_RADIUS_OPTIONS.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`rounded-full px-3 py-2 text-sm font-bold ${radius === option ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface'}`}
+                        onClick={() => setRadius(option)}
+                      >
+                        {option.toString().replace('.', ',')} km
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={updateProfile.isPending}
+                  onClick={() =>
+                    updateProfile.mutate({
+                      displayName,
+                      phone,
+                      postalCode,
+                      profileBio,
+                      kiezRadiusKm: radius,
+                      notificationPrefs: preferences,
+                    })
+                  }
+                >
+                  {updateProfile.isPending ? 'Wird gespeichert …' : 'Profil speichern'}
+                </button>
+              </div>
             </section>
             <div className="space-y-6">
               <section className="card p-7">
@@ -112,9 +197,11 @@ export default function ProfilePage() {
                   onClick={() =>
                     value &&
                     updateProfile.mutate({
-                      displayName: value.display_name,
-                      phone: value.phone,
-                      kiezRadiusKm: value.kiez_radius_km as KiezRadius,
+                      displayName,
+                      phone,
+                      postalCode,
+                      profileBio,
+                      kiezRadiusKm: radius,
                       notificationPrefs: preferences,
                     })
                   }

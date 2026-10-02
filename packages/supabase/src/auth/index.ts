@@ -88,12 +88,12 @@ function describeError(error: unknown): string {
   return String(error);
 }
 
-export async function resetPassword(email: string) {
+export async function resetPassword(email: string, redirectTo?: string) {
   const { data, error } = await (
     await import('../client/createClient')
   )
     .getSupabaseClient()
-    .auth.resetPasswordForEmail(email);
+    .auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
   if (error) throw error;
   return data;
 }

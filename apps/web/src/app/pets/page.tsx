@@ -1,20 +1,201 @@
 'use client';
 
 import {
+  PET_SPECIES_OPTIONS,
   useOwnPets,
+  useCreatePet,
   useUpdatePet,
+  useUploadPetPhoto,
+  useSetPetActive,
+  useSetPetDeceased,
   PET_SPECIES_LABELS,
   type Pet,
   type PetSpecies,
 } from '@pfotennetz/supabase';
 import Image from 'next/image';
+import Link from 'next/link';
 import { WebHeader } from '../../components/WebHeader';
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 
 function stringList(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === 'string')
     : [];
+}
+
+function PetEditor({ pet, onClose }: { pet: Pet | null; onClose: () => void }) {
+  const create = useCreatePet();
+  const update = useUpdatePet();
+  const [name, setName] = useState(pet?.name ?? '');
+  const [species, setSpecies] = useState<PetSpecies>((pet?.species as PetSpecies) ?? 'dog');
+  const [breed, setBreed] = useState(pet?.breed ?? '');
+  const [color, setColor] = useState(pet?.color ?? '');
+  const [specialNeeds, setSpecialNeeds] = useState(pet?.special_needs ?? '');
+  const [birthDate, setBirthDate] = useState(pet?.birth_date ?? '');
+  const [microchipNumber, setMicrochipNumber] = useState(pet?.microchip_number ?? '');
+  const [insurancePolicy, setInsurancePolicy] = useState(pet?.insurance_policy ?? '');
+  const [vetClinic, setVetClinic] = useState(pet?.vet_clinic ?? '');
+  const [vetPhone, setVetPhone] = useState(pet?.vet_phone ?? '');
+  const [medications, setMedications] = useState(stringList(pet?.medications).join(', '));
+  const [allergies, setAllergies] = useState(pet?.allergies?.join(', ') ?? '');
+  const mutation = pet === null ? create : update;
+
+  const save = () => {
+    const input = {
+      name,
+      species,
+      breed: breed || null,
+      color: color || null,
+      specialNeeds: specialNeeds || null,
+      birthDate: birthDate || null,
+      microchipNumber,
+      insurancePolicy,
+      vetClinic,
+      vetPhone,
+      medications: medications
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+      allergies: allergies
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    };
+    if (pet === null) create.mutate(input, { onSuccess: onClose });
+    else update.mutate({ ...input, petId: pet.id }, { onSuccess: onClose });
+  };
+
+  return (
+    <section className="card mt-8 p-7">
+      <h2 className="text-xl font-extrabold">{pet === null ? 'Neues Tier' : 'Tier bearbeiten'}</h2>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <label className="text-sm font-bold">
+          Name
+          <input
+            className="input mt-1"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Tierart
+          <select
+            className="input mt-1"
+            value={species}
+            onChange={(event) => setSpecies(event.target.value as PetSpecies)}
+          >
+            {PET_SPECIES_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {PET_SPECIES_LABELS[option]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm font-bold">
+          Rasse
+          <input
+            className="input mt-1"
+            value={breed}
+            onChange={(event) => setBreed(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Farbe
+          <input
+            className="input mt-1"
+            value={color}
+            onChange={(event) => setColor(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Geburtsdatum
+          <input
+            type="date"
+            className="input mt-1"
+            value={birthDate}
+            onChange={(event) => setBirthDate(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Chipnummer
+          <input
+            className="input mt-1"
+            value={microchipNumber}
+            onChange={(event) => setMicrochipNumber(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Versicherungspolice
+          <input
+            className="input mt-1"
+            value={insurancePolicy}
+            onChange={(event) => setInsurancePolicy(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Tierarztpraxis
+          <input
+            className="input mt-1"
+            value={vetClinic}
+            onChange={(event) => setVetClinic(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Tierarzt-Telefon
+          <input
+            type="tel"
+            className="input mt-1"
+            value={vetPhone}
+            onChange={(event) => setVetPhone(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Medikamente
+          <input
+            className="input mt-1"
+            placeholder="Kommagetrennt"
+            value={medications}
+            onChange={(event) => setMedications(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Allergien
+          <input
+            className="input mt-1"
+            placeholder="Kommagetrennt"
+            value={allergies}
+            onChange={(event) => setAllergies(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-bold sm:col-span-2">
+          Besonderer Betreuungsbedarf
+          <textarea
+            className="input mt-1 min-h-24"
+            value={specialNeeds}
+            onChange={(event) => setSpecialNeeds(event.target.value)}
+          />
+        </label>
+      </div>
+      {mutation.isError ? (
+        <p role="alert" className="mt-4 text-sm text-error">
+          Speichern fehlgeschlagen: {mutation.error.message}
+        </p>
+      ) : null}
+      <div className="mt-5 flex gap-3">
+        <button type="button" className="btn-primary" disabled={mutation.isPending} onClick={save}>
+          {mutation.isPending ? 'Wird gespeichert …' : 'Speichern'}
+        </button>
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={mutation.isPending}
+          onClick={onClose}
+        >
+          Abbrechen
+        </button>
+      </div>
+    </section>
+  );
 }
 
 function PetHealthEditor({ pet }: { pet: Pet }) {
@@ -111,6 +292,65 @@ function PetHealthEditor({ pet }: { pet: Pet }) {
   );
 }
 
+function PetStatusAndPhotoActions({ pet }: { pet: Pet }) {
+  const uploadPhoto = useUploadPetPhoto();
+  const setActive = useSetPetActive();
+  const setDeceased = useSetPetDeceased();
+
+  const choosePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    uploadPhoto.mutate({
+      petId: pet.id,
+      fileData: await file.arrayBuffer(),
+      contentType: file.type || 'image/jpeg',
+    });
+  };
+
+  const pending = uploadPhoto.isPending || setActive.isPending || setDeceased.isPending;
+
+  return (
+    <div className="mt-5 border-t border-outline-variant/30 pt-5">
+      <div className="flex flex-wrap gap-3">
+        <label className="btn-secondary cursor-pointer">
+          {uploadPhoto.isPending ? 'Bild wird gespeichert …' : 'Tierfoto auswählen'}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            disabled={pending}
+            onChange={(event) => void choosePhoto(event)}
+          />
+        </label>
+        {!pet.is_deceased ? (
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={pending}
+            onClick={() => setActive.mutate({ petId: pet.id, isActive: !pet.is_active })}
+          >
+            {pet.is_active ? 'Für Aufträge pausieren' : 'Für Aufträge aktivieren'}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={pending}
+          onClick={() => setDeceased.mutate({ petId: pet.id, isDeceased: !pet.is_deceased })}
+        >
+          {pet.is_deceased ? 'Als lebend markieren' : 'Als verstorben markieren'}
+        </button>
+      </div>
+      {uploadPhoto.isError || setActive.isError || setDeceased.isError ? (
+        <p role="alert" className="mt-3 text-sm text-error">
+          Änderung konnte nicht gespeichert werden. Bitte versuche es erneut.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function age(birthDate: string | null): string | null {
   if (!birthDate) return null;
   const birth = new Date(`${birthDate}T00:00:00`);
@@ -127,6 +367,7 @@ function age(birthDate: string | null): string | null {
 
 export default function PetsPage() {
   const pets = useOwnPets();
+  const [editingPet, setEditingPet] = useState<Pet | null | undefined>(undefined);
   return (
     <main className="min-h-screen bg-surface">
       <WebHeader backHref="/" backLabel="Dashboard" />
@@ -138,6 +379,12 @@ export default function PetsPage() {
         <p className="mt-3 text-lg text-on-surface-variant">
           Alle wichtigen Informationen zu deinen Tieren an einem Ort.
         </p>
+        <button type="button" className="btn-primary mt-5" onClick={() => setEditingPet(null)}>
+          Neues Tier anlegen
+        </button>
+        {editingPet !== undefined ? (
+          <PetEditor pet={editingPet} onClose={() => setEditingPet(undefined)} />
+        ) : null}
         {pets.isPending ? (
           <p className="py-12 text-center text-on-surface-variant">Tierprofile werden geladen …</p>
         ) : pets.isError ? (
@@ -201,7 +448,21 @@ export default function PetsPage() {
                       <strong>Besonderes:</strong> {pet.special_needs}
                     </div>
                   ) : null}
+                  <PetStatusAndPhotoActions pet={pet} />
                   <PetHealthEditor pet={pet} />
+                  <button
+                    type="button"
+                    className="btn-secondary mt-4"
+                    onClick={() => setEditingPet(pet)}
+                  >
+                    Tier bearbeiten
+                  </button>
+                  <Link
+                    href={`/pets/${pet.id}/emergency`}
+                    className="btn-secondary mt-4 ml-3 inline-flex"
+                  >
+                    Notfallkarte
+                  </Link>
                 </div>
               </article>
             ))}

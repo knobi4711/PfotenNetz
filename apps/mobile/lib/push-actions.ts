@@ -3,13 +3,17 @@ export type NotificationActionData = {
   actionUrls?: unknown;
 };
 
+function isInternalPath(value: string): boolean {
+  return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\');
+}
+
 export function notificationActionUrl(
   data: NotificationActionData,
   actionIdentifier: string,
   defaultActionIdentifier: string
 ): string | null {
   if (actionIdentifier === defaultActionIdentifier && typeof data.url === 'string') {
-    return data.url.startsWith('/') ? data.url : null;
+    return isInternalPath(data.url) ? data.url : null;
   }
   if (
     typeof data.actionUrls !== 'object' ||
@@ -19,5 +23,5 @@ export function notificationActionUrl(
     return null;
   }
   const actionUrl = (data.actionUrls as Record<string, unknown>)[actionIdentifier];
-  return typeof actionUrl === 'string' && actionUrl.startsWith('/') ? actionUrl : null;
+  return typeof actionUrl === 'string' && isInternalPath(actionUrl) ? actionUrl : null;
 }

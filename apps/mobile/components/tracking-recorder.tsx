@@ -17,17 +17,20 @@ export function TrackingRecorder({ bookingId }: { bookingId: string }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [displayedDistanceMeters, setDisplayedDistanceMeters] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [operationPending, setOperationPending] = useState(false);
 
   useEffect(() => () => subscription.current?.remove(), []);
 
   const start = async () => {
+    if (operationPending || sessionId !== null) return;
+    setOperationPending(true);
     setError(null);
-    const permission = await Location.requestForegroundPermissionsAsync();
-    if (permission.status !== Location.PermissionStatus.GRANTED) {
-      setError('Standortfreigabe wird für das Live-Tracking benötigt.');
-      return;
-    }
     try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== Location.PermissionStatus.GRANTED) {
+        setError('Standortfreigabe wird für das Live-Tracking benötigt.');
+        return;
+      }
       const session = await create.mutateAsync(bookingId);
       setSessionId(session.id);
       startedAt.current = Date.now();
@@ -66,21 +69,24 @@ export function TrackingRecorder({ bookingId }: { bookingId: string }) {
       setError(
         reason instanceof Error ? reason.message : 'Live-Tracking konnte nicht gestartet werden.'
       );
+    } finally {
+      setOperationPending(false);
     }
   };
 
   const stop = async () => {
-    if (!sessionId) return;
+    if (!sessionId || operationPending) return;
+    setOperationPending(true);
     subscription.current?.remove();
     subscription.current = null;
     try {
       await stopBackgroundTracking().catch(() => undefined);
+      await stopTrackingGeofence().catch(() => undefined);
       await finish.mutateAsync({
         sessionId,
         distanceMeters: distance.current,
         durationSeconds: Math.max(0, (Date.now() - (startedAt.current ?? Date.now())) / 1000),
       });
-      await stopTrackingGeofence().catch(() => undefined);
       backgroundEnabled.current = false;
       setSessionId(null);
       previous.current = null;
@@ -90,6 +96,8 @@ export function TrackingRecorder({ bookingId }: { bookingId: string }) {
       setError(
         reason instanceof Error ? reason.message : 'Live-Tracking konnte nicht beendet werden.'
       );
+    } finally {
+      setOperationPending(false);
     }
   };
 
@@ -108,7 +116,7 @@ export function TrackingRecorder({ bookingId }: { bookingId: string }) {
       <ActionButton
         title={sessionId ? 'Tracking beenden' : 'Live-Tracking starten'}
         variant={sessionId ? 'secondary' : 'primary'}
-        pending={create.isPending || finish.isPending}
+        pending={operationPending || create.isPending || finish.isPending}
         onPress={() => void (sessionId ? stop() : start())}
       />
     </Card>

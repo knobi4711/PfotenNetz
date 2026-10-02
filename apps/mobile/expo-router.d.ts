@@ -9,6 +9,9 @@ declare module 'expo-router' {
     '/(tabs)/tracking': undefined;
     '/(tabs)/profile': undefined;
     '/(auth)/login': undefined;
+    '/(auth)/forgot-password': undefined;
+    '/scan': undefined;
+    '/emergency/[token]': { token: string };
     '/booking/[id]': { id: string };
   }
 

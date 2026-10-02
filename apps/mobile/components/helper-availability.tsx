@@ -7,6 +7,7 @@ import {
   useDeleteAvailability,
   useOwnAvailabilities,
   useUpdateAvailability,
+  AVAILABILITY_PET_SPECIES,
   type Availability,
   type UpsertAvailabilityInput,
 } from '@pfotennetz/supabase';
@@ -40,6 +41,14 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
   const minute = index % 2 === 0 ? '00' : '30';
   return `${hour}:${minute}`;
 });
+const PET_SPECIES_LABELS: Record<string, string> = {
+  dog: 'Hund',
+  cat: 'Katze',
+  rabbit: 'Kaninchen',
+  guinea_pig: 'Meerschweinchen',
+  bird: 'Vogel',
+  other: 'Andere',
+};
 
 function TimeDropdown({
   label,
@@ -127,7 +136,11 @@ function SlotRow({ slot }: { slot: Availability }) {
           {day} · {slot.start_time.slice(0, 5)}–{slot.end_time.slice(0, 5)} Uhr
         </Text>
         <Text style={[styles.slotMeta, { color: c.onSurfaceVariant }]}>
-          {types} · bis {Number(slot.max_distance_km).toLocaleString('de-DE')} km ·{' '}
+          {types} ·{' '}
+          {((slot.pet_species as string[] | undefined) ?? AVAILABILITY_PET_SPECIES)
+            .map((species) => PET_SPECIES_LABELS[species] ?? species)
+            .join(', ')}{' '}
+          · bis {Number(slot.max_distance_km).toLocaleString('de-DE')} km ·{' '}
           {slot.is_active ? 'aktiv' : 'pausiert'}
         </Text>
         {update.isError ? (
@@ -176,6 +189,7 @@ export function AvailabilityManager() {
   const [start, setStart] = useState('09:00');
   const [end, setEnd] = useState('12:00');
   const [types, setTypes] = useState<BookingType[]>(['walk']);
+  const [petSpecies, setPetSpecies] = useState<string[]>([...AVAILABILITY_PET_SPECIES]);
   const [radius, setRadius] = useState('5');
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -195,6 +209,7 @@ export function AvailabilityManager() {
       startTime: start,
       endTime: end,
       bookingTypes: types,
+      petSpecies,
       maxDistanceKm: Number(radius.replace(',', '.')),
     });
 
@@ -283,6 +298,33 @@ export function AvailabilityManager() {
             >
               <Text style={[styles.chipText, { color: selected ? c.onPrimary : c.onSurface }]}>
                 {bookingTypeLabels[type]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Text style={[styles.label, { color: c.onSurface }]}>Tierarten</Text>
+      <View style={styles.chipRow}>
+        {AVAILABILITY_PET_SPECIES.map((species) => {
+          const selected = petSpecies.includes(species);
+          return (
+            <Pressable
+              key={species}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              onPress={() =>
+                setPetSpecies((current) =>
+                  selected ? current.filter((item) => item !== species) : [...current, species]
+                )
+              }
+              style={[
+                styles.chip,
+                { backgroundColor: selected ? c.secondary : c.surfaceContainerHigh },
+              ]}
+            >
+              <Text style={[styles.chipText, { color: selected ? c.onSecondary : c.onSurface }]}>
+                {PET_SPECIES_LABELS[species]}
               </Text>
             </Pressable>
           );

@@ -4,7 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
-import { useNearbyHelpers, type NearbyHelper } from '@pfotennetz/supabase';
+import {
+  BOOKING_TYPES,
+  nearbyHelperErrorMessage,
+  useNearbyHelpers,
+  type NearbyHelper,
+  type BookingType,
+} from '@pfotennetz/supabase';
 import {
   ActionButton,
   AppHeader,
@@ -22,6 +28,15 @@ import {
 import { formatAvailableDays, projectNearbyPoint, type MapCoordinate } from '../../lib/helper-map';
 
 const RADII = [1.5, 3, 5, 10] as const;
+const SPECIES = [
+  ['dog', 'Hund'],
+  ['cat', 'Katze'],
+  ['rabbit', 'Kaninchen'],
+  ['guinea_pig', 'Meerschweinchen'],
+  ['bird', 'Vogel'],
+  ['other', 'Andere'],
+] as const;
+const DAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] as const;
 
 function trustLabel(trustLevel: string): string {
   if (trustLevel === 'gold') return 'Gold-verifiziert';
@@ -205,7 +220,12 @@ export default function ExploreScreen() {
   const [locationPending, setLocationPending] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const helpersQuery = useNearbyHelpers(center === null ? null : { ...center, radiusKm });
+  const [bookingType, setBookingType] = useState<BookingType | null>(null);
+  const [petSpecies, setPetSpecies] = useState<string | null>(null);
+  const [dayOfWeek, setDayOfWeek] = useState<number | null>(null);
+  const helpersQuery = useNearbyHelpers(
+    center === null ? null : { ...center, radiusKm, bookingType, petSpecies, dayOfWeek }
+  );
   const helpers = helpersQuery.data ?? [];
 
   const locate = () => {
@@ -218,13 +238,16 @@ export default function ExploreScreen() {
           setLocationError('Standortfreigabe wurde nicht erteilt.');
           return;
         }
-        const cached = await Location.getLastKnownPositionAsync({
-          maxAge: 5 * 60 * 1000,
-          requiredAccuracy: 1000,
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        }).catch(async () => {
+          const fallback = await Location.getLastKnownPositionAsync({
+            maxAge: 5 * 60 * 1000,
+            requiredAccuracy: 1000,
+          });
+          if (fallback === null) throw new Error('Standort konnte nicht bestimmt werden.');
+          return fallback;
         });
-        const position =
-          cached ??
-          (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
         setCenter({ latitude: position.coords.latitude, longitude: position.coords.longitude });
         setSelectedId(null);
       } catch (error: unknown) {
@@ -266,6 +289,58 @@ export default function ExploreScreen() {
               );
             })}
           </ChipRow>
+          <Text style={[styles.filterLabel, { color: c.onSurface }]}>Betreuungsart</Text>
+          <ChipRow>
+            <Chip
+              label="Alle"
+              selected={bookingType === null}
+              onPress={() => setBookingType(null)}
+            />
+            {BOOKING_TYPES.map((type) => (
+              <Chip
+                key={type}
+                label={
+                  type === 'walk'
+                    ? 'Gassi'
+                    : type === 'feeding'
+                      ? 'Füttern'
+                      : type === 'vacation'
+                        ? 'Urlaub'
+                        : 'Tagesbetreuung'
+                }
+                selected={bookingType === type}
+                onPress={() => setBookingType(type)}
+              />
+            ))}
+          </ChipRow>
+          <Text style={[styles.filterLabel, { color: c.onSurface }]}>Tierart</Text>
+          <ChipRow>
+            <Chip label="Alle" selected={petSpecies === null} onPress={() => setPetSpecies(null)} />
+            {SPECIES.map(([value, label]) => (
+              <Chip
+                key={value}
+                label={label}
+                selected={petSpecies === value}
+                onPress={() => setPetSpecies(value)}
+              />
+            ))}
+          </ChipRow>
+          <Text style={[styles.filterLabel, { color: c.onSurface }]}>Verfügbar am</Text>
+          <ChipRow>
+            <Chip
+              label="Jeder Tag"
+              selected={dayOfWeek === null}
+              onPress={() => setDayOfWeek(null)}
+            />
+            {DAYS.map((label, index) => (
+              <Chip
+                key={label}
+                label={label}
+                selected={dayOfWeek === index}
+                onPress={() => setDayOfWeek(index)}
+              />
+            ))}
+          </ChipRow>
           <ActionButton
             title={center === null ? 'Standort verwenden' : 'Standort aktualisieren'}
             pending={locationPending}
@@ -277,14 +352,14 @@ export default function ExploreScreen() {
         {center === null ? (
           <Card>
             <EmptyText>
-              Aktiviere deinen Standort, um Helfer:innen in deiner Nachbarschaft zu suchen.
+              Aktiviere deinen Standort, um Helfer:innen in deiner Nähe zu suchen.
             </EmptyText>
           </Card>
         ) : helpersQuery.isPending ? (
           <LoadingView label="Helfer:innen werden gesucht …" />
         ) : helpersQuery.isError ? (
           <ErrorBox
-            message={`Suche fehlgeschlagen: ${helpersQuery.error.message}`}
+            message={`Suche fehlgeschlagen: ${nearbyHelperErrorMessage(helpersQuery.error)}`}
             onRetry={() => {
               void helpersQuery.refetch();
             }}
@@ -343,6 +418,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 40 },
   filterSection: { marginBottom: 16 },
+  filterLabel: { fontFamily: appFonts.bold, fontSize: 13, marginTop: 10, marginBottom: 4 },
   map: {
     height: 280,
     borderRadius: 24,

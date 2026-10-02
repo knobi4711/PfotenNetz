@@ -15,9 +15,7 @@ export function useNearbyHelpers(
   const client = getSupabaseClient();
   return useQuery({
     queryKey:
-      search === null
-        ? [...helperKeys.all, 'nearby', 'disabled']
-        : helperKeys.nearby(search.latitude, search.longitude, search.radiusKm),
+      search === null ? [...helperKeys.all, 'nearby', 'disabled'] : helperKeys.nearby(search),
     queryFn: () => {
       if (search === null) throw new Error('Standort ist erforderlich.');
       return fetchNearbyHelpers(client, search);

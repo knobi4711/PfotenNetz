@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
-import { fetchNearbyHelpers, validateNearbyHelperSearch } from './queries';
+import {
+  fetchNearbyHelpers,
+  nearbyHelperErrorMessage,
+  validateNearbyHelperSearch,
+} from './queries';
 
 function clientWithRpc(result: unknown) {
   const calls: unknown[] = [];
@@ -52,5 +56,28 @@ describe('nearby helper search', () => {
       validateNearbyHelperSearch({ latitude: 52, longitude: 13, radiusKm: 0.1 })
     ).not.toBeNull();
     expect(validateNearbyHelperSearch({ latitude: 52, longitude: 13, radiusKm: 3 })).toBeNull();
+  });
+
+  it('validates the optional weekday filter', () => {
+    expect(
+      validateNearbyHelperSearch({ latitude: 52, longitude: 13, radiusKm: 3, dayOfWeek: 1 })
+    ).toBeNull();
+    expect(
+      validateNearbyHelperSearch({ latitude: 52, longitude: 13, radiusKm: 3, dayOfWeek: 7 })
+    ).not.toBeNull();
+  });
+
+  it('explains when the remote helper RPC migration is missing', () => {
+    expect(
+      nearbyHelperErrorMessage(
+        new Error('Could not find the function public.find_nearby_helpers in the schema cache')
+      )
+    ).toContain('Remote-Migrationen 050 und 051');
+    expect(
+      nearbyHelperErrorMessage({
+        message: 'Could not find the function public.find_nearby_helpers in the schema cache',
+        code: 'PGRST202',
+      })
+    ).toContain('Remote-Migrationen 050 und 051');
   });
 });

@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   deletePasskey,
+  getSupabaseClient,
   listPasskeys,
+  registerWithEmail,
   registerPasskey,
+  resetPassword,
   signInWithEmail,
   signInWithPasskey,
   signOut,
@@ -25,6 +28,10 @@ export function PasskeyPanel() {
   const auth = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [registering, setRegistering] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [passkeys, setPasskeys] = useState<PasskeyItem[]>([]);
@@ -54,6 +61,45 @@ export function PasskeyPanel() {
       .finally(() => {
         setPending(false);
       });
+  };
+
+  const submitRegistration = () => {
+    if (displayName.trim().length < 2) {
+      setError('Bitte gib einen Namen mit mindestens zwei Zeichen ein.');
+      return;
+    }
+    setPending(true);
+    setError(null);
+    void registerWithEmail(getSupabaseClient(), {
+      displayName: displayName.trim(),
+      email: email.trim(),
+      password,
+    })
+      .then((result) => {
+        setRegistering(false);
+        setPassword('');
+        if (result.emailConfirmationRequired) {
+          setError('Registrierung erfolgreich. Prüfe bitte dein E-Mail-Postfach.');
+        }
+      })
+      .catch((registrationError: unknown) => {
+        setError(messageOf(registrationError));
+      })
+      .finally(() => {
+        setPending(false);
+      });
+  };
+
+  const submitPasswordReset = () => {
+    if (!email.trim().includes('@')) {
+      setError('Bitte gib eine gültige E-Mail-Adresse ein.');
+      return;
+    }
+    run(() =>
+      resetPassword(email.trim(), `${window.location.origin}/reset-password`).then(() => {
+        setResetSent(true);
+      })
+    );
   };
 
   if (auth.status === 'loading') {
@@ -127,7 +173,30 @@ export function PasskeyPanel() {
 
   return (
     <section className="rounded-xl border border-outline-variant/30 bg-white p-8">
-      <h2 className="mb-4 text-xl font-bold text-on-surface">Anmelden</h2>
+      <h2 className="mb-4 text-xl font-bold text-on-surface">
+        {resetting ? 'Passwort zurücksetzen' : registering ? 'Konto erstellen' : 'Anmelden'}
+      </h2>
+      {resetting ? (
+        <p className="mb-5 text-sm text-on-surface-variant">
+          Wir senden dir einen Link an deine E-Mail-Adresse. Der Link öffnet die sichere
+          Passwortvergabe.
+        </p>
+      ) : null}
+      {!resetting && registering ? (
+        <>
+          <label className="mb-1 block text-sm font-semibold" htmlFor="display-name">
+            Anzeigename
+          </label>
+          <input
+            id="display-name"
+            type="text"
+            autoComplete="name"
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
+            className="mb-4 w-full rounded-lg border px-3 py-2"
+          />
+        </>
+      ) : null}
       <label className="mb-1 block text-sm font-semibold" htmlFor="email">
         E-Mail
       </label>
@@ -141,41 +210,104 @@ export function PasskeyPanel() {
         }}
         className="mb-4 w-full rounded-lg border px-3 py-2"
       />
-      <label className="mb-1 block text-sm font-semibold" htmlFor="password">
-        Passwort
-      </label>
-      <input
-        id="password"
-        type="password"
-        autoComplete="current-password"
-        value={password}
-        onChange={(event) => {
-          setPassword(event.target.value);
-        }}
-        className="mb-4 w-full rounded-lg border px-3 py-2"
-      />
+      {!resetting ? (
+        <>
+          <label className="mb-1 block text-sm font-semibold" htmlFor="password">
+            Passwort
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value);
+            }}
+            className="mb-4 w-full rounded-lg border px-3 py-2"
+          />
+        </>
+      ) : null}
+      {resetSent ? (
+        <p className="mb-4 text-sm text-green-700" role="status">
+          Falls ein Konto zu dieser Adresse existiert, wurde eine E-Mail versendet.
+        </p>
+      ) : null}
       {error !== null ? <p className="mb-4 text-sm text-red-700">{error}</p> : null}
       <button
         type="button"
         disabled={pending}
         className="w-full rounded-xl bg-orange-600 px-4 py-3 font-bold text-white disabled:opacity-50"
         onClick={() => {
-          run(() => signInWithEmail(email.trim(), password));
+          if (resetting) submitPasswordReset();
+          else if (registering) submitRegistration();
+          else run(() => signInWithEmail(email.trim(), password));
         }}
       >
-        Mit Passwort anmelden
+        {resetting
+          ? 'Reset-E-Mail senden'
+          : registering
+            ? 'Konto erstellen'
+            : 'Mit Passwort anmelden'}
       </button>
-      <div className="my-4 text-center text-sm text-on-surface-variant">oder</div>
+      {resetting ? (
+        <button
+          type="button"
+          disabled={pending}
+          className="mt-3 w-full rounded-xl border px-4 py-3 font-semibold disabled:opacity-50"
+          onClick={() => {
+            setResetting(false);
+            setResetSent(false);
+            setError(null);
+          }}
+        >
+          Zur Anmeldung
+        </button>
+      ) : null}
       <button
         type="button"
         disabled={pending}
-        className="w-full rounded-xl border px-4 py-3 font-bold disabled:opacity-50"
+        className="mt-3 w-full rounded-xl border px-4 py-3 font-semibold disabled:opacity-50"
         onClick={() => {
-          run(signInWithPasskey);
+          setRegistering((current) => !current);
+          setResetting(false);
+          setError(null);
         }}
       >
-        Mit Passkey / Windows Hello anmelden
+        {registering ? 'Bereits registriert? Anmelden' : 'Noch kein Konto? Registrieren'}
       </button>
+      {!registering ? (
+        <>
+          {!resetting ? (
+            <button
+              type="button"
+              disabled={pending}
+              className="mt-3 w-full text-sm font-semibold text-orange-700 disabled:opacity-50"
+              onClick={() => {
+                setResetting(true);
+                setResetSent(false);
+                setError(null);
+              }}
+            >
+              Passwort vergessen?
+            </button>
+          ) : null}
+          {!resetting ? (
+            <div className="my-4 text-center text-sm text-on-surface-variant">oder</div>
+          ) : null}
+          {!resetting ? (
+            <button
+              type="button"
+              disabled={pending}
+              className="w-full rounded-xl border px-4 py-3 font-bold disabled:opacity-50"
+              onClick={() => {
+                run(signInWithPasskey);
+              }}
+            >
+              Mit Passkey / Windows Hello anmelden
+            </button>
+          ) : null}
+        </>
+      ) : null}
     </section>
   );
 }

@@ -207,6 +207,11 @@ export default function HomeScreen() {
               router.push('/hazard/radar');
             }}
           />
+          <ActionButton
+            title="Notfallkarte scannen"
+            variant="secondary"
+            onPress={() => router.push('/scan')}
+          />
         </Card>
 
         <Card>

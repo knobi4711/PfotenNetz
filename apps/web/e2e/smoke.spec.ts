@@ -4,13 +4,16 @@ const routes = [
   '/',
   '/explore',
   '/community',
+  '/community/moderation',
   '/bookings',
   '/pets',
+  '/reset-password',
   '/profile',
   '/tracking',
   '/hazard/radar',
   '/hazard/report',
   '/missing',
+  '/pets/00000000-0000-0000-0000-000000000002/emergency',
   '/booking/smoke-test',
   '/chat/smoke-test',
 ];
@@ -111,6 +114,7 @@ test.describe('Web smoke flows', () => {
     };
     const bookingId = '00000000-0000-0000-0000-000000000003';
     const helperId = '00000000-0000-0000-0000-000000000004';
+    const contactRequestId = '00000000-0000-0000-0000-000000000006';
     const profile = {
       id: userId,
       display_name: 'Testkonto',
@@ -156,6 +160,16 @@ test.describe('Web smoke flows', () => {
       created_at: '2026-01-01T00:00:00.000Z',
     };
     let bookingStatus = 'confirmed';
+    let contactStatus = 'pending';
+    const contactRequest = {
+      id: contactRequestId,
+      requester_id: helperId,
+      helper_id: userId,
+      message: 'Gern vorab kennenlernen.',
+      status: contactStatus,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    };
 
     const authUser = {
       id: userId,
@@ -223,6 +237,14 @@ test.describe('Web smoke flows', () => {
         });
         return;
       }
+      if (url.pathname.endsWith('/contact_requests')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([{ ...contactRequest, status: contactStatus }]),
+        });
+        return;
+      }
       if (url.pathname.endsWith('/bookings')) {
         await route.fulfill({
           status: 200,
@@ -239,6 +261,18 @@ test.describe('Web smoke flows', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({ ...booking, status: bookingStatus }),
+        });
+        return;
+      }
+      if (url.pathname.endsWith('/rpc/respond_contact_request')) {
+        const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>;
+        expect(body.p_request_id).toBe(contactRequestId);
+        expect(body.p_status).toBe('accepted');
+        contactStatus = 'accepted';
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ...contactRequest, status: contactStatus }),
         });
         return;
       }
@@ -295,5 +329,9 @@ test.describe('Web smoke flows', () => {
       mimeType: 'image/jpeg',
       buffer: Buffer.from('test-image'),
     });
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Neue Anfrage · Offen')).toBeVisible();
+    await page.getByRole('button', { name: 'Annehmen' }).click();
+    await expect(page.getByText('Neue Anfrage · Angenommen')).toBeVisible();
   });
 });

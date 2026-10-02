@@ -21,6 +21,10 @@ export interface CreateBookingInput {
   priceKiezHours?: number | undefined;
   /** Optional pre-selected helper from the map search (must differ from seeker). */
   helperId?: string | null | undefined;
+  /** Marks a genuine time-critical care request for nearby push notifications. */
+  isUrgent?: boolean | undefined;
+  /** Care instructions and needs shared with the selected helper. */
+  careNotes?: string | null | undefined;
 }
 
 async function requireUserId(client: SupabaseClient<Database>): Promise<string> {
@@ -67,6 +71,9 @@ export function validateCreateBooking(input: CreateBookingInput): string | null 
     if (address.length > 0 && address.length < 5) {
       return 'Der Treffpunkt muss mindestens 5 Zeichen lang sein.';
     }
+  }
+  if (input.careNotes !== undefined && input.careNotes !== null && input.careNotes.length > 2000) {
+    return 'Die Betreuungsnotiz darf höchstens 2.000 Zeichen enthalten.';
   }
   return null;
 }
@@ -116,6 +123,8 @@ export async function createBooking(
       price_eur_cents: input.currency === 'EUR' ? Math.round((input.priceEur ?? 0) * 100) : 0,
       price_kiez_hours: input.currency === 'KIEZ_HOURS' ? (input.priceKiezHours ?? 0) : 0,
       currency: input.currency,
+      is_urgent: input.isUrgent ?? false,
+      care_notes: input.careNotes?.trim() || null,
     })
     .select('*')
     .single();

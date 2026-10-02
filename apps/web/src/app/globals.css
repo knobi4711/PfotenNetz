@@ -213,6 +213,10 @@
     @apply chip bg-transparent border border-outline-variant text-on-surface-variant hover:bg-surface-container;
   }
 
+  .chip-selected {
+    @apply bg-primary text-on-primary border-primary;
+  }
+
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-label-sm font-medium;
   }

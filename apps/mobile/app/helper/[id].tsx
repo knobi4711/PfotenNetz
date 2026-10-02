@@ -1,7 +1,12 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useHelperDetail } from '@pfotennetz/supabase';
+import {
+  contactRequestErrorMessage,
+  useCreateContactRequest,
+  useHelperDetail,
+} from '@pfotennetz/supabase';
 import { bookingTypeLabels } from '../../lib/booking';
 import { formatAvailableDays } from '../../lib/helper-map';
 import {
@@ -33,6 +38,11 @@ export default function HelperDetailScreen() {
   const helperId = Array.isArray(rawId) ? (rawId[0] ?? null) : (rawId ?? null);
   const detailQuery = useHelperDetail(helperId);
   const detail = detailQuery.data ?? null;
+  const createContact = useCreateContactRequest();
+  const [contactMessage, setContactMessage] = useState(
+    'Hallo, ich würde dich gern vorab kennenlernen und die Betreuung besprechen.'
+  );
+  const [contactSent, setContactSent] = useState(false);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
@@ -90,6 +100,55 @@ export default function HelperDetailScreen() {
                 label="Regelmäßig verfügbar"
                 value={formatAvailableDays(detail.available_days)}
               />
+            </Card>
+
+            <Card>
+              <SectionTitle>Unverbindlich kennenlernen</SectionTitle>
+              <Text style={[styles.privacy, { color: c.onSurfaceVariant }]}>
+                Sende zuerst eine Nachricht über PfotenNetz. Telefonnummern und Adressen bleiben
+                dabei geschützt; eine Buchung ist damit noch nicht verbunden.
+              </Text>
+              <TextInput
+                editable={!createContact.isPending && !contactSent}
+                multiline
+                onChangeText={setContactMessage}
+                style={[
+                  styles.messageInput,
+                  {
+                    backgroundColor: c.surfaceContainerLow,
+                    borderColor: c.outlineVariant,
+                    color: c.onSurface,
+                  },
+                ]}
+                value={contactMessage}
+              />
+              {createContact.isError ? (
+                <ErrorBox
+                  message={`Kontaktanfrage konnte nicht gesendet werden: ${contactRequestErrorMessage(createContact.error)}`}
+                />
+              ) : null}
+              {contactSent ? (
+                <Text style={[styles.privacy, { color: c.secondary }]}>
+                  Kontaktanfrage gesendet. Warte auf eine Antwort.
+                </Text>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={createContact.isPending}
+                  onPress={() => {
+                    if (helperId)
+                      createContact.mutate(
+                        { helperId, message: contactMessage },
+                        { onSuccess: () => setContactSent(true) }
+                      );
+                  }}
+                  style={[styles.contactButton, { backgroundColor: c.secondary }]}
+                >
+                  <Text style={[styles.contactButtonText, { color: c.onSecondary }]}>
+                    {createContact.isPending ? 'Wird gesendet …' : 'Kennenlernen anfragen'}
+                  </Text>
+                </Pressable>
+              )}
             </Card>
 
             <Card>
@@ -156,4 +215,23 @@ const styles = StyleSheet.create({
   slotDay: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
   slotMeta: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginTop: 2 },
   privacy: { fontFamily: appFonts.regular, fontSize: 11, marginTop: 12, lineHeight: 17 },
+  messageInput: {
+    minHeight: 86,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    marginTop: 12,
+    fontFamily: appFonts.regular,
+    fontSize: 14,
+    textAlignVertical: 'top',
+  },
+  contactButton: {
+    borderRadius: 16,
+    minHeight: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingHorizontal: 16,
+  },
+  contactButtonText: { fontFamily: appFonts.bold, fontSize: 14 },
 });

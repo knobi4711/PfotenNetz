@@ -27,5 +27,9 @@ describe('notificationActionUrl', () => {
     expect(
       notificationActionUrl({ actionUrls: { OPEN_CHAT: 'chat/bk-1' } }, 'OPEN_CHAT', 'DEFAULT')
     ).toBeNull();
+    expect(notificationActionUrl({ url: '//example.com' }, 'DEFAULT', 'DEFAULT')).toBeNull();
+    expect(
+      notificationActionUrl({ actionUrls: { OPEN_CHAT: '/\\example.com' } }, 'OPEN_CHAT', 'DEFAULT')
+    ).toBeNull();
   });
 });

@@ -1,12 +1,29 @@
 'use client';
 
-import { useNearbyHelpers, type NearbyHelper } from '@pfotennetz/supabase';
+import {
+  BOOKING_TYPES,
+  contactRequestErrorMessage,
+  nearbyHelperErrorMessage,
+  useCreateContactRequest,
+  useNearbyHelpers,
+  type BookingType,
+  type NearbyHelper,
+} from '@pfotennetz/supabase';
+import { searchOpenStreetMap, type GeocodingResult } from '@pfotennetz/shared';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { WebHeader } from '../../components/WebHeader';
 
 const RADII = [1.5, 3, 5, 10] as const;
+const SPECIES = [
+  ['dog', 'Hund'],
+  ['cat', 'Katze'],
+  ['rabbit', 'Kaninchen'],
+  ['guinea_pig', 'Meerschweinchen'],
+  ['bird', 'Vogel'],
+  ['other', 'Andere'],
+] as const;
+const DAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] as const;
 
 type MapHelper = Pick<
   NearbyHelper,
@@ -153,10 +170,11 @@ function locate(): Promise<{ latitude: number; longitude: number }> {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (position) =>
-        resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+      (position) => {
+        resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+      },
       () => reject(new Error('Standort konnte nicht bestimmt werden.')),
-      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
     );
   });
 }
@@ -205,12 +223,23 @@ function HelperCard({
 }
 
 export default function ExplorePage() {
-  const router = useRouter();
   const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<(typeof RADII)[number]>(3);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const search = center === null ? null : { ...center, radiusKm };
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [placeResults, setPlaceResults] = useState<GeocodingResult[]>([]);
+  const [placeSearchPending, setPlaceSearchPending] = useState(false);
+  const [bookingType, setBookingType] = useState<BookingType | null>(null);
+  const [petSpecies, setPetSpecies] = useState<string | null>(null);
+  const [dayOfWeek, setDayOfWeek] = useState<number | null>(null);
+  const [contactMessage, setContactMessage] = useState(
+    'Hallo, ich würde dich gern vorab kennenlernen und die Betreuung besprechen.'
+  );
+  const [contactSent, setContactSent] = useState(false);
+  const createContact = useCreateContactRequest();
+  const search =
+    center === null ? null : { ...center, radiusKm, bookingType, petSpecies, dayOfWeek };
   const helpersQuery = useNearbyHelpers(search);
   const helpers = helpersQuery.data ?? [];
   const selected = helpers.find((helper) => helper.helper_id === selectedId) ?? null;
@@ -227,6 +256,23 @@ export default function ExplorePage() {
           error instanceof Error ? error.message : 'Standort konnte nicht bestimmt werden.'
         )
       );
+  };
+
+  const handlePlaceSearch = () => {
+    setLocationError(null);
+    setPlaceSearchPending(true);
+    void searchOpenStreetMap(placeQuery)
+      .then((results) => {
+        setPlaceResults(results);
+        if (results.length === 0) setLocationError('Kein passender Ort gefunden.');
+      })
+      .catch((error: unknown) => {
+        setPlaceResults([]);
+        setLocationError(
+          error instanceof Error ? error.message : 'Ort konnte nicht gesucht werden.'
+        );
+      })
+      .finally(() => setPlaceSearchPending(false));
   };
 
   return (
@@ -257,6 +303,116 @@ export default function ExplorePage() {
             </button>
           ))}
         </div>
+        <div className="mb-6 rounded-2xl bg-surface-container-low p-4">
+          <label className="mb-2 block text-sm font-bold" htmlFor="place-search">
+            Ort oder PLZ manuell wählen
+          </label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              id="place-search"
+              className="min-w-0 flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-sm"
+              placeholder="z. B. 37581 oder Berlin"
+              value={placeQuery}
+              onChange={(event) => setPlaceQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') handlePlaceSearch();
+              }}
+            />
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={placeSearchPending || placeQuery.trim().length < 3}
+              onClick={handlePlaceSearch}
+            >
+              {placeSearchPending ? 'Suche …' : 'Ort suchen'}
+            </button>
+          </div>
+          {placeResults.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {placeResults.map((result) => (
+                <button
+                  key={`${result.latitude}-${result.longitude}`}
+                  type="button"
+                  className="block w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-left text-sm hover:bg-surface-container"
+                  onClick={() => {
+                    setCenter({ latitude: result.latitude, longitude: result.longitude });
+                    setSelectedId(null);
+                    setPlaceResults([]);
+                    setPlaceQuery(result.displayName);
+                  }}
+                >
+                  {result.displayName}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <div className="mb-6 space-y-3 rounded-2xl bg-surface-container-low p-4">
+          <p className="text-sm font-bold">Filter</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setBookingType(null)}
+              className={`chip ${bookingType === null ? 'chip-selected' : ''}`}
+            >
+              Alle Betreuungsarten
+            </button>
+            {BOOKING_TYPES.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setBookingType(type)}
+                className={`chip ${bookingType === type ? 'chip-selected' : ''}`}
+              >
+                {type === 'walk'
+                  ? 'Gassi'
+                  : type === 'feeding'
+                    ? 'Füttern'
+                    : type === 'vacation'
+                      ? 'Urlaub'
+                      : 'Tagesbetreuung'}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setPetSpecies(null)}
+              className={`chip ${petSpecies === null ? 'chip-selected' : ''}`}
+            >
+              Alle Tierarten
+            </button>
+            {SPECIES.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setPetSpecies(value)}
+                className={`chip ${petSpecies === value ? 'chip-selected' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setDayOfWeek(null)}
+              className={`chip ${dayOfWeek === null ? 'chip-selected' : ''}`}
+            >
+              Jeder Tag
+            </button>
+            {DAYS.map((day, index) => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => setDayOfWeek(index)}
+                className={`chip ${dayOfWeek === index ? 'chip-selected' : ''}`}
+              >
+                {day}
+              </button>
+            ))}
+          </div>
+        </div>
         {locationError ? (
           <p
             role="alert"
@@ -270,14 +426,14 @@ export default function ExplorePage() {
             <p className="text-5xl">📍</p>
             <h2 className="mt-4 text-2xl font-extrabold">Standort aktivieren</h2>
             <p className="mx-auto mt-2 max-w-md text-on-surface-variant">
-              Erlaube deinen Standort, um Helfer:innen im gewählten Radius zu sehen.
+              Erlaube deinen Standort, um Helfer:innen in deiner Nähe zu sehen.
             </p>
           </section>
         ) : helpersQuery.isPending ? (
           <p className="py-12 text-center text-on-surface-variant">Helfer:innen werden gesucht …</p>
         ) : helpersQuery.isError ? (
           <p role="alert" className="rounded-xl bg-error-container p-4 text-error">
-            Suche fehlgeschlagen: {helpersQuery.error.message}
+            Suche fehlgeschlagen: {nearbyHelperErrorMessage(helpersQuery.error)}
           </p>
         ) : (
           <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -306,7 +462,11 @@ export default function ExplorePage() {
                     key={helper.helper_id}
                     helper={helper}
                     selected={helper.helper_id === selectedId}
-                    onSelect={() => setSelectedId(helper.helper_id)}
+                    onSelect={() => {
+                      setSelectedId(helper.helper_id);
+                      setContactSent(false);
+                      createContact.reset();
+                    }}
                   />
                 ))
               )}
@@ -317,15 +477,41 @@ export default function ExplorePage() {
                   </p>
                   <h3 className="mt-1 text-xl font-extrabold">{selected.display_name}</h3>
                   <p className="mt-2 text-sm text-on-surface-variant">
-                    Stelle hier später direkt eine verbindliche Betreuungsanfrage.
+                    Lerne die Person unverbindlich kennen. Telefonnummern und Adressen bleiben
+                    geschützt.
                   </p>
-                  <button
-                    type="button"
-                    className="btn-primary mt-4 w-full"
-                    onClick={() => router.push('/')}
-                  >
-                    Anfrage über Mobile-App öffnen
-                  </button>
+                  <textarea
+                    aria-label="Nachricht zur Kennenlernanfrage"
+                    className="mt-4 min-h-24 w-full rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-sm text-on-surface"
+                    disabled={createContact.isPending || contactSent}
+                    maxLength={1000}
+                    onChange={(event) => setContactMessage(event.target.value)}
+                    value={contactMessage}
+                  />
+                  {createContact.isError ? (
+                    <p role="alert" className="mt-2 text-sm font-semibold text-error">
+                      {contactRequestErrorMessage(createContact.error)}
+                    </p>
+                  ) : null}
+                  {contactSent ? (
+                    <p className="mt-3 text-sm font-bold text-secondary">
+                      Anfrage gesendet. Warte auf eine Antwort.
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-primary mt-4 w-full"
+                      disabled={createContact.isPending}
+                      onClick={() =>
+                        createContact.mutate(
+                          { helperId: selected.helper_id, message: contactMessage },
+                          { onSuccess: () => setContactSent(true) }
+                        )
+                      }
+                    >
+                      {createContact.isPending ? 'Wird gesendet …' : 'Kennenlernen anfragen'}
+                    </button>
+                  )}
                 </div>
               ) : null}
             </div>

@@ -14,6 +14,8 @@ export type KiezRadius = (typeof KIEZ_RADIUS_OPTIONS)[number];
 export interface UpdateOwnProfileInput {
   displayName: string;
   phone: string | null;
+  postalCode?: string | null;
+  profileBio?: string | null;
   kiezRadiusKm: KiezRadius;
   notificationPrefs?: NotificationPreferences;
 }
@@ -33,6 +35,8 @@ export function validateUpdateOwnProfile(input: UpdateOwnProfileInput): string |
   if (input.phone !== null && input.phone !== '' && input.phone.trim().length < 3) {
     return 'Bitte gib eine gültige Telefonnummer ein oder lasse das Feld leer.';
   }
+  if (input.profileBio !== undefined && input.profileBio !== null && input.profileBio.length > 500)
+    return 'Die Kurzvorstellung darf höchstens 500 Zeichen enthalten.';
   return null;
 }
 
@@ -64,6 +68,8 @@ export async function updateOwnProfile(
     .update({
       display_name: input.displayName.trim(),
       phone,
+      ...(input.postalCode !== undefined ? { postal_code: input.postalCode?.trim() || null } : {}),
+      ...(input.profileBio !== undefined ? { profile_bio: input.profileBio?.trim() || null } : {}),
       kiez_radius_km: input.kiezRadiusKm,
       ...(input.notificationPrefs ? { notification_prefs: input.notificationPrefs } : {}),
     })
@@ -71,6 +77,27 @@ export async function updateOwnProfile(
     .select('*')
     .single();
 
+  if (error) throw error;
+  return data;
+}
+
+export async function uploadOwnAvatar(
+  client: SupabaseClient<Database>,
+  fileData: ArrayBuffer,
+  contentType = 'image/jpeg'
+): Promise<Profile> {
+  const userId = await requireUserId(client);
+  const path = `${userId}/avatar.jpg`;
+  const upload = await client.storage
+    .from('avatars')
+    .upload(path, fileData, { contentType, upsert: true });
+  if (upload.error) throw upload.error;
+  const { data, error } = await client
+    .from('profiles')
+    .update({ avatar_url: path })
+    .eq('id', userId)
+    .select('*')
+    .single();
   if (error) throw error;
   return data;
 }

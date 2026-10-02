@@ -1,22 +1,30 @@
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { File } from 'expo-file-system';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   KIEZ_RADIUS_OPTIONS,
+  getSupabaseClient,
   deletePasskey,
   listPasskeys,
   signOut,
   useOwnProfile,
+  useOwnContactRequests,
+  useCancelContactRequest,
+  useRespondContactRequest,
   useTimebankAccount,
   useTimebankTransactions,
   useUpdateOwnProfile,
+  useUploadOwnAvatar,
   type NotificationPreferences,
   type KiezRadius,
   type TimebankTransaction,
+  type ContactRequest,
 } from '@pfotennetz/supabase';
 import { formatDate, formatTimebankHours, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
 import { timebankTxDescription, timebankTxTypeLabels } from '../../lib/booking';
@@ -102,21 +110,92 @@ function TransactionRow({ tx }: { tx: TimebankTransaction }) {
   );
 }
 
+function ContactRequestRow({
+  request,
+  ownId,
+  onRespond,
+  onCancel,
+  pending,
+}: {
+  request: ContactRequest;
+  ownId: string;
+  onRespond: (requestId: string, status: 'accepted' | 'declined') => void;
+  onCancel: (requestId: string) => void;
+  pending: boolean;
+}) {
+  const c = usePalette();
+  const isIncoming = request.helper_id === ownId;
+  const statusLabel = {
+    pending: 'Offen',
+    accepted: 'Angenommen',
+    declined: 'Abgelehnt',
+    cancelled: 'Zurückgezogen',
+  }[request.status];
+
+  return (
+    <View style={styles.contactRequestRow}>
+      <Text style={[styles.contactRequestTitle, { color: c.onSurface }]}>
+        {isIncoming ? 'Kennenlernanfrage erhalten' : 'Kennenlernanfrage gesendet'}
+      </Text>
+      <Text style={[styles.contactRequestMessage, { color: c.onSurfaceVariant }]}>
+        {request.message}
+      </Text>
+      <Text style={[styles.contactRequestStatus, { color: c.secondary }]}>
+        {statusLabel} · {formatDate(request.created_at)}
+      </Text>
+      {request.status === 'pending' ? (
+        <View style={styles.contactRequestActions}>
+          {isIncoming ? (
+            <>
+              <ActionButton
+                title="Annehmen"
+                pending={pending}
+                onPress={() => onRespond(request.id, 'accepted')}
+              />
+              <ActionButton
+                title="Ablehnen"
+                variant="secondary"
+                disabled={pending}
+                onPress={() => onRespond(request.id, 'declined')}
+              />
+            </>
+          ) : (
+            <ActionButton
+              title="Zurückziehen"
+              variant="secondary"
+              pending={pending}
+              onPress={() => onCancel(request.id)}
+            />
+          )}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
   const c = usePalette();
   const theme = useTheme();
   const profileQuery = useOwnProfile();
   const updateProfile = useUpdateOwnProfile();
+  const uploadAvatar = useUploadOwnAvatar();
   const accountQuery = useTimebankAccount();
   const transactionsQuery = useTimebankTransactions();
+  const contactRequestsQuery = useOwnContactRequests();
+  const respondContactRequest = useRespondContactRequest();
+  const cancelContactRequest = useCancelContactRequest();
 
   const profile = profileQuery.data ?? null;
   const account = accountQuery.data ?? null;
   const transactions = transactionsQuery.data ?? [];
+  const contactRequests = contactRequestsQuery.data ?? [];
+  const ownId = profile?.id ?? '';
 
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [profileBio, setProfileBio] = useState('');
   const [kiezRadiusKm, setKiezRadiusKm] = useState<KiezRadius>(1.5);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({
     hazards: true,
@@ -139,6 +218,25 @@ export default function ProfileScreen() {
   const [fingerprintEnrolled, setFingerprintEnrolled] = useState(false);
   const [fingerprintPending, setFingerprintPending] = useState(false);
   const [fingerprintError, setFingerprintError] = useState<string | null>(null);
+  const avatarUrl = profile?.avatar_url
+    ? getSupabaseClient().storage.from('avatars').getPublicUrl(profile.avatar_url).data.publicUrl
+    : null;
+  const selectAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    const asset = result.canceled ? undefined : result.assets[0];
+    if (!asset) return;
+    uploadAvatar.mutate({
+      fileData: await new File(asset.uri).arrayBuffer(),
+      contentType: asset.mimeType ?? 'image/jpeg',
+    });
+  };
 
   const loadPasskeys = () => {
     setPasskeysPending(true);
@@ -251,6 +349,8 @@ export default function ProfileScreen() {
   const startEditing = () => {
     setDisplayName(profile?.display_name ?? '');
     setPhone(profile?.phone ?? '');
+    setPostalCode(profile?.postal_code ?? '');
+    setProfileBio(profile?.profile_bio ?? '');
     const current = Number(profile?.kiez_radius_km ?? 1.5);
     setKiezRadiusKm(
       (KIEZ_RADIUS_OPTIONS as readonly number[]).includes(current) ? (current as KiezRadius) : 1.5
@@ -277,7 +377,14 @@ export default function ProfileScreen() {
   const handleSave = () => {
     setFormHint(null);
     updateProfile.mutate(
-      { displayName: displayName.trim(), phone, kiezRadiusKm, notificationPrefs },
+      {
+        displayName: displayName.trim(),
+        phone,
+        postalCode,
+        profileBio,
+        kiezRadiusKm,
+        notificationPrefs,
+      },
       {
         onSuccess: () => {
           setEditing(false);
@@ -371,6 +478,45 @@ export default function ProfileScreen() {
                 ]}
                 value={phone}
               />
+              <Text style={[styles.label, { color: c.onSurface }]}>
+                Postleitzahl (für Regionalprüfung)
+              </Text>
+              <TextInput
+                editable={!updateProfile.isPending}
+                keyboardType="number-pad"
+                maxLength={5}
+                onChangeText={setPostalCode}
+                placeholder="z. B. 10115"
+                placeholderTextColor={c.outline}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: c.surfaceContainerLow,
+                    borderColor: c.outlineVariant,
+                    color: c.onSurface,
+                  },
+                ]}
+                value={postalCode}
+              />
+              <Text style={[styles.label, { color: c.onSurface }]}>Kurzvorstellung (optional)</Text>
+              <TextInput
+                editable={!updateProfile.isPending}
+                multiline
+                maxLength={500}
+                onChangeText={setProfileBio}
+                placeholder="Wer bist du und was kannst du anbieten?"
+                placeholderTextColor={c.outline}
+                style={[
+                  styles.input,
+                  styles.bioInput,
+                  {
+                    backgroundColor: c.surfaceContainerLow,
+                    borderColor: c.outlineVariant,
+                    color: c.onSurface,
+                  },
+                ]}
+                value={profileBio}
+              />
               <Text style={[styles.label, { color: c.onSurface }]}>Nachbarschafts-Radius</Text>
               <View style={styles.radiusRow}>
                 {KIEZ_RADIUS_OPTIONS.map((option) => {
@@ -452,16 +598,23 @@ export default function ProfileScreen() {
           ) : (
             <>
               <View style={styles.profileHero}>
-                <View
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Profilfoto ändern"
+                  onPress={() => void selectAvatar()}
                   style={[
                     styles.profileAvatar,
                     { backgroundColor: c.primaryFixed, borderColor: c.surfaceContainerLowest },
                   ]}
                 >
-                  <Text style={[styles.profileAvatarText, { color: c.primary }]}>
-                    {profile.display_name.slice(0, 1).toUpperCase() || '🐾'}
-                  </Text>
-                </View>
+                  {avatarUrl ? (
+                    <Image source={{ uri: avatarUrl }} style={styles.profileAvatarImage} />
+                  ) : (
+                    <Text style={[styles.profileAvatarText, { color: c.primary }]}>
+                      {profile.display_name.slice(0, 1).toUpperCase() || '🐾'}
+                    </Text>
+                  )}
+                </Pressable>
                 <View style={styles.profileHeroMain}>
                   <Text style={[styles.profileName, { color: c.onSurface }]}>
                     {profile.display_name}
@@ -477,6 +630,13 @@ export default function ProfileScreen() {
               <InfoRow label="Name" value={profile.display_name} />
               <InfoRow label="E-Mail" value={profile.email} />
               <InfoRow label="Telefon" value={profile.phone ?? '–'} />
+              <InfoRow
+                label="Region"
+                value={profile.postal_code ? profile.postal_code : 'Noch nicht bestätigt'}
+              />
+              {profile.profile_bio ? (
+                <InfoRow label="Über mich" value={profile.profile_bio} />
+              ) : null}
               <InfoRow
                 label="Nachbarschafts-Radius"
                 value={`${Number(profile.kiez_radius_km).toString().replace('.', ',')} km`}
@@ -528,6 +688,39 @@ export default function ProfileScreen() {
             </Card>
             <HelperStatusCard profile={profile} />
             <AvailabilityManager />
+            <Card>
+              <SectionTitle>Kennenlernanfragen</SectionTitle>
+              {contactRequestsQuery.isPending ? (
+                <LoadingView label="Anfragen werden geladen …" />
+              ) : contactRequestsQuery.isError ? (
+                <ErrorBox
+                  message={`Anfragen konnten nicht geladen werden: ${contactRequestsQuery.error.message}`}
+                  onRetry={() => void contactRequestsQuery.refetch()}
+                />
+              ) : contactRequests.length === 0 ? (
+                <EmptyText>Noch keine unverbindlichen Kennenlernanfragen.</EmptyText>
+              ) : (
+                contactRequests.map((request) => (
+                  <ContactRequestRow
+                    key={request.id}
+                    request={request}
+                    ownId={ownId}
+                    pending={respondContactRequest.isPending || cancelContactRequest.isPending}
+                    onRespond={(requestId, status) =>
+                      respondContactRequest.mutate(
+                        { requestId, status },
+                        { onSuccess: () => void contactRequestsQuery.refetch() }
+                      )
+                    }
+                    onCancel={(requestId) =>
+                      cancelContactRequest.mutate(requestId, {
+                        onSuccess: () => void contactRequestsQuery.refetch(),
+                      })
+                    }
+                  />
+                ))
+              )}
+            </Card>
             {profile.role === 'admin' ? (
               <Card>
                 <SectionTitle>Moderation</SectionTitle>
@@ -683,6 +876,7 @@ export default function ProfileScreen() {
             void profileQuery.refetch();
             void accountQuery.refetch();
             void transactionsQuery.refetch();
+            void contactRequestsQuery.refetch();
           }}
         />
 
@@ -710,6 +904,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  profileAvatarImage: { width: '100%', height: '100%', borderRadius: 34 },
   profileAvatarText: { fontFamily: appFonts.extrabold, fontSize: 28 },
   profileHeroMain: { flex: 1 },
   profileName: { fontFamily: appFonts.extrabold, fontSize: 20, lineHeight: 28 },
@@ -730,6 +925,7 @@ const styles = StyleSheet.create({
     fontFamily: appFonts.regular,
     fontSize: 15,
   },
+  bioInput: { minHeight: 86, paddingTop: 14, textAlignVertical: 'top' },
   hint: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, marginTop: 8 },
   radiusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   radiusChip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
@@ -763,6 +959,11 @@ const styles = StyleSheet.create({
   txAmounts: { alignItems: 'flex-end', gap: 2 },
   txAmount: { fontFamily: appFonts.extrabold, fontSize: 14, lineHeight: 20 },
   txBalance: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
+  contactRequestRow: { paddingVertical: 10, gap: 5 },
+  contactRequestTitle: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
+  contactRequestMessage: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 19 },
+  contactRequestStatus: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
+  contactRequestActions: { gap: 8, marginTop: 4 },
   themeOptions: { flexDirection: 'row', gap: 8, marginTop: 12 },
   themeOption: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
   themeOptionText: { fontFamily: appFonts.bold, fontSize: 13 },

@@ -51,6 +51,9 @@ export default function NewBookingScreen() {
   const [currency, setCurrency] = useState<BookingCurrency>('KIEZ_HOURS');
   const [price, setPrice] = useState('');
   const [meetingAddress, setMeetingAddress] = useState('');
+  const [careNotes, setCareNotes] = useState('');
+  const [isUrgent, setIsUrgent] = useState(false);
+  const [safetyConfirmed, setSafetyConfirmed] = useState(false);
   const [formHint, setFormHint] = useState<string | null>(null);
 
   const pets = (petsQuery.data ?? []).filter((pet) => pet.is_active);
@@ -59,6 +62,10 @@ export default function NewBookingScreen() {
   const handleCreate = () => {
     if (petId === null) {
       setFormHint('Bitte wähle ein Tier aus.');
+      return;
+    }
+    if (!safetyConfirmed) {
+      setFormHint('Bitte bestätige die Hinweise zu Kennenlernen, Haftung und Versicherungsschutz.');
       return;
     }
     const startAt = parseGermanDateTime(startDate, startTime);
@@ -107,6 +114,8 @@ export default function NewBookingScreen() {
         priceEur: currency === 'EUR' ? priceValue : undefined,
         priceKiezHours: currency === 'KIEZ_HOURS' ? priceValue : undefined,
         helperId: helper?.helper_id ?? undefined,
+        isUrgent,
+        careNotes: careNotes.trim() || null,
       },
       {
         onSuccess: (booking) => {
@@ -384,6 +393,59 @@ export default function NewBookingScreen() {
             ]}
             value={meetingAddress}
           />
+          <Text style={[styles.label, { color: c.onSurface }]}>Bedürfnisse und Hinweise</Text>
+          <TextInput
+            editable={!pending}
+            multiline
+            onChangeText={setCareNotes}
+            placeholder="z. B. Medikamente, Verträglichkeit, Fütterung"
+            placeholderTextColor={c.outline}
+            style={[
+              styles.input,
+              styles.multiline,
+              {
+                backgroundColor: c.surfaceContainerLow,
+                borderColor: c.outlineVariant,
+                color: c.onSurface,
+              },
+            ]}
+            value={careNotes}
+          />
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: isUrgent }}
+            onPress={() => setIsUrgent((value) => !value)}
+            style={styles.noticeRow}
+          >
+            <Text style={[styles.checkbox, { color: isUrgent ? c.primary : c.outline }]}>
+              {isUrgent ? '☑' : '☐'}
+            </Text>
+            <Text style={[styles.noticeText, { color: c.onSurface }]}>
+              Dringender Betreuungsfall (nur bei tatsächlichem Zeitdruck)
+            </Text>
+          </Pressable>
+        </Card>
+
+        <Card>
+          <SectionTitle>Sicherheit vor dem ersten Sitten</SectionTitle>
+          <Text style={[styles.helperMeta, { color: c.onSurfaceVariant }]}>
+            Vereinbare vor der ersten Betreuung ein persönliches Probetreffen, teile private
+            Kontaktdaten erst im geschützten Chat und prüfe deinen eigenen Versicherungsschutz –
+            insbesondere bei Fremdhütung.
+          </Text>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: safetyConfirmed }}
+            onPress={() => setSafetyConfirmed((value) => !value)}
+            style={styles.noticeRow}
+          >
+            <Text style={[styles.checkbox, { color: safetyConfirmed ? c.primary : c.outline }]}>
+              {safetyConfirmed ? '☑' : '☐'}
+            </Text>
+            <Text style={[styles.noticeText, { color: c.onSurface }]}>
+              Ich habe die Hinweise gelesen und akzeptiere die Nutzungsbedingungen.
+            </Text>
+          </Pressable>
         </Card>
 
         {formHint !== null ? (
@@ -430,6 +492,10 @@ const styles = StyleSheet.create({
     fontFamily: appFonts.regular,
     fontSize: 15,
   },
+  multiline: { minHeight: 96, paddingTop: 14, textAlignVertical: 'top' },
+  noticeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 12 },
+  checkbox: { fontSize: 22, lineHeight: 24 },
+  noticeText: { flex: 1, fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20 },
   hint: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, marginTop: 8 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },

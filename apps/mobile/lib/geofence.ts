@@ -2,17 +2,31 @@ import * as Location from 'expo-location';
 import * as SecureStore from 'expo-secure-store';
 import * as TaskManager from 'expo-task-manager';
 import { getNotificationsModule } from './push';
+import { nextGeofenceState, type GeofenceState } from './geofence-state';
 
 export const TRACKING_GEOFENCE_TASK = 'pfotennetz-tracking-geofence';
 const BOOKING_KEY = 'pfotennetz.active-geofence-booking';
+const STATE_KEY = 'pfotennetz.active-geofence-state';
 
 TaskManager.defineTask(TRACKING_GEOFENCE_TASK, async ({ data, error }) => {
   if (error) return;
   const event = data as { eventType?: Location.GeofencingEventType } | undefined;
-  if (event?.eventType !== Location.GeofencingEventType.Exit) return;
+  const bookingId = await SecureStore.getItemAsync(BOOKING_KEY);
+  if (!bookingId || event?.eventType === undefined) return;
+  const eventType =
+    event.eventType === Location.GeofencingEventType.Enter
+      ? 'enter'
+      : event.eventType === Location.GeofencingEventType.Exit
+        ? 'exit'
+        : null;
+  if (eventType === null) return;
+  const previousState =
+    ((await SecureStore.getItemAsync(STATE_KEY)) as GeofenceState | null) ?? 'inside';
+  const transition = nextGeofenceState(previousState, eventType);
+  await SecureStore.setItemAsync(STATE_KEY, transition.state);
+  if (!transition.shouldNotifyExit) return;
   const notifications = getNotificationsModule();
   if (notifications === null) return;
-  const bookingId = await SecureStore.getItemAsync(BOOKING_KEY);
   await notifications.scheduleNotificationAsync({
     content: {
       title: 'Sicherheitszone verlassen',
@@ -33,6 +47,7 @@ export async function startTrackingGeofence(
   if (!permission.granted)
     throw new Error('Hintergrundstandort wird für die Sicherheitszone benötigt.');
   await SecureStore.setItemAsync(BOOKING_KEY, bookingId);
+  await SecureStore.setItemAsync(STATE_KEY, 'inside');
   await Location.startGeofencingAsync(TRACKING_GEOFENCE_TASK, [
     {
       identifier: `booking-${bookingId}`,
@@ -50,4 +65,5 @@ export async function stopTrackingGeofence(): Promise<void> {
     await Location.stopGeofencingAsync(TRACKING_GEOFENCE_TASK);
   }
   await SecureStore.deleteItemAsync(BOOKING_KEY);
+  await SecureStore.deleteItemAsync(STATE_KEY);
 }

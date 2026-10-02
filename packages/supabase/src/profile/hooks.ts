@@ -4,6 +4,7 @@ import { profileKeys } from './keys';
 import {
   fetchOwnProfile,
   updateOwnProfile,
+  uploadOwnAvatar,
   type Profile,
   type UpdateOwnProfileInput,
 } from './queries';
@@ -23,6 +24,18 @@ export function useUpdateOwnProfile() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: UpdateOwnProfileInput) => updateOwnProfile(client, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: profileKeys.own });
+    },
+  });
+}
+
+export function useUploadOwnAvatar() {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { fileData: ArrayBuffer; contentType?: string }) =>
+      uploadOwnAvatar(client, input.fileData, input.contentType),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: profileKeys.own });
     },

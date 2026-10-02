@@ -13,6 +13,7 @@ import {
   useOwnProfile,
   useModerateCommunityEvent,
 } from '@pfotennetz/supabase';
+import Link from 'next/link';
 import { WebHeader } from '../../components/WebHeader';
 import { useState } from 'react';
 
@@ -199,6 +200,11 @@ export default function CommunityPage() {
         >
           {showCreate ? 'Formular schließen' : 'Event erstellen'}
         </button>
+        {profile.data?.role === 'admin' ? (
+          <Link href="/community/moderation" className="btn-secondary ml-3 mt-6 inline-flex">
+            Community moderieren
+          </Link>
+        ) : null}
         {showCreate ? <CreateEventForm onCreated={() => setShowCreate(false)} /> : null}
         {events.isPending || participants.isPending || user.isPending ? (
           <p className="py-12 text-center text-on-surface-variant">Events werden geladen …</p>

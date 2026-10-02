@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import * as SecureStore from 'expo-secure-store';
 import * as TaskManager from 'expo-task-manager';
 import { getSupabaseClient } from '@pfotennetz/supabase';
+import { readTrackingQueue, writeTrackingQueue, type QueuedTrackingPoint } from './tracking-queue';
 
 export const TRACKING_LOCATION_TASK = 'pfotennetz-tracking-location';
 const TRACKING_SESSION_KEY = 'pfotennetz.active-tracking-session';
@@ -11,25 +12,29 @@ TaskManager.defineTask(TRACKING_LOCATION_TASK, async ({ data, error }) => {
   const sessionId = await SecureStore.getItemAsync(TRACKING_SESSION_KEY);
   const locations =
     (data as { locations?: Location.LocationObject[] } | undefined)?.locations ?? [];
-  if (!sessionId || locations.length === 0) return;
+  if (!sessionId && locations.length === 0) return;
 
-  const { error: insertError } = await getSupabaseClient()
-    .from('tracking_points')
-    .insert(
-      locations.map((location) => ({
-        session_id: sessionId,
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        accuracy_meters: location.coords.accuracy ?? 0,
-        speed_mps: location.coords.speed,
-        heading_degrees:
-          location.coords.heading === null ? null : Math.round(location.coords.heading),
-        altitude_meters: location.coords.altitude,
-        recorded_at: new Date(location.timestamp).toISOString(),
-        is_batched: locations.length > 1,
-      }))
-    );
-  if (insertError) throw insertError;
+  const points: QueuedTrackingPoint[] = locations.map((location) => ({
+    session_id: sessionId ?? '',
+    latitude: location.coords.latitude,
+    longitude: location.coords.longitude,
+    accuracy_meters: location.coords.accuracy ?? 0,
+    speed_mps: location.coords.speed,
+    heading_degrees: location.coords.heading === null ? null : Math.round(location.coords.heading),
+    altitude_meters: location.coords.altitude,
+    recorded_at: new Date(location.timestamp).toISOString(),
+    is_batched: locations.length > 1,
+  }));
+  const queued = await readTrackingQueue();
+  const pending = [...queued, ...points].filter((point) => point.session_id.length > 0);
+  if (pending.length === 0) return;
+
+  const { error: insertError } = await getSupabaseClient().from('tracking_points').insert(pending);
+  if (insertError) {
+    await writeTrackingQueue(pending);
+    return;
+  }
+  await writeTrackingQueue([]);
 });
 
 export async function startBackgroundTracking(sessionId: string): Promise<void> {

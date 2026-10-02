@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -17,6 +17,7 @@ import {
   signInWithFingerprint,
   storeCredentials,
 } from '../../lib/fingerprint-login';
+import logo from '../../assets/pfotennetz-logo.png';
 
 function friendlyAuthError(message: string): string {
   if (message.toLowerCase().includes('invalid login credentials')) {
@@ -146,6 +147,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Image accessibilityLabel="PfotenNetz Logo" source={logo} style={styles.logo} />
         <Text style={[styles.title, { color: c.onSurface }]}>PfotenNetz</Text>
         <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
           Melde dich an, um deine Buchungen und deine Nachbarschafts-Stunden zu sehen.
@@ -214,6 +216,14 @@ export default function LoginScreen() {
           {signIn.isError ? <ErrorBox message={friendlyAuthError(signIn.error.message)} /> : null}
 
           <ActionButton title="Anmelden" pending={signIn.isPending} onPress={handleSignIn} />
+          <Pressable
+            accessibilityRole="link"
+            disabled={signIn.isPending}
+            onPress={() => router.push('/(auth)/forgot-password')}
+            style={styles.forgotLink}
+          >
+            <Text style={[styles.toggleText, { color: c.primary }]}>Passwort vergessen?</Text>
+          </Pressable>
         </Card>
 
         {fingerprintReady ? (
@@ -269,11 +279,18 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
+  logo: {
+    alignSelf: 'center',
+    height: 128,
+    marginTop: 28,
+    marginBottom: 12,
+    width: 128,
+  },
   title: {
     fontFamily: appFonts.extrabold,
     fontSize: 32,
     lineHeight: 40,
-    marginTop: 32,
+    marginTop: 0,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -305,6 +322,7 @@ const styles = StyleSheet.create({
   footer: { marginTop: 8, alignItems: 'center' },
   footerText: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, textAlign: 'center' },
   registerLink: { padding: 10 },
+  forgotLink: { alignSelf: 'center', paddingVertical: 10 },
   passkeyTitle: { fontFamily: appFonts.extrabold, fontSize: 17, lineHeight: 24, marginBottom: 4 },
   passkeyText: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20 },
 });

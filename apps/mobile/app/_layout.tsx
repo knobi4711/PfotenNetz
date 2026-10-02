@@ -102,9 +102,10 @@ function AuthGate() {
   const segments = useSegments();
   const atRoot = segments.length === 0 || segments[0] === 'index';
   const inAuthGroup = segments[0] === '(auth)';
+  const inPublicEmergency = segments[0] === 'emergency';
 
   const redirectToHome = auth.status === 'authenticated' && (atRoot || inAuthGroup);
-  const redirectToLogin = auth.status === 'unauthenticated' && !inAuthGroup;
+  const redirectToLogin = auth.status === 'unauthenticated' && !inAuthGroup && !inPublicEmergency;
 
   usePushSetup(auth.status === 'authenticated');
 

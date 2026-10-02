@@ -6,11 +6,15 @@ import {
   useBookings,
   useOwnPets,
   useOwnProfile,
+  useOwnContactRequests,
+  useRespondContactRequest,
+  useCancelContactRequest,
   useTimebankAccount,
   useUnreadCount,
 } from '@pfotennetz/supabase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState } from 'react';
 import { PasskeyPanel } from './PasskeyPanel';
 
@@ -34,6 +38,9 @@ export function Dashboard() {
   const bookings = useBookings();
   const account = useTimebankAccount();
   const unread = useUnreadCount();
+  const contactRequests = useOwnContactRequests();
+  const respondContactRequest = useRespondContactRequest();
+  const cancelContactRequest = useCancelContactRequest();
 
   if (auth.status !== 'authenticated') {
     return (
@@ -86,6 +93,8 @@ export function Dashboard() {
               'Gefahrenradar',
               'Betreuung & Tracking',
               'Community',
+              'Meine Tiere',
+              'Mein Profil',
             ].map((item, index) => (
               <button
                 key={item}
@@ -96,6 +105,8 @@ export function Dashboard() {
                   if (item === 'Gefahrenradar') router.push('/hazard/radar');
                   if (item === 'Betreuung & Tracking') router.push('/tracking');
                   if (item === 'Community') router.push('/community');
+                  if (item === 'Meine Tiere') router.push('/pets');
+                  if (item === 'Mein Profil') router.push('/profile');
                 }}
               >
                 {item}
@@ -190,6 +201,93 @@ export function Dashboard() {
                 </div>
               ) : (
                 <p className="text-sm text-on-surface-variant">Noch kein Tierprofil angelegt.</p>
+              )}
+            </article>
+            <article className="card p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-xl font-extrabold">Kennenlernanfragen</h2>
+                {contactRequests.isFetching && !contactRequests.isPending ? (
+                  <span className="text-xs text-on-surface-variant">Aktualisiere …</span>
+                ) : null}
+              </div>
+              {contactRequests.isPending ? (
+                <p className="text-sm text-on-surface-variant">Anfragen werden geladen …</p>
+              ) : contactRequests.isError ? (
+                <p className="text-sm text-error">{contactRequests.error.message}</p>
+              ) : contactRequests.data?.length ? (
+                <div className="space-y-3">
+                  {contactRequests.data.slice(0, 4).map((request) => {
+                    const incoming = request.helper_id === auth.userId;
+                    const status =
+                      request.status === 'pending'
+                        ? 'Offen'
+                        : request.status === 'accepted'
+                          ? 'Angenommen'
+                          : request.status === 'declined'
+                            ? 'Abgelehnt'
+                            : 'Zurückgezogen';
+                    return (
+                      <div
+                        key={request.id}
+                        className="rounded-xl border border-outline-variant/40 p-4"
+                      >
+                        <p className="font-bold">
+                          {incoming ? 'Neue Anfrage' : 'Deine Anfrage'} · {status}
+                        </p>
+                        <p className="mt-1 text-sm text-on-surface-variant">{request.message}</p>
+                        {request.status === 'pending' ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {incoming ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn-primary"
+                                  disabled={respondContactRequest.isPending}
+                                  onClick={() =>
+                                    respondContactRequest.mutate(
+                                      { requestId: request.id, status: 'accepted' },
+                                      { onSuccess: () => void contactRequests.refetch() }
+                                    )
+                                  }
+                                >
+                                  Annehmen
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  disabled={respondContactRequest.isPending}
+                                  onClick={() =>
+                                    respondContactRequest.mutate(
+                                      { requestId: request.id, status: 'declined' },
+                                      { onSuccess: () => void contactRequests.refetch() }
+                                    )
+                                  }
+                                >
+                                  Ablehnen
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                disabled={cancelContactRequest.isPending}
+                                onClick={() =>
+                                  cancelContactRequest.mutate(request.id, {
+                                    onSuccess: () => void contactRequests.refetch(),
+                                  })
+                                }
+                              >
+                                Zurückziehen
+                              </button>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-on-surface-variant">Noch keine Kennenlernanfragen.</p>
               )}
             </article>
             <article className="card bg-secondary-container p-6">
@@ -302,7 +400,16 @@ export function Dashboard() {
       <footer className="border-t border-outline-variant/30">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-6 py-6 text-sm text-on-surface-variant md:flex-row md:items-center md:justify-between lg:px-10">
           <span>Nachbarschafts-Netzwerk aktiv</span>
-          <span>Impressum & Datenschutz · © 2026 PfotenNetz</span>
+          <span>
+            <Link href="/legal/terms" className="hover:text-primary">
+              Nutzungsbedingungen
+            </Link>{' '}
+            ·{' '}
+            <Link href="/legal/privacy" className="hover:text-primary">
+              Datenschutz
+            </Link>{' '}
+            · Impressum · © 2026 PfotenNetz
+          </span>
         </div>
       </footer>
     </div>

@@ -26,6 +26,8 @@ export * from './pets/emergencyLinks';
 export * from './pets/hooks';
 export * from './messages/queries';
 export * from './messages/hooks';
+export * from './contactRequests/queries';
+export * from './contactRequests/hooks';
 export * from './helpers/keys';
 export * from './helpers/queries';
 export * from './helpers/hooks';

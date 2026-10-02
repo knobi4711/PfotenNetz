@@ -67,7 +67,14 @@ export function sanitizeData(data) {
     ) {
       const actionUrls = {};
       for (const [action, url] of Object.entries(value)) {
-        if (typeof url === 'string' && url.startsWith('/')) actionUrls[action] = url;
+        if (
+          typeof url === 'string' &&
+          url.startsWith('/') &&
+          !url.startsWith('//') &&
+          !url.includes('\\')
+        ) {
+          actionUrls[action] = url;
+        }
       }
       if (Object.keys(actionUrls).length > 0) out.actionUrls = actionUrls;
     }

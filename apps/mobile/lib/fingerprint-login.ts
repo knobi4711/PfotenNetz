@@ -14,12 +14,41 @@ import * as SecureStore from 'expo-secure-store';
 
 const CREDENTIAL_EMAIL_KEY = 'pfotennetz.biometric.email';
 const CREDENTIAL_PASSWORD_KEY = 'pfotennetz.biometric.password';
+const FINGERPRINT_OPERATION_TIMEOUT_MS = 15_000;
 
 export class FingerprintCancelledError extends Error {
   constructor() {
     super('Die Fingerabdruck-Anfrage wurde abgebrochen.');
     this.name = 'FingerprintCancelledError';
   }
+}
+
+class FingerprintTimeoutError extends Error {
+  constructor() {
+    super(
+      'Die Fingerabdruck-Anmeldung hat zu lange gedauert. Bitte melde dich mit E-Mail und Passwort an.'
+    );
+    this.name = 'FingerprintTimeoutError';
+  }
+}
+
+function withFingerprintTimeout<T>(operation: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = globalThis.setTimeout(
+      () => reject(new FingerprintTimeoutError()),
+      FINGERPRINT_OPERATION_TIMEOUT_MS
+    );
+    operation.then(
+      (value) => {
+        globalThis.clearTimeout(timeout);
+        resolve(value);
+      },
+      (error: unknown) => {
+        globalThis.clearTimeout(timeout);
+        reject(error);
+      }
+    );
+  });
 }
 
 export interface FingerprintCapabilities {
@@ -93,17 +122,29 @@ export async function authenticateWithFingerprint(): Promise<void> {
 export async function signInWithFingerprint(
   signIn: (email: string, password: string) => Promise<unknown>
 ): Promise<void> {
-  await authenticateWithFingerprint();
-  const [email, password] = await Promise.all([
-    SecureStore.getItemAsync(CREDENTIAL_EMAIL_KEY),
-    SecureStore.getItemAsync(CREDENTIAL_PASSWORD_KEY),
-  ]);
+  await withFingerprintTimeout(authenticateWithFingerprint());
+  const [email, password] = await withFingerprintTimeout(
+    Promise.all([
+      SecureStore.getItemAsync(CREDENTIAL_EMAIL_KEY),
+      SecureStore.getItemAsync(CREDENTIAL_PASSWORD_KEY),
+    ])
+  );
   if (email === null || email.length === 0 || password === null || password.length === 0) {
     throw new Error(
       'Keine gespeicherten Zugangsdaten gefunden. Bitte melde dich mit E-Mail und Passwort an.'
     );
   }
-  await signIn(email, password);
+  try {
+    await withFingerprintTimeout(signIn(email, password));
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    if (message.includes('invalid login credentials') || message.includes('user not found')) {
+      // The account may have been deleted remotely. Do not keep offering a
+      // biometric login that can never succeed on this device.
+      await clearStoredCredentials();
+    }
+    throw error;
+  }
 }
 
 export function friendlyFingerprintError(error: unknown): string {

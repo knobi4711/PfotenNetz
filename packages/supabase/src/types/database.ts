@@ -8,6 +8,36 @@ export type Database = {
   };
   public: {
     Tables: {
+      contact_requests: {
+        Row: {
+          id: string;
+          requester_id: string;
+          helper_id: string;
+          message: string;
+          status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          requester_id: string;
+          helper_id: string;
+          message: string;
+          status?: 'pending' | 'accepted' | 'declined' | 'cancelled';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          requester_id?: string;
+          helper_id?: string;
+          message?: string;
+          status?: 'pending' | 'accepted' | 'declined' | 'cancelled';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       bookings: {
         Row: {
           booking_number: string;
@@ -19,6 +49,8 @@ export type Database = {
           end_at: string;
           helper_id: string | null;
           id: string;
+          is_urgent: boolean;
+          care_notes: string | null;
           key_handoff_details: Json | null;
           key_handoff_type: Database['public']['Enums']['key_handoff_type'] | null;
           meeting_address: string | null;
@@ -47,6 +79,8 @@ export type Database = {
           currency?: Database['public']['Enums']['currency'];
           end_at: string;
           helper_id?: string | null;
+          is_urgent?: boolean;
+          care_notes?: string | null;
           id?: string;
           key_handoff_details?: Json | null;
           key_handoff_type?: Database['public']['Enums']['key_handoff_type'] | null;
@@ -76,6 +110,8 @@ export type Database = {
           currency?: Database['public']['Enums']['currency'];
           end_at?: string;
           helper_id?: string | null;
+          is_urgent?: boolean;
+          care_notes?: string | null;
           id?: string;
           key_handoff_details?: Json | null;
           key_handoff_type?: Database['public']['Enums']['key_handoff_type'] | null;
@@ -492,6 +528,7 @@ export type Database = {
       };
       helper_availabilities: {
         Row: {
+          pet_species: string[];
           booking_types: string[];
           created_at: string;
           day_of_week: number;
@@ -504,6 +541,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          pet_species?: string[];
           booking_types?: string[];
           created_at?: string;
           day_of_week: number;
@@ -516,6 +554,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          pet_species?: string[];
           booking_types?: string[];
           created_at?: string;
           day_of_week?: number;
@@ -920,6 +959,8 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null;
+          postal_code: string | null;
+          profile_bio: string | null;
           created_at: string;
           display_name: string;
           email: string;
@@ -938,6 +979,8 @@ export type Database = {
         };
         Insert: {
           avatar_url?: string | null;
+          postal_code?: string | null;
+          profile_bio?: string | null;
           created_at?: string;
           display_name: string;
           email: string;
@@ -956,6 +999,8 @@ export type Database = {
         };
         Update: {
           avatar_url?: string | null;
+          postal_code?: string | null;
+          profile_bio?: string | null;
           created_at?: string;
           display_name?: string;
           email?: string;
@@ -1373,6 +1418,14 @@ export type Database = {
       };
     };
     Functions: {
+      cancel_contact_request: {
+        Args: { p_request_id: string };
+        Returns: Database['public']['Tables']['contact_requests']['Row'];
+      };
+      respond_contact_request: {
+        Args: { p_request_id: string; p_status: string };
+        Returns: Database['public']['Tables']['contact_requests']['Row'];
+      };
       create_emergency_card_link: {
         Args: { p_pet_id: string; p_token: string };
         Returns: { id: string; expires_at: string }[];
@@ -1560,13 +1613,17 @@ export type Database = {
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean };
       find_nearby_helpers: {
         Args: {
+          p_booking_type?: Database['public']['Enums']['booking_type'] | null;
+          p_day_of_week?: number | null;
           p_latitude: number;
           p_limit?: number;
           p_longitude: number;
+          p_pet_species?: string | null;
           p_radius_km?: number;
         };
         Returns: {
           available_days: number[];
+          accepted_species: string[];
           avatar_url: string;
           display_name: string;
           distance_km: number;
@@ -2720,6 +2777,8 @@ export type Database = {
         | 'community_event'
         | 'verification_update'
         | 'timebank_update'
+        | 'contact_request'
+        | 'contact_response'
         | 'system';
       timebank_tx_type: 'earned' | 'spent' | 'bonus' | 'adjustment' | 'transfer';
       verification_status: 'pending' | 'approved' | 'rejected' | 'expired';
@@ -2885,6 +2944,8 @@ export const Constants = {
         'community_event',
         'verification_update',
         'timebank_update',
+        'contact_request',
+        'contact_response',
         'system',
       ],
       timebank_tx_type: ['earned', 'spent', 'bonus', 'adjustment', 'transfer'],

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
+import type { BookingType } from '../bookings/creation';
 
 export type NearbyHelper =
   Database['public']['Functions']['find_nearby_helpers']['Returns'][number];
@@ -9,6 +10,22 @@ export interface NearbyHelperSearch {
   longitude: number;
   radiusKm: number;
   limit?: number | undefined;
+  bookingType?: BookingType | null | undefined;
+  petSpecies?: string | null | undefined;
+  dayOfWeek?: number | null | undefined;
+}
+
+export function nearbyHelperErrorMessage(error: unknown): string {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error !== null && 'message' in error
+        ? String(error.message)
+        : String(error);
+  if (message.includes('find_nearby_helpers') && message.includes('schema cache')) {
+    return 'Die Helfersuche ist auf dem Server noch nicht aktiviert. Bitte die Remote-Migrationen 050 und 051 anwenden.';
+  }
+  return message;
 }
 
 export function validateNearbyHelperSearch(input: NearbyHelperSearch): string | null {
@@ -27,6 +44,12 @@ export function validateNearbyHelperSearch(input: NearbyHelperSearch): string | 
   ) {
     return 'Das Ergebnislimit muss zwischen 1 und 50 liegen.';
   }
+  if (
+    input.dayOfWeek !== undefined &&
+    input.dayOfWeek !== null &&
+    (!Number.isInteger(input.dayOfWeek) || input.dayOfWeek < 0 || input.dayOfWeek > 6)
+  )
+    return 'Ungültiger Wochentag.';
   return null;
 }
 
@@ -43,6 +66,9 @@ export async function fetchNearbyHelpers(
     p_longitude: input.longitude,
     p_radius_km: input.radiusKm,
     p_limit: input.limit ?? 20,
+    ...(input.bookingType !== undefined ? { p_booking_type: input.bookingType } : {}),
+    ...(input.petSpecies !== undefined ? { p_pet_species: input.petSpecies } : {}),
+    ...(input.dayOfWeek !== undefined ? { p_day_of_week: input.dayOfWeek } : {}),
   });
 
   if (error) throw error;
@@ -55,6 +81,7 @@ export interface HelperSlot {
   end_time: string;
   booking_types: string[];
   max_distance_km: number;
+  pet_species?: string[];
 }
 
 export interface HelperDetail {

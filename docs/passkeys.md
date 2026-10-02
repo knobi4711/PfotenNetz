@@ -33,10 +33,16 @@ Configure these server-side environment variables in the deployment of
   comma-separated when more than one certificate is active)
 
 The web app serves the Apple association and Android Digital Asset Links files
-from `/.well-known/` and provides Windows Hello registration and sign-in.
+from `/.well-known/`. Both endpoints return `503` until their signing values
+are configured, preventing an accidentally incomplete association file.
 
 ## Native builds
 
 Passkeys require a development or release build. Expo Go does not contain the
 `react-native-passkeys` native module. After changing associated domains or
 signing certificates, rebuild and reinstall the app.
+
+## Generated Supabase types
+
+See [Supabase type drift checks](supabase-types.md) for remote schema validation
+and the required repository secrets.

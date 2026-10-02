@@ -59,3 +59,6 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Web E2E
+        run: pnpm --filter @pfotennetz/web test:e2e

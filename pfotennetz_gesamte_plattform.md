@@ -1,23 +1,26 @@
 # PfotenNetz — Gesamte Plattform-Architektur & Screen-Spezifikation
 
 **Projekt:** PfotenNetz — Mobile-First & Desktop Nachbarschafts-Plattform für Haustierbetreuung, P2P-Solidarität & hyperlokale Gefahrenwarnung  
-**Version:** 3.3.0 (Standabgleich Mobile/Web, 24.09.2026)
+**Version:** 3.6.0 (Standabgleich Mobile/Web/Android, 01.10.2026)
 **Design-System:** Warm Community Pet Care (`#e26d46` Terracotta, `#2e7d32` Salbeigrün/Waldgrün, `#fff8f5` Warm Linen)  
-**Status:** Mobile-Betreuungsplattform und zentrale Web-Flows implementiert; Notfall-, Integrations- und Produktionsfunktionen teilweise offen
+**Status:** Mobile-Betreuungsplattform und zentrale Web-Flows implementiert; Passwort-Reset und robuste Android-Biometrie ergänzt, rechtliche Freigabe und einzelne native Abnahmen sind noch offen
 
 ---
 
-## 0. Aktueller Implementierungsstand (24.09.2026)
+## 0. Aktueller Implementierungsstand (01.10.2026)
 
 Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsächlich implementierte Stand ist:
 
 ### Umgesetzt – Mobile-App
 
-- Authentifizierung, Registrierung, Session-Handling und Android-Fingerabdruck-Anmeldung
+- Authentifizierung, Registrierung, Session-Handling, Passwort-zurücksetzen und Android-Fingerabdruck-Anmeldung
+- Android-Fingerprint-Login mit Timeout, verständlicher Fehlerbehandlung und Bereinigung veralteter lokaler Zugangsdaten
 - Dashboard, Haustierverwaltung, Tierbilder, Geburtsdatum/Alter sowie Aktiv-/Pausiert-/Verstorben-Status
 - Dashboard ohne den separaten Abschnitt „Meine Haustiere“; Haustiere bleiben über den eigenen Tab verwaltbar
 - Digitale Tier-Notfallkarte mit Chipnummer, Medikamenten, Allergien, Tierarzt- und Versicherungsdaten, inklusive Teilen-Funktion
 - Helfer:innen-Suche mit Standortfreigabe, Radius und schematischer Karte
+- Deutschlandweite Nutzung mit standortbasierter Suche und Radiusfiltern
+- Suchfilter nach Tierart, Betreuungsart und Wochentag auf Mobile und Web
 - OpenStreetMap/Nominatim-Ortssuche im Web-Gefahrenmelder mit Übernahme der gefundenen Koordinaten
 - Öffentliche Notfallkarten mit zeitlich validiertem Browser-Offline-Cache und Mobile-SecureStore-Fallback
 - OpenStreetMap-/Leaflet-Karten für Helfer:innen-Suche, Gefahrenradar und Tracking-Flows
@@ -27,25 +30,42 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Rich-Push-Kategorien mit internen Deep-Links für Gefahren- und Vermisst-Tier-Warnungen
 - Admin-Zugangspunkt „Administration“ im Profil/Header; sichere Gefahrenmoderation für Admins
 - Helfer:innen-Verfügbarkeiten mit Mehrfachauswahl beliebiger Wochentage und Zeit-Dropdowns in 30-Minuten-Schritten
+- Helfer:innen-Verfügbarkeiten mit unterstützten Tierarten (Hund, Katze, Kleintiere, Vogel und andere)
+- Profilfoto-Upload, Kurzvorstellung und frei editierbare Profil-/Standortangabe
+- Deutschlandweite Nutzung ohne Pilotregion- oder PLZ-Beschränkung; Web-Standortwahl per hochgenauer Browser-Geolokalisierung und manueller Ort-/PLZ-Suche
+- Dringende Betreuungsanfragen mit Betreuungsnotizen und serverseitiger Kennzeichnung
+- Unverbindliche Kontaktanfragen an verifizierte Helfer:innen vor einer Buchung
+- Sicherheitsbestätigung vor der ersten Betreuung mit Empfehlung eines persönlichen Probetreffens
+- Hinweise zu Haftung, Versicherungsschutz, ehrenamtlicher Gegenseitigkeit und möglichen Folgen von Geldzahlungen
+- Technische Entwürfe für Nutzungsbedingungen und Datenschutzhinweise in Web und Mobile
 - Community-Events mit Erstellung, Teilnahme vormerken/zurücknehmen, Teilnehmerübersicht und Moderation
 - Vermisste-Tiere-Meldung, eigene Suchmeldungen, Status „gefunden“ und Vermissten-Radar
 - Hintergrund-/Foreground-Tracking-Service mit Expo-Background-Location-Task, Geofence-Sicherheitszone,
   serverseitiger Positions-/Telemetrie-Synchronisierung und Web-Live-Tracking
+- Persistente lokale Tracking-Queue für Offline-Positionen mit Wiederholung nach Netzrückkehr und Bereinigung nach erfolgreicher Synchronisierung
+- Geofence-Zustandsautomat für genau eine Exit-Benachrichtigung pro Verlassen; erneutes Betreten aktiviert den nächsten Alarm
+- Native QR-Scanner-Route `/scan` für freigegebene PfotenNetz-Notfallkarten mit strikter URL-Prüfung, Kamera-Berechtigungsfluss und nativer öffentlicher Kartenansicht mit SecureStore-Offline-Fallback
 
 ### Umgesetzt – Web-App
 
 - Authentifizierte Desktop-Dashboard-Shell
 - `/explore`: Helfer:innen-Karte und Radius-Suche
+- `/explore`: Helfer:innen-Karte, Radius-, Tierart-, Betreuungsart- und Wochentagsfilter
+- `/legal/terms` und `/legal/privacy`: technische Entwürfe für Nutzungsbedingungen und Datenschutz
 - `/hazard/radar`: Desktop-Gefahrenradar mit Standort, Pins und Filtern
 - `/hazard/report` und `/hazard/[id]`: Gefahrenmeldung und Details
 - `/bookings`: Buchungsübersicht
 - `/booking/[id]`: Buchungsdetail mit Statusaktionen und Chat-Einstieg
 - `/chat/[bookingId]`: Web-Chat mit Text-, Foto- und Medienanzeige
 - `/profile`: Profil und Zeitbank-Verlauf
-- `/pets`: Tierprofile mit strukturierten Gesundheitsdaten und Notfallkarten-Zugriff
-- `/missing` und `/missing/[id]`: Vermisst-Tier-Übersicht, Sichtungsverlauf und Foto-Upload
+- `/profile`: vollständige Bearbeitung von Anzeigename, Telefon, PLZ, Kurzvorstellung, Suchradius und Benachrichtigungen
+- Anmeldung mit „Passwort vergessen?“, Reset-E-Mail und sicherer Passwortvergabe unter `/reset-password`
+- `/pets`: Tierprofile mit Anlegen/Bearbeiten, Tierfoto-Upload, Aktiv-/Pausiert-/Verstorben-Status, strukturierten Gesundheitsdaten und Notfallkarten-Aktionen
+- `/pets/[petId]/emergency`: Web-Notfallkarte mit sicherem 30-Tage-Link, Teilen/Kopieren und sofortigem Widerruf
+- `/missing` und `/missing/[id]`: Vermisst-Tier-Meldung per Browserstandort, Übersicht, Statuswechsel, Sichtungsverlauf und Foto-Upload
 - `/tracking`: Betreuung-/Tracking-Übersicht mit direktem Web-Chat-Einstieg
 - `/community`: kommende Community-Events, Event-Erstellung und Teilnahme
+- `/community/moderation`: Admin-Queue für Community-Events mit Freigabe und Ausblenden
 - `/hazard/moderation`: Admin-Moderation aktiver Gefahrenmeldungen
 - Root-`.env`-Laden für den Web-Build im Monorepo
 
@@ -55,24 +75,31 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Mobile-Lint: erfolgreich
 - Web-Typecheck und Web-Lint: erfolgreich
 - Mobile-Typecheck und Mobile-Lint: erfolgreich
-- Supabase-Tests: 83 erfolgreich
-- Mobile-Tests: 54 erfolgreich
-- Web-E2E: 15/15 erfolgreich, inklusive authentifizierten Tier-, Buchungs-, Chat- und Medienflüssen sowie Offline-Notfallkarten-Smoke-Test
+- Supabase-Tests: 88 erfolgreich
+- Mobile-Tests: 67 erfolgreich
+- Repository-Lint: erfolgreich
+- Web-E2E: **18/18 erfolgreich**, inklusive Passwort-Reset-Route, authentifizierten Tier-, Buchungs-, Chat-, Medien- und Kontaktanfrage-Flüssen, Offline-Notfallkarten-Smoke-Test sowie Community-Moderation und Web-Notfallkartenroute
 - Web-Build: erfolgreich
 - Expo-Android-Bundle: erfolgreich erzeugt
-- Remote-Migrationen bis `049_fix_hazard_sighting_geography_assignment.sql` angewendet
+- Android-Development-Build: erfolgreich erzeugt, installiert und mit einem nativen Login-/Dashboard-Smoke-Test auf dem verbundenen Gerät geprüft; aktueller EAS-Build `92fc3272-1f8b-42a8-9c16-a82c584e9afc`
+- Android-Login-Smoke: leerer lokaler Zustand ohne Fingerprint-Angebot und ohne blockierenden Ladezustand geprüft
+- Remote-Migrationen bis `059_fix_missing_sighting_reporter_read.sql` angewendet; die Migrationen umfassen Anforderungen, Helfersuche, Kontaktanfragen, Duplikatschutz und RPC-Korrekturen
 
 ### Noch nicht vollständig umgesetzt
 
 - Vollständige Geocoding-Abdeckung sowie flächendeckende Straßenkartenfunktionen
-- Native Hintergrund-/Geofence- und Broadcast-Tests auf echten Geräten
-- QR-/Offline-Notfallkarten-Tests auf realen Android-/iOS-Geräten
-- Tasso-Anbindung und automatische Vermisst-Tier-Synchronisierung
+- Vollständige native Hintergrund-/Geofence- und Broadcast-Abnahme auf echten Geräten; Offline-Queue und Exit-Deduplizierung sind implementiert, Basis-Smokes und Offline-Smoke sind erfolgt, GPS-/Geofence-Simulation und Push-Zustellung stehen noch aus
+- QR-/Offline-Notfallkarten-Tests auf realen Android-/iOS-Geräten; der QR-Scanner ist implementiert, die Geräteabnahme steht noch aus
+- Tasso-Anbindung und automatische Vermisst-Tier-Synchronisierung (vorerst zurückgestellt)
+- Lokale WhatsApp-Gruppen-Bridge für Vermisstmeldungen (vorerst zurückgestellt)
 - Rich-Push-Lockscreen mit Ausweichroute und Entwarnungsaktion
 - Native Voice-Notes, Anruf-/Video-Funktionen und Ende-zu-Ende-Verschlüsselung im Chat
 - SmartLock, Haftpflicht-/Schutzgarantie- und Tierarzt-/Polizei-Integrationen
 - Erweiterte Community-Moderation und produktive Event-Moderationsrichtlinien
-- Native Passkeys bleiben ein PoC und benötigen einen Development Build
+- Native Passkeys bleiben ein PoC; der Development Build ist vorhanden, eine vollständige Geräteabnahme steht noch aus
+- Rechtstexte sind technische Entwürfe und benötigen Betreiberangaben sowie Rechtsprüfung
+- Web-Parität ist noch nicht vollständig: einige native Sonderfunktionen fehlen noch im Web
+- Kontaktanfragen können auf Mobile und Web erstellt, angenommen, abgelehnt oder storniert werden; Backend- und Web-Flows sind getestet, die produktive Push-/Antwort-/Chat-Abnahme auf echten Geräten bleibt noch offen
 
 ---
 
@@ -109,7 +136,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - **Top Navigation Bar:**
   - Logo & Brandmark (`PfotenNetz`)
   - Hauptreiter: `Dashboard`, `Nachbarschaftskarte & Helfer`, `Gefahren- & Notfall-Leitstelle`, `Betreuung & Live-Tracking`, `Community & Treff`
-  - Standort-Badge mit Radius (`Berlin-Prenzlauer Berg / Kollwitz-Nachbarschaft 1,5 km`)
+  - Standort-Badge mit frei wählbarem Suchradius
   - Zeitbank-Guthaben Pill (`14,5 Std. Zeitbank`)
   - Profil-Avatar & Schnelleinstieg
 - **Globaler Footer:**
@@ -412,26 +439,43 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 
 ### Priorität 1 – Produktreife
 
-1. OSRM-Routenberechnung ist im Web-Live-Tracking integriert; verbleibende Kartenfunktionen und mobile Routenführung ergänzen.
-2. Native Live-Tracking-Funktionen mit Geofence und Realtime-Broadcast sind technisch vorbereitet; vollständige
+1. OSRM-Routenberechnung ist im Web-Live-Tracking integriert; die mobile App bietet jetzt eine
+   provider-neutrale Routenführung zum hinterlegten Treffpunkt über die installierte Karten-App bzw. den Browser.
+2. Native Live-Tracking-Funktionen mit Geofence und Realtime-Broadcast sind technisch vorbereitet; der Development-Build ist vorhanden und Basis-Smokes sind erfolgt. Vollständige
+   Android-Tests mit GPS-/Geofence-Simulation benötigen noch reproduzierbare Testpositionen. Development-Build-Profil und Ablauf stehen in
+   `docs/android-device-testing.md`; die fachliche Abnahmematrix steht in `docs/phase-3-acceptance-plan.md`.
+3. QR-/Offline-Notfallkarten-Cache ist jetzt gegen beschädigte Snapshots abgesichert und automatisiert getestet;
    Tests auf realen Android-/iOS-Geräten stehen noch aus.
-3. QR-/Offline-Notfallkarten-Tests auf realen Android-/iOS-Geräten ergänzen.
-4. Tasso-Anbindung und automatische Vermisst-Tier-Synchronisierung ergänzen.
-5. Rich-Push-Flows, Notification-Deep-Links und Entwarnungsaktionen auf realen Android-/iOS-Geräten testen.
+4. Tasso-Anbindung und automatische Vermisst-Tier-Synchronisierung bleiben vorerst
+   zurückgestellt; API-, Datenschutz- und Vertragsfreigabe sind im Abnahmeplan als
+   Voraussetzung dokumentiert.
+5. Rich-Push-Flows unterstützen jetzt auch die Safety-Aktionen „Ausweichroute öffnen“ und
+   „Entwarnung melden“; Notification-Deep-Links und diese Aktionen müssen noch auf realen
+   Android-/iOS-Geräten getestet werden.
 
 ### Priorität 2 – Plattformfunktionen
 
-1. Native Geräte-/Development-Build-Tests für Push, Tracking, Geofence, QR und Offline-Modus durchführen.
-2. Authentifizierte Web-Buchungs-, Chat- und Medienflüsse sind mit isolierten Testkonten als E2E-Test abgedeckt; echte Staging-Testkonten ergänzen.
-3. Native Passkeys in einem Expo-Development-Build validieren.
-4. Authentifizierte Playwright-/Detox- und native Gerätetests sowie CI-Checks für die Hauptjourneys ausbauen.
+1. Native Geräte-/Development-Build-Tests für Push, Tracking, Geofence und QR mit reproduzierbaren GPS-Positionen durchführen; App-Start, Offline-Modus und Basis-Berechtigungen sind bereits geprüft, die Testmatrix ist dokumentiert.
+2. Authentifizierte Web-Buchungs-, Chat- und Medienflüsse sind mit isolierten Testkonten als E2E-Test abgedeckt; echte Staging-Testkonten ergänzen. Rollen und Reset-Regeln sind dokumentiert.
+3. Native Passkeys in einem Expo-Development-Build validieren; die Abnahmeschritte sind dokumentiert.
+4. Authentifizierte Playwright-/Detox- und native Gerätetests sowie CI-Checks für die Hauptjourneys ausbauen; die Web-Playwright-Suite läuft jetzt verpflichtend nach dem Build in CI.
+5. Kontaktanfragen mit Push-Benachrichtigungen, Antwortstatus und anschließendem Chat auf echten Geräten abnehmen; Web-Antwortstatus ist im E2E-Flow abgedeckt, Datenbanktrigger und kontrollierte RPCs sind implementiert.
 
 ### Priorität 3 – Integrationen und Betrieb
 
-1. Tasso, SmartLock, Tierarzt-/Polizei-Direktwahl und Versicherungsprozesse fachlich spezifizieren.
+1. SmartLock, Tierarzt-/Polizei-Direktwahl und Versicherungsprozesse fachlich spezifizieren;
+   Tasso bleibt bis zu einer späteren Produktentscheidung zurückgestellt.
+   Eine mögliche WhatsApp-Share-/Moderations-Bridge für lokale Gruppen bleibt
+   ebenfalls bis zu einer späteren Produktentscheidung zurückgestellt.
 2. Apple-Team-ID und Android-SHA256-Fingerprints für die `.well-known`-Endpoints konfigurieren.
+   Die Apple-Association- und Android-Assetlinks-Endpunkte validieren die Werte bereits und
+   antworten bis zur Konfiguration mit `503` statt unvollständige Verknüpfungen auszuliefern.
 3. Supabase-Typen regelmäßig aus dem Remote-Schema generieren und in CI validieren.
+   Dafür ist jetzt ein wöchentlicher bzw. manueller `Supabase type drift`-Workflow vorhanden;
+   es fehlen nur noch die Repository-Secrets `SUPABASE_ACCESS_TOKEN` und `SUPABASE_PROJECT_REF`.
 4. Datenschutz-, Standort- und Aufbewahrungskonzept für GPS, Fotos, Notfall- und Verifizierungsdaten finalisieren.
+   Ein technischer Arbeitsstand mit Fristen und Löschleitplanken liegt jetzt unter
+   `docs/data-retention.md`; Rechtsprüfung und produktive Löschjobs stehen noch aus.
 
 ### Aktueller technischer Referenzstand
 
@@ -441,6 +485,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 - Öffentliche Notfallkarten verwenden widerrufbare SHA-256-Tokens; private Medien werden über kurzlebige
   Signed URLs ausgeliefert.
 - Push-Präferenzen, Tracking-Positionen, Distanz und Dauer werden serverseitig berücksichtigt bzw. berechnet.
-- Letzte angewendete Remote-Migration: `049_fix_hazard_sighting_geography_assignment.sql`
+- Letzte angewendete Remote-Migration: `059_fix_missing_sighting_reporter_read.sql`
+- Remote angewendet: `050_original-requirements.sql` bis `059_fix_missing_sighting_reporter_read.sql`
 - Letzter Remote-Commit: nicht Bestandteil dieses lokalen Standabgleichs
 - Bewusst nicht überschreiben: `packages/supabase/src/auth/index.ts`, `supabase/config.toml`

@@ -139,6 +139,16 @@ export function configureForegroundPresentation(): void {
         buttonTitle: 'Warnung öffnen',
         options: { opensAppToForeground: true },
       },
+      {
+        identifier: 'OPEN_ROUTE',
+        buttonTitle: 'Ausweichroute öffnen',
+        options: { opensAppToForeground: true },
+      },
+      {
+        identifier: 'REPORT_CLEAR',
+        buttonTitle: 'Entwarnung melden',
+        options: { opensAppToForeground: true, isDestructive: false },
+      },
     ]),
   ]).catch(() => undefined);
   notifications.setNotificationHandler({

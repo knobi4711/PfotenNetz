@@ -36,6 +36,7 @@ import {
   keyHandoffLabel,
 } from '../../lib/booking';
 import { TrackingRecorder } from '../../components/tracking-recorder';
+import { buildDirectionsUrl, openDirections } from '../../lib/navigation';
 
 type BookingStatus = Database['public']['Enums']['booking_status'];
 
@@ -250,6 +251,15 @@ export default function BookingDetailScreen() {
                 })}
               />
               <InfoRow label="Treffpunkt" value={booking.meeting_address ?? '–'} />
+              {buildDirectionsUrl(booking.meeting_address ?? '') !== null ? (
+                <ActionButton
+                  title="Route zum Treffpunkt"
+                  variant="secondary"
+                  onPress={() => {
+                    void openDirections(booking.meeting_address ?? '');
+                  }}
+                />
+              ) : null}
               <InfoRow label="Schlüssel" value={keyHandoffLabel(booking.key_handoff_type)} />
               <InfoRow
                 label="Preis"

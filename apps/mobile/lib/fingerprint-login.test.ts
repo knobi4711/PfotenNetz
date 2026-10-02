@@ -145,6 +145,34 @@ describe('signInWithFingerprint', () => {
     expect(getItem).not.toHaveBeenCalled();
     expect(signIn).not.toHaveBeenCalled();
   });
+
+  it('clears stale credentials when the remote account no longer exists', async () => {
+    authenticate.mockResolvedValue({ success: true });
+    getItem.mockImplementation((key: string) =>
+      Promise.resolve(key.endsWith('email') ? 'deleted@example.invalid' : 'secret')
+    );
+    const signIn = vi.fn().mockRejectedValue(new Error('Invalid login credentials'));
+
+    await expect(signInWithFingerprint(signIn)).rejects.toThrow('Invalid login credentials');
+    expect(deleteItem).toHaveBeenCalledWith('pfotennetz.biometric.email');
+    expect(deleteItem).toHaveBeenCalledWith('pfotennetz.biometric.password');
+  });
+
+  it('times out when the remote sign-in never responds', async () => {
+    vi.useFakeTimers();
+    authenticate.mockResolvedValue({ success: true });
+    getItem.mockImplementation((key: string) =>
+      Promise.resolve(key.endsWith('email') ? 'a@b.de' : 'secret')
+    );
+    const signIn = vi.fn().mockImplementation(() => new Promise<never>(() => undefined));
+
+    const result = signInWithFingerprint(signIn);
+    const assertion = expect(result).rejects.toThrow('zu lange gedauert');
+    await vi.advanceTimersByTimeAsync(15_000);
+
+    await assertion;
+    vi.useRealTimers();
+  });
 });
 
 describe('friendlyFingerprintError', () => {

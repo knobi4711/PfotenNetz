@@ -8,6 +8,14 @@ export const AVAILABILITY_DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 export type AvailabilityDay = (typeof AVAILABILITY_DAYS)[number];
 
 export const AVAILABILITY_BOOKING_TYPES: BookingType[] = ['walk', 'feeding', 'vacation', 'daycare'];
+export const AVAILABILITY_PET_SPECIES = [
+  'dog',
+  'cat',
+  'rabbit',
+  'guinea_pig',
+  'bird',
+  'other',
+] as const;
 
 export interface UpsertAvailabilityInput {
   dayOfWeek: number;
@@ -18,6 +26,7 @@ export interface UpsertAvailabilityInput {
   bookingTypes: BookingType[];
   maxDistanceKm: number;
   isActive?: boolean | undefined;
+  petSpecies?: string[] | undefined;
 }
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
@@ -44,6 +53,8 @@ export function validateAvailabilityInput(input: UpsertAvailabilityInput): strin
   if (input.bookingTypes.length === 0) {
     return 'Bitte wähle mindestens eine Betreuungsart.';
   }
+  if (input.petSpecies !== undefined && input.petSpecies.length === 0)
+    return 'Bitte wähle mindestens eine Tierart.';
   for (const type of input.bookingTypes) {
     if (!AVAILABILITY_BOOKING_TYPES.includes(type)) {
       return `Unbekannte Betreuungsart: ${type}`;
@@ -101,6 +112,7 @@ export async function createAvailability(
       booking_types: input.bookingTypes,
       max_distance_km: input.maxDistanceKm,
       is_active: input.isActive ?? true,
+      pet_species: input.petSpecies ?? [...AVAILABILITY_PET_SPECIES],
     })
     .select('*')
     .single();
@@ -147,6 +159,10 @@ export async function updateAvailability(
     patch.max_distance_km = input.maxDistanceKm;
   }
   if (input.isActive !== undefined) patch.is_active = input.isActive;
+  if (input.petSpecies !== undefined) {
+    if (input.petSpecies.length === 0) throw new Error('Bitte wähle mindestens eine Tierart.');
+    patch.pet_species = input.petSpecies;
+  }
 
   const { data, error } = await client
     .from('helper_availabilities')
