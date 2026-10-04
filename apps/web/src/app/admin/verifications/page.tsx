@@ -13,11 +13,20 @@ const TYPE_LABELS = {
   liability_insurance: 'Haftpflichtversicherung',
 } as const;
 
+function groupByUser<T extends { user_id: string }>(requests: T[]): T[][] {
+  const groups = new Map<string, T[]>();
+  for (const request of requests) {
+    groups.set(request.user_id, [...(groups.get(request.user_id) ?? []), request]);
+  }
+  return [...groups.values()];
+}
+
 export default function HelperVerificationAdminPage() {
   const profile = useOwnProfile();
   const query = useAdminHelperVerifications();
   const review = useReviewHelperVerification();
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const requestGroups = groupByUser(query.data ?? []);
 
   if (profile.isPending)
     return (
@@ -58,80 +67,104 @@ export default function HelperVerificationAdminPage() {
             Anfragen konnten nicht geladen werden: {query.error.message}
           </p>
         ) : null}
-        {!query.isPending && !query.isError && !query.data?.length ? (
+        {!query.isPending && !query.isError && !requestGroups.length ? (
           <div className="card mt-8 p-8 text-center text-on-surface-variant">
             Keine offenen Helper-Anfragen vorhanden.
           </div>
         ) : null}
         <div className="mt-8 space-y-5">
-          {query.data?.map((request) => (
-            <article key={request.verification_id} className="card p-6">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-extrabold text-on-surface">{request.display_name}</h2>
-                  <p className="mt-1 text-sm text-on-surface-variant">{request.email}</p>
+          {requestGroups.map((requests) => {
+            const request = requests[0];
+            if (!request) return null;
+            return (
+              <article key={request.user_id} className="card p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-on-surface">
+                      {request.display_name}
+                    </h2>
+                    <p className="mt-1 text-sm text-on-surface-variant">{request.email}</p>
+                  </div>
+                  <time className="text-sm text-on-surface-variant">
+                    {new Date(request.created_at).toLocaleDateString('de-DE')}
+                  </time>
                 </div>
-                <time className="text-sm text-on-surface-variant">
-                  {new Date(request.created_at).toLocaleDateString('de-DE')}
-                </time>
-              </div>
-              <p className="mt-4 font-semibold">
-                {TYPE_LABELS[request.verification_type as keyof typeof TYPE_LABELS] ??
-                  request.verification_type}
-              </p>
-              <p className="mt-1 text-sm text-on-surface-variant">
-                {request.storage_paths.length} Dokument(e) hochgeladen
-              </p>
-              <label
-                className="mt-5 block text-sm font-bold"
-                htmlFor={`reason-${request.verification_id}`}
-              >
-                Ablehnungsgrund (optional)
-              </label>
-              <textarea
-                id={`reason-${request.verification_id}`}
-                value={reasons[request.verification_id] ?? ''}
-                onChange={(event) =>
-                  setReasons((current) => ({
-                    ...current,
-                    [request.verification_id]: event.target.value,
-                  }))
-                }
-                className="input mt-2 min-h-24 py-3"
-              />
-              <div className="mt-5 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={review.isPending}
-                  onClick={() =>
-                    review.mutate({ verificationId: request.verification_id, status: 'approved' })
-                  }
-                >
-                  Freigeben
-                </button>
-                <button
-                  type="button"
-                  className="btn-emergency"
-                  disabled={review.isPending}
-                  onClick={() =>
-                    review.mutate({
-                      verificationId: request.verification_id,
-                      status: 'rejected',
-                      rejectionReason: reasons[request.verification_id]?.trim() || null,
-                    })
-                  }
-                >
-                  Ablehnen
-                </button>
-              </div>
-              {review.isError ? (
-                <p role="alert" className="mt-4 text-sm font-semibold text-error">
-                  Anfrage konnte nicht verarbeitet werden: {review.error.message}
+                <p className="mt-4 text-sm font-semibold text-on-surface-variant">
+                  {requests.length} Prüfungen in dieser Helper-Anfrage
                 </p>
-              ) : null}
-            </article>
-          ))}
+                <label
+                  className="mt-5 block text-sm font-bold"
+                  htmlFor={`reason-${request.user_id}`}
+                >
+                  Ablehnungsgrund (optional)
+                </label>
+                <textarea
+                  id={`reason-${request.user_id}`}
+                  value={reasons[request.user_id] ?? ''}
+                  onChange={(event) =>
+                    setReasons((current) => ({
+                      ...current,
+                      [request.user_id]: event.target.value,
+                    }))
+                  }
+                  className="input mt-2 min-h-24 py-3"
+                />
+                <div className="mt-5 divide-y divide-outline-variant/40 rounded-xl border border-outline-variant/50">
+                  {requests.map((verification) => (
+                    <div
+                      key={verification.verification_id}
+                      className="flex flex-wrap items-center justify-between gap-3 p-4"
+                    >
+                      <div>
+                        <p className="font-bold">
+                          {TYPE_LABELS[
+                            verification.verification_type as keyof typeof TYPE_LABELS
+                          ] ?? verification.verification_type}
+                        </p>
+                        <p className="text-sm text-on-surface-variant">
+                          {verification.storage_paths.length} Dokument(e) hochgeladen
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          disabled={review.isPending}
+                          onClick={() =>
+                            review.mutate({
+                              verificationId: verification.verification_id,
+                              status: 'approved',
+                            })
+                          }
+                        >
+                          Freigeben
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-emergency"
+                          disabled={review.isPending}
+                          onClick={() =>
+                            review.mutate({
+                              verificationId: verification.verification_id,
+                              status: 'rejected',
+                              rejectionReason: reasons[request.user_id]?.trim() || null,
+                            })
+                          }
+                        >
+                          Ablehnen
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {review.isError ? (
+                  <p role="alert" className="mt-4 text-sm font-semibold text-error">
+                    Anfrage konnte nicht verarbeitet werden: {review.error.message}
+                  </p>
+                ) : null}
+              </article>
+            );
+          })}
         </div>
       </div>
     </main>

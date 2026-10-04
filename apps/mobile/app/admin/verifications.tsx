@@ -24,6 +24,14 @@ const TYPE_LABELS = {
   liability_insurance: 'Haftpflichtversicherung',
 } as const;
 
+function groupByUser<T extends { user_id: string }>(requests: T[]): T[][] {
+  const groups = new Map<string, T[]>();
+  for (const request of requests) {
+    groups.set(request.user_id, [...(groups.get(request.user_id) ?? []), request]);
+  }
+  return [...groups.values()];
+}
+
 export default function HelperVerificationAdminScreen() {
   const c = usePalette();
   const profile = useOwnProfile();
@@ -46,6 +54,7 @@ export default function HelperVerificationAdminScreen() {
   }
 
   const requests = query.data ?? [];
+  const requestGroups = groupByUser(requests);
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: c.surface }]}
@@ -60,69 +69,81 @@ export default function HelperVerificationAdminScreen() {
           onRetry={() => void query.refetch()}
         />
       ) : null}
-      {!query.isPending && !query.isError && requests.length === 0 ? (
+      {!query.isPending && !query.isError && requestGroups.length === 0 ? (
         <Card>
           <EmptyText>Keine offenen Helper-Anfragen vorhanden.</EmptyText>
         </Card>
       ) : null}
-      {requests.map((request) => (
-        <Card key={request.verification_id}>
-          <SectionTitle>{request.display_name}</SectionTitle>
-          <Text style={[styles.meta, { color: c.onSurfaceVariant }]}>{request.email}</Text>
-          <Text style={[styles.body, { color: c.onSurface }]}>
-            {TYPE_LABELS[request.verification_type as keyof typeof TYPE_LABELS] ??
-              request.verification_type}{' '}
-            · Antrag vom {new Date(request.created_at).toLocaleDateString('de-DE')}
-          </Text>
-          {request.storage_paths.length > 0 ? (
-            <Text style={[styles.meta, { color: c.onSurfaceVariant }]}>
-              Dokumente: {request.storage_paths.length} hochgeladen
+      {requestGroups.map((requestsForUser) => {
+        const request = requestsForUser[0];
+        if (!request) return null;
+        return (
+          <Card key={request.user_id}>
+            <SectionTitle>{request.display_name}</SectionTitle>
+            <Text style={[styles.meta, { color: c.onSurfaceVariant }]}>{request.email}</Text>
+            <Text style={[styles.body, { color: c.onSurface }]}>
+              {requestsForUser.length} Prüfungen in dieser Helper-Anfrage · Antrag vom{' '}
+              {new Date(request.created_at).toLocaleDateString('de-DE')}
             </Text>
-          ) : null}
-          <TextInput
-            value={reasons[request.verification_id] ?? ''}
-            onChangeText={(value) =>
-              setReasons((current) => ({ ...current, [request.verification_id]: value }))
-            }
-            placeholder="Ablehnungsgrund (optional)"
-            placeholderTextColor={c.outline}
-            style={[
-              styles.input,
-              {
-                color: c.onSurface,
-                borderColor: c.outlineVariant,
-                backgroundColor: c.surfaceContainerLow,
-              },
-            ]}
-          />
-          {review.isError ? (
-            <ErrorBox
-              message={`Anfrage konnte nicht verarbeitet werden: ${review.error.message}`}
-            />
-          ) : null}
-          <View style={styles.actions}>
-            <ActionButton
-              title="Freigeben"
-              pending={review.isPending}
-              onPress={() =>
-                review.mutate({ verificationId: request.verification_id, status: 'approved' })
+            <TextInput
+              value={reasons[request.user_id] ?? ''}
+              onChangeText={(value) =>
+                setReasons((current) => ({ ...current, [request.user_id]: value }))
               }
+              placeholder="Ablehnungsgrund (optional)"
+              placeholderTextColor={c.outline}
+              style={[
+                styles.input,
+                {
+                  color: c.onSurface,
+                  borderColor: c.outlineVariant,
+                  backgroundColor: c.surfaceContainerLow,
+                },
+              ]}
             />
-            <ActionButton
-              title="Ablehnen"
-              variant="danger"
-              pending={review.isPending}
-              onPress={() =>
-                review.mutate({
-                  verificationId: request.verification_id,
-                  status: 'rejected',
-                  rejectionReason: reasons[request.verification_id]?.trim() || null,
-                })
-              }
-            />
-          </View>
-        </Card>
-      ))}
+            {review.isError ? (
+              <ErrorBox
+                message={`Anfrage konnte nicht verarbeitet werden: ${review.error.message}`}
+              />
+            ) : null}
+            {requestsForUser.map((verification) => (
+              <View key={verification.verification_id} style={styles.verification}>
+                <Text style={[styles.verificationTitle, { color: c.onSurface }]}>
+                  {TYPE_LABELS[verification.verification_type as keyof typeof TYPE_LABELS] ??
+                    verification.verification_type}
+                </Text>
+                <Text style={[styles.meta, { color: c.onSurfaceVariant }]}>
+                  {verification.storage_paths.length} Dokument(e) hochgeladen
+                </Text>
+                <View style={styles.actions}>
+                  <ActionButton
+                    title="Freigeben"
+                    pending={review.isPending}
+                    onPress={() =>
+                      review.mutate({
+                        verificationId: verification.verification_id,
+                        status: 'approved',
+                      })
+                    }
+                  />
+                  <ActionButton
+                    title="Ablehnen"
+                    variant="danger"
+                    pending={review.isPending}
+                    onPress={() =>
+                      review.mutate({
+                        verificationId: verification.verification_id,
+                        status: 'rejected',
+                        rejectionReason: reasons[request.user_id]?.trim() || null,
+                      })
+                    }
+                  />
+                </View>
+              </View>
+            ))}
+          </Card>
+        );
+      })}
     </ScrollView>
   );
 }
@@ -141,4 +162,6 @@ const styles = StyleSheet.create({
     fontFamily: appFonts.regular,
   },
   actions: { gap: 8, marginTop: 14 },
+  verification: { borderTopWidth: 1, borderTopColor: '#eadbd5', paddingTop: 14, marginTop: 14 },
+  verificationTitle: { fontFamily: appFonts.semibold, fontSize: 15 },
 });
