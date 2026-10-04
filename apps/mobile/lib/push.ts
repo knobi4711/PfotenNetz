@@ -21,6 +21,9 @@ export interface PushRegistration {
 let cachedNotifications: typeof NotificationsType | null | undefined;
 
 export function getNotificationsModule(): typeof NotificationsType | null {
+  // expo-notifications exposes no usable response/listener API in browsers.
+  // Return before require() so web never invokes a native-only method.
+  if (Platform.OS === 'web') return null;
   // Expo Go (appOwnership === 'expo'): Remote-Push ist seit SDK 53 entfernt.
   // Das JS-Modul lädt zwar, aber jeder native Zugriff wirft — daher das
   // Modul hier gar nicht erst anfassen.

@@ -74,6 +74,7 @@ export function PasskeyPanel() {
       displayName: displayName.trim(),
       email: email.trim(),
       password,
+      emailRedirectTo: window.location.origin,
     })
       .then((result) => {
         setRegistering(false);

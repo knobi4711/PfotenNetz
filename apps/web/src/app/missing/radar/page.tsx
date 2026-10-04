@@ -9,18 +9,7 @@ import {
 } from '@pfotennetz/supabase';
 import { useState } from 'react';
 import { WebHeader } from '../../../components/WebHeader';
-
-function locate(): Promise<{ latitude: number; longitude: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation)
-      return reject(new Error('Standortfreigabe wird nicht unterstützt.'));
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude }),
-      () => reject(new Error('Standort konnte nicht bestimmt werden.')),
-      { enableHighAccuracy: true, maximumAge: 300000, timeout: 10000 }
-    );
-  });
-}
+import { getCurrentBrowserLocation } from '../../../lib/location';
 
 export default function MissingRadarPage() {
   const pets = useOwnPets();
@@ -37,7 +26,7 @@ export default function MissingRadarPage() {
 
   const locateAndLoad = () => {
     setError(null);
-    void locate()
+    void getCurrentBrowserLocation()
       .then(() => setLocationReady(true))
       .catch((cause: unknown) =>
         setError(cause instanceof Error ? cause.message : 'Standort konnte nicht bestimmt werden.')
@@ -46,7 +35,7 @@ export default function MissingRadarPage() {
   const submit = async () => {
     if (!selectedId || !locationReady) return;
     try {
-      const point = await locate();
+      const point = await getCurrentBrowserLocation();
       const sighting = await create.mutateAsync({
         missingPetId: selectedId,
         latitude: point.latitude,

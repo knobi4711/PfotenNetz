@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useEffect, useRef } from 'react';
 import { WebHeader } from '../../components/WebHeader';
+import { getCurrentBrowserLocation } from '../../lib/location';
 
 const RADII = [1.5, 3, 5, 10] as const;
 const SPECIES = [
@@ -164,22 +165,6 @@ function OSMMap({
   );
 }
 
-function locate(): Promise<{ latitude: number; longitude: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Standortfreigabe wird von diesem Browser nicht unterstützt.'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude });
-      },
-      () => reject(new Error('Standort konnte nicht bestimmt werden.')),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-    );
-  });
-}
-
 function HelperCard({
   helper,
   selected,
@@ -248,7 +233,7 @@ export default function ExplorePage() {
 
   const handleLocate = () => {
     setLocationError(null);
-    void locate()
+    void getCurrentBrowserLocation()
       .then((point) => {
         setCenter(point);
         setSelectedId(null);

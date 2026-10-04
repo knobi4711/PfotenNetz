@@ -1,5 +1,6 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 const THEME_KEY = 'pfotennetz.theme-mode';
@@ -10,16 +11,16 @@ const ThemeContext = createContext<{
   setMode: (mode: ThemeMode) => void;
 }>({ mode: 'system', effectiveMode: 'light', setMode: () => undefined });
 
-function readThemeMode(): ThemeMode {
-  if (typeof window === 'undefined') return 'system';
-  const stored = window.localStorage.getItem(THEME_KEY);
-  return stored === 'system' || stored === 'light' || stored === 'dark' ? stored : 'system';
-}
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
-  const [mode, setModeState] = useState<ThemeMode>(readThemeMode);
+  const [mode, setModeState] = useState<ThemeMode>('system');
   const effectiveMode = mode === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : mode;
+
+  useEffect(() => {
+    void SecureStore.getItemAsync(THEME_KEY).then((stored) => {
+      if (stored === 'system' || stored === 'light' || stored === 'dark') setModeState(stored);
+    });
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -27,7 +28,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       effectiveMode,
       setMode: (nextMode: ThemeMode) => {
         setModeState(nextMode);
-        window.localStorage.setItem(THEME_KEY, nextMode);
+        void SecureStore.setItemAsync(THEME_KEY, nextMode);
       },
     }),
     [effectiveMode, mode]

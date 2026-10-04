@@ -5,6 +5,8 @@ export interface RegisterWithEmailInput {
   displayName: string;
   email: string;
   password: string;
+  /** Optional redirect target for email confirmation (for example a native deep link). */
+  emailRedirectTo?: string;
 }
 
 export async function registerWithEmail(
@@ -16,6 +18,7 @@ export async function registerWithEmail(
     password: input.password,
     options: {
       data: { display_name: input.displayName },
+      ...(input.emailRedirectTo ? { emailRedirectTo: input.emailRedirectTo } : {}),
     },
   });
 

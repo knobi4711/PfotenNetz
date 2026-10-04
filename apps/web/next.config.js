@@ -13,6 +13,7 @@ module.exports = (phase) => ({
   // Keep development chunks separate from production builds. Running a build
   // while the local dev server is open must not invalidate its module graph.
   distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next',
+  output: 'standalone',
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,

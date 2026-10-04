@@ -26,6 +26,7 @@
     "components/**/*",
     "assets.d.ts",
     "lib/**/*",
+    "providers/**/*",
     "expo-router.d.ts",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"

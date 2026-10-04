@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Stack } from 'expo-router/stack';
 import { router, useSegments } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
 import type * as Notifications from 'expo-notifications';
@@ -10,7 +11,7 @@ import { PlusJakartaSans_600SemiBold } from '@expo-google-fonts/plus-jakarta-san
 import { PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans/700Bold';
 import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans/800ExtraBold';
 import { useFonts } from 'expo-font';
-import { useAuth, useRegisterDevice } from '@pfotennetz/supabase';
+import { getSupabaseClient, useAuth, useRegisterDevice } from '@pfotennetz/supabase';
 import { Providers } from '../providers/Providers';
 import '../lib/geofence';
 import '../lib/tracking-background';
@@ -97,6 +98,40 @@ function usePushSetup(enabled: boolean) {
   }, [enabled, registerDevice]);
 }
 
+/** Completes Supabase email confirmation links opened through the native app scheme. */
+function useAuthDeepLink() {
+  useEffect(() => {
+    let active = true;
+
+    const applySessionFromUrl = async (url: string | null) => {
+      if (!active || url === null || !url.includes('#')) return;
+
+      const hash = url.slice(url.indexOf('#') + 1);
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      if (!accessToken || !refreshToken) return;
+
+      await getSupabaseClient().auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+    };
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void applySessionFromUrl(url).catch(() => undefined);
+    });
+    void Linking.getInitialURL()
+      .then(applySessionFromUrl)
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
+}
+
 function AuthGate() {
   const auth = useAuth();
   const segments = useSegments();
@@ -177,9 +212,15 @@ export default function RootLayout() {
 
   return (
     <Providers>
+      <AuthDeepLinkHandler />
       <AuthGate />
     </Providers>
   );
+}
+
+function AuthDeepLinkHandler() {
+  useAuthDeepLink();
+  return null;
 }
 
 const styles = StyleSheet.create({

@@ -11,20 +11,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
 import { WebHeader } from '../../../components/WebHeader';
-
-function locate(): Promise<{ latitude: number; longitude: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Standortfreigabe wird von diesem Browser nicht unterstützt.'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude }),
-      () => reject(new Error('Standort konnte nicht bestimmt werden.')),
-      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
-    );
-  });
-}
+import { getCurrentBrowserLocation } from '../../../lib/location';
 
 export default function MissingPetDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +30,7 @@ export default function MissingPetDetailPage() {
   const submitSighting = async () => {
     setError(null);
     try {
-      const point = await locate();
+      const point = await getCurrentBrowserLocation();
       const sighting = await createSighting.mutateAsync({
         missingPetId: id,
         latitude: point.latitude,

@@ -8,21 +8,8 @@ import {
 } from '@pfotennetz/supabase';
 import Link from 'next/link';
 import { WebHeader } from '../../components/WebHeader';
+import { getCurrentBrowserLocation } from '../../lib/location';
 import { useState } from 'react';
-
-function locate(): Promise<{ latitude: number; longitude: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Standortfreigabe wird von diesem Browser nicht unterstützt.'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude }),
-      () => reject(new Error('Standort konnte nicht bestimmt werden.')),
-      { enableHighAccuracy: true, maximumAge: 300000, timeout: 10000 }
-    );
-  });
-}
 
 export default function MissingPetsPage() {
   const reports = useOwnMissingPets();
@@ -37,7 +24,7 @@ export default function MissingPetsPage() {
     setCreateError(null);
     try {
       if (!selectedPetId) throw new Error('Bitte wähle zuerst ein Tier aus.');
-      const point = await locate();
+      const point = await getCurrentBrowserLocation();
       await create.mutateAsync({
         petId: selectedPetId,
         latitude: point.latitude,

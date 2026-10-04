@@ -11,6 +11,7 @@ import {
 import { searchOpenStreetMap, type GeocodingResult } from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { WebHeader } from '../../../components/WebHeader';
+import { getCurrentBrowserLocation } from '../../../lib/location';
 import { useState } from 'react';
 
 const TYPES: HazardType[] = [
@@ -22,18 +23,6 @@ const TYPES: HazardType[] = [
   'other',
 ];
 const SEVERITIES: HazardSeverity[] = ['low', 'medium', 'high', 'critical'];
-
-function locate(): Promise<{ latitude: number; longitude: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation)
-      return reject(new Error('Standortfreigabe wird nicht unterstützt.'));
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude }),
-      () => reject(new Error('Standort konnte nicht bestimmt werden.')),
-      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
-    );
-  });
-}
 
 export default function WebHazardReportPage() {
   const router = useRouter();
@@ -52,7 +41,7 @@ export default function WebHazardReportPage() {
 
   const setCurrentLocation = () => {
     setError(null);
-    void locate()
+    void getCurrentBrowserLocation()
       .then(setLocation)
       .catch((cause: unknown) =>
         setError(cause instanceof Error ? cause.message : 'Standort konnte nicht bestimmt werden.')
@@ -79,7 +68,7 @@ export default function WebHazardReportPage() {
   const publish = async () => {
     setError(null);
     try {
-      const point = location ?? (await locate());
+      const point = location ?? (await getCurrentBrowserLocation());
       const hazard = await create.mutateAsync({
         type,
         severity,

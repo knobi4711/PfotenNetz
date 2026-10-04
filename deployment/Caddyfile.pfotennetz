@@ -1,0 +1,7 @@
+pfotennetz.app {
+    reverse_proxy pfotennetz-web:3000
+}
+
+www.pfotennetz.app {
+    redir https://pfotennetz.app{uri} permanent
+}

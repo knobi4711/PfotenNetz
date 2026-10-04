@@ -6,6 +6,7 @@ import {
   useCreateTrackingSession,
   useFinishTrackingSession,
 } from '@pfotennetz/supabase';
+import { hasUsableBrowserAccuracy } from '../lib/location';
 import { useRef, useState } from 'react';
 
 type Point = { latitude: number; longitude: number; accuracy: number; timestamp: number };
@@ -59,6 +60,12 @@ export function WebTrackingRecorder({ bookingId }: { bookingId: string }) {
       setDistanceMeters(0);
       watch.current = navigator.geolocation.watchPosition(
         (position) => {
+          if (!hasUsableBrowserAccuracy(position.coords.accuracy)) {
+            setError(
+              'Der Browser liefert aktuell nur einen ungenauen Standort. Bitte aktiviere die Standortdienste von Windows.'
+            );
+            return;
+          }
           const point: Point = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,

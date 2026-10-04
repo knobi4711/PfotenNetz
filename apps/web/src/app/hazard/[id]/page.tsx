@@ -10,18 +10,7 @@ import {
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { WebHeader } from '../../../components/WebHeader';
-
-function locate(): Promise<{ latitude: number; longitude: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation)
-      return reject(new Error('Standortfreigabe wird nicht unterstützt.'));
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude }),
-      () => reject(new Error('Standort konnte nicht bestimmt werden.')),
-      { maximumAge: 300000, timeout: 10000 }
-    );
-  });
-}
+import { getCurrentBrowserLocation } from '../../../lib/location';
 
 export default function WebHazardDetailPage() {
   const params = useParams<{ id: string }>();
@@ -30,7 +19,7 @@ export default function WebHazardDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const sendFeedback = (description: string) => {
     setError(null);
-    void locate()
+    void getCurrentBrowserLocation()
       .then((point) => {
         if (query.data)
           sighting.mutate({

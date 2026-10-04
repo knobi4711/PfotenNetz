@@ -51,6 +51,24 @@ describe('registerWithEmail', () => {
     ).resolves.toEqual({ user, session, emailConfirmationRequired: false });
   });
 
+  it('forwards a native email confirmation redirect', async () => {
+    const user = { id: 'user-1' };
+    const { client, calls } = clientWithSignUp({ data: { user, session: null }, error: null });
+
+    await registerWithEmail(client, {
+      displayName: 'Cara Beispiel',
+      email: 'cara@example.com',
+      password: 'sicheres-passwort',
+      emailRedirectTo: 'pfotennetz://callback',
+    });
+
+    expect(calls[0]).toMatchObject({
+      options: {
+        emailRedirectTo: 'pfotennetz://callback',
+      },
+    });
+  });
+
   it('forwards signup errors', async () => {
     const error = new Error('User already registered');
     const { client } = clientWithSignUp({ data: { user: null, session: null }, error });

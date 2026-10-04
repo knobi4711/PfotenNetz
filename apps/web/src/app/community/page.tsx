@@ -15,26 +15,13 @@ import {
 } from '@pfotennetz/supabase';
 import Link from 'next/link';
 import { WebHeader } from '../../components/WebHeader';
+import { getCurrentBrowserLocation } from '../../lib/location';
 import { useState } from 'react';
 
 const EVENT_TYPES = Object.entries(EVENT_TYPE_LABELS) as [
   'group_walk' | 'playdate' | 'meetup' | 'swap_meet' | 'training' | 'other',
   string,
 ][];
-
-function getLocation(): Promise<{ latitude: number; longitude: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Standortfreigabe wird von diesem Browser nicht unterstützt.'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude }),
-      () => reject(new Error('Für ein Event muss der Standort freigegeben werden.')),
-      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
-    );
-  });
-}
 
 function CreateEventForm({ onCreated }: { onCreated: () => void }) {
   const create = useCreateCommunityEvent();
@@ -50,7 +37,7 @@ function CreateEventForm({ onCreated }: { onCreated: () => void }) {
     event.preventDefault();
     if (!title.trim() || !startsAt) return;
     try {
-      const location = await getLocation();
+      const location = await getCurrentBrowserLocation();
       await create.mutateAsync({
         title: title.trim(),
         type,

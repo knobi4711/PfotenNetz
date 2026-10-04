@@ -50,7 +50,9 @@
       ]
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "static",
+      "lang": "de"
     },
     "plugins": [
       "expo-router",

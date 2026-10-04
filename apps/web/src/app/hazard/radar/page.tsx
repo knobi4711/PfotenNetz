@@ -8,9 +8,11 @@ import {
   useOwnProfile,
   type ActiveHazard,
 } from '@pfotennetz/supabase';
+import { searchOpenStreetMap, type GeocodingResult } from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { WebHeader } from '../../../components/WebHeader';
+import { getCurrentBrowserLocation } from '../../../lib/location';
 
 const RADII = [0.5, 1, 1.5, 3] as const;
 const SEVERITIES = ['all', 'critical', 'high', 'medium', 'low'] as const;
@@ -144,18 +146,6 @@ function OSMHazardMap({
   );
 }
 
-function locate(): Promise<{ latitude: number; longitude: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation)
-      return reject(new Error('Standortfreigabe wird nicht unterstützt.'));
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude }),
-      () => reject(new Error('Standort konnte nicht bestimmt werden.')),
-      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
-    );
-  });
-}
-
 export default function WebHazardRadarPage() {
   const router = useRouter();
   const profile = useOwnProfile();
@@ -165,6 +155,9 @@ export default function WebHazardRadarPage() {
   const [severity, setSeverity] = useState<(typeof SEVERITIES)[number]>('all');
   const [hours, setHours] = useState<(typeof TIME_RANGES)[number]>(24);
   const [error, setError] = useState<string | null>(null);
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [placeResults, setPlaceResults] = useState<GeocodingResult[]>([]);
+  const [placeSearchPending, setPlaceSearchPending] = useState(false);
   const query = useActiveHazards(center === null ? null : { ...center, radiusKm: radius });
   const cutoff = Date.now() - hours * 60 * 60 * 1000;
   const hazards = (query.data ?? []).filter(
@@ -175,11 +168,26 @@ export default function WebHazardRadarPage() {
 
   const handleLocate = () => {
     setError(null);
-    void locate()
+    void getCurrentBrowserLocation()
       .then(setCenter)
       .catch((cause: unknown) =>
         setError(cause instanceof Error ? cause.message : 'Standort konnte nicht bestimmt werden.')
       );
+  };
+
+  const handlePlaceSearch = () => {
+    setError(null);
+    setPlaceSearchPending(true);
+    void searchOpenStreetMap(placeQuery)
+      .then((results) => {
+        setPlaceResults(results);
+        if (results.length === 0) setError('Kein passender Ort gefunden.');
+      })
+      .catch((cause: unknown) => {
+        setPlaceResults([]);
+        setError(cause instanceof Error ? cause.message : 'Ort konnte nicht gesucht werden.');
+      })
+      .finally(() => setPlaceSearchPending(false));
   };
 
   return (
@@ -269,6 +277,49 @@ export default function WebHazardRadarPage() {
               {value.toString().replace('.', ',')} km
             </button>
           ))}
+        </div>
+        <div className="mb-6 rounded-2xl bg-surface-container-low p-4">
+          <label className="mb-2 block text-sm font-bold" htmlFor="hazard-place-search">
+            Ort oder PLZ manuell wählen
+          </label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              id="hazard-place-search"
+              className="min-w-0 flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-sm"
+              placeholder="z. B. 37581 oder Berlin"
+              value={placeQuery}
+              onChange={(event) => setPlaceQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') handlePlaceSearch();
+              }}
+            />
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={placeSearchPending || placeQuery.trim().length < 3}
+              onClick={handlePlaceSearch}
+            >
+              {placeSearchPending ? 'Suche …' : 'Ort suchen'}
+            </button>
+          </div>
+          {placeResults.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {placeResults.map((result) => (
+                <button
+                  key={`${result.latitude}-${result.longitude}`}
+                  type="button"
+                  className="block w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-left text-sm hover:bg-surface-container"
+                  onClick={() => {
+                    setCenter({ latitude: result.latitude, longitude: result.longitude });
+                    setPlaceResults([]);
+                    setPlaceQuery(result.displayName);
+                  }}
+                >
+                  {result.displayName}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
         {error ? (
           <p

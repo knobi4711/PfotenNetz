@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSignUp } from '@pfotennetz/supabase';
@@ -46,7 +47,12 @@ export default function RegisterScreen() {
     }
 
     setFormHint(null);
-    signUp.mutate({ displayName: trimmedName, email: trimmedEmail, password });
+    signUp.mutate({
+      displayName: trimmedName,
+      email: trimmedEmail,
+      password,
+      emailRedirectTo: Linking.createURL('callback'),
+    });
   };
 
   const pending = signUp.isPending;
