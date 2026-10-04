@@ -60,5 +60,10 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Prepare standalone web assets
+        run: |
+          cp -R apps/web/.next/static apps/web/.next/standalone/apps/web/.next/
+          cp -R apps/web/public apps/web/.next/standalone/apps/web/
+
       - name: Web E2E
         run: pnpm --filter @pfotennetz/web test:e2e
