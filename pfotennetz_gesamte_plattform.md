@@ -1,13 +1,13 @@
 # PfotenNetz — Gesamte Plattform-Architektur & Screen-Spezifikation
 
 **Projekt:** PfotenNetz — Mobile-First & Desktop Nachbarschafts-Plattform für Haustierbetreuung, P2P-Solidarität & hyperlokale Gefahrenwarnung  
-**Version:** 3.6.0 (Standabgleich Mobile/Web/Android, 01.10.2026)
+**Version:** 3.7.0 (Standabgleich Mobile/Web/Android/Deployment, 04.10.2026)
 **Design-System:** Warm Community Pet Care (`#e26d46` Terracotta, `#2e7d32` Salbeigrün/Waldgrün, `#fff8f5` Warm Linen)  
-**Status:** Mobile-Betreuungsplattform und zentrale Web-Flows implementiert; Passwort-Reset und robuste Android-Biometrie ergänzt, rechtliche Freigabe und einzelne native Abnahmen sind noch offen
+**Status:** Mobile-Betreuungsplattform, zentrale Web-Flows und produktionsnahe Web-Auslieferung implementiert; Passwort-Reset, robuste Android-Biometrie, native/Web-Plattformtrennung und Deployment-Vorbereitung ergänzt, rechtliche Freigabe und einzelne native Abnahmen sind noch offen
 
 ---
 
-## 0. Aktueller Implementierungsstand (01.10.2026)
+## 0. Aktueller Implementierungsstand (04.10.2026)
 
 Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsächlich implementierte Stand ist:
 
@@ -45,6 +45,9 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Persistente lokale Tracking-Queue für Offline-Positionen mit Wiederholung nach Netzrückkehr und Bereinigung nach erfolgreicher Synchronisierung
 - Geofence-Zustandsautomat für genau eine Exit-Benachrichtigung pro Verlassen; erneutes Betreten aktiviert den nächsten Alarm
 - Native QR-Scanner-Route `/scan` für freigegebene PfotenNetz-Notfallkarten mit strikter URL-Prüfung, Kamera-Berechtigungsfluss und nativer öffentlicher Kartenansicht mit SecureStore-Offline-Fallback
+- Plattformgetrennte Native-/Web-Implementierungen für Geofence, Hintergrund-Tracking, Provider und Theme; native APIs werden im Browser nicht mehr geladen
+- Expo-Web-Konfiguration mit Metro-Bundler, statischer Ausgabe, deutscher Sprache und Deep-Link-Schema `pfotennetz`
+- EAS-Profile für Development-Builds, interne Preview-Verteilung und Production-Builds mit automatischer Versionsnummer
 
 ### Umgesetzt – Web-App
 
@@ -65,9 +68,13 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - `/missing` und `/missing/[id]`: Vermisst-Tier-Meldung per Browserstandort, Übersicht, Statuswechsel, Sichtungsverlauf und Foto-Upload
 - `/tracking`: Betreuung-/Tracking-Übersicht mit direktem Web-Chat-Einstieg
 - `/community`: kommende Community-Events, Event-Erstellung und Teilnahme
+- `/home`: authentifizierte Web-Startseite als zentraler Einstieg in Dashboard, Gefahren, Vermisstmeldungen und Community
+- `/`: öffentliche Web-Einstiegsseite mit Weiterleitung in den authentifizierten Bereich
 - `/community/moderation`: Admin-Queue für Community-Events mit Freigabe und Ausblenden
 - `/hazard/moderation`: Admin-Moderation aktiver Gefahrenmeldungen
 - Root-`.env`-Laden für den Web-Build im Monorepo
+- Next.js-Produktionsbuild als Standalone-Ausgabe mit vorbereitetem Docker-Container hinter Caddy auf `pfotennetz.app`
+- Deployment-Dokumentation, Docker-Compose-Datei und Caddy-Konfiguration unter `deployment/`; Paperless bleibt auf Port 8000 unverändert
 
 ### Qualitätsstand
 
@@ -81,6 +88,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Web-E2E: **18/18 erfolgreich**, inklusive Passwort-Reset-Route, authentifizierten Tier-, Buchungs-, Chat-, Medien- und Kontaktanfrage-Flüssen, Offline-Notfallkarten-Smoke-Test sowie Community-Moderation und Web-Notfallkartenroute
 - Web-Build: erfolgreich
 - Expo-Android-Bundle: erfolgreich erzeugt
+- Web-Deployment-Vorbereitung: Next.js-Standalone-Build, interner Container-Port 3000 sowie Caddy-Reverse-Proxy-Konfiguration dokumentiert
 - Android-Development-Build: erfolgreich erzeugt, installiert und mit einem nativen Login-/Dashboard-Smoke-Test auf dem verbundenen Gerät geprüft; aktueller EAS-Build `92fc3272-1f8b-42a8-9c16-a82c584e9afc`
 - Android-Login-Smoke: leerer lokaler Zustand ohne Fingerprint-Angebot und ohne blockierenden Ladezustand geprüft
 - Remote-Migrationen bis `059_fix_missing_sighting_reporter_read.sql` angewendet; die Migrationen umfassen Anforderungen, Helfersuche, Kontaktanfragen, Duplikatschutz und RPC-Korrekturen
