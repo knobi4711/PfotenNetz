@@ -3,6 +3,8 @@ import type { Database } from '../types/database';
 
 export type Verification = Database['public']['Tables']['verifications']['Row'];
 export type VerificationType = Database['public']['Enums']['verification_type'];
+export type AdminHelperVerification =
+  Database['public']['Functions']['admin_list_helper_verifications']['Returns'][number];
 
 export const HELPER_VERIFICATION_TYPES: VerificationType[] = ['id_document', 'liability_insurance'];
 
@@ -49,6 +51,33 @@ export async function requestHelperStatus(
     .select('*');
   if (error) throw error;
   return [...(data ?? []), ...existing];
+}
+
+/** Pending helper verification requests; the database function enforces admin access. */
+export async function fetchAdminHelperVerifications(
+  client: SupabaseClient<Database>
+): Promise<AdminHelperVerification[]> {
+  const { data, error } = await client.rpc('admin_list_helper_verifications');
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Approves or rejects one pending verification and promotes the user after both approvals. */
+export async function reviewHelperVerification(
+  client: SupabaseClient<Database>,
+  input: {
+    verificationId: string;
+    status: 'approved' | 'rejected';
+    rejectionReason?: string | null;
+  }
+): Promise<Verification> {
+  const { data, error } = await client.rpc('admin_review_helper_verification', {
+    p_verification_id: input.verificationId,
+    p_status: input.status,
+    p_rejection_reason: input.rejectionReason ?? null,
+  });
+  if (error) throw error;
+  return data;
 }
 
 /** Securely stores the caller's location (validated server-side). */

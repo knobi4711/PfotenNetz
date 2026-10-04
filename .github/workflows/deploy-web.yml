@@ -1,0 +1,75 @@
+name: Deploy web
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - name: Check out tested commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.0.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.13.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web app
+        run: pnpm --filter @pfotennetz/web build
+
+      - name: Prepare standalone assets
+        run: |
+          cp -R apps/web/.next/static apps/web/.next/standalone/apps/web/.next/
+          cp -R apps/web/public apps/web/.next/standalone/apps/web/
+
+      - name: Configure deployment SSH
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.PFOTENNETZ_DEPLOY_SSH_KEY }}
+
+      - name: Trust deployment host
+        run: ssh-keyscan -H "${{ secrets.PFOTENNETZ_DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload web build
+        env:
+          DEPLOY_HOST: ${{ secrets.PFOTENNETZ_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.PFOTENNETZ_DEPLOY_USER }}
+        run: |
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" 'rm -rf /mnt/Daten/pfotennetz/next-standalone /mnt/Daten/pfotennetz/next-static /mnt/Daten/pfotennetz/web-public && mkdir -p /mnt/Daten/pfotennetz/next-standalone /mnt/Daten/pfotennetz/next-static /mnt/Daten/pfotennetz/web-public'
+          scp -r apps/web/.next/standalone/* "$DEPLOY_USER@$DEPLOY_HOST:/mnt/Daten/pfotennetz/next-standalone/"
+          scp -r apps/web/.next/static/* "$DEPLOY_USER@$DEPLOY_HOST:/mnt/Daten/pfotennetz/next-static/"
+          scp -r apps/web/public/* "$DEPLOY_USER@$DEPLOY_HOST:/mnt/Daten/pfotennetz/web-public/"
+
+      - name: Restart web container
+        env:
+          DEPLOY_HOST: ${{ secrets.PFOTENNETZ_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.PFOTENNETZ_DEPLOY_USER }}
+        run: ssh "$DEPLOY_USER@$DEPLOY_HOST" 'cd /mnt/Daten/pfotennetz && docker compose restart web'

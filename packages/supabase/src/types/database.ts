@@ -1418,6 +1418,30 @@ export type Database = {
       };
     };
     Functions: {
+      admin_list_helper_verifications: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          verification_id: string;
+          user_id: string;
+          email: string;
+          display_name: string;
+          profile_role: string;
+          trust_level: string;
+          verification_type: Database['public']['Enums']['verification_type'];
+          verification_status: Database['public']['Enums']['verification_status'];
+          storage_paths: string[];
+          created_at: string;
+          rejection_reason: string | null;
+        }[];
+      };
+      admin_review_helper_verification: {
+        Args: {
+          p_rejection_reason?: string | null;
+          p_status: Database['public']['Enums']['verification_status'];
+          p_verification_id: string;
+        };
+        Returns: Database['public']['Tables']['verifications']['Row'];
+      };
       cancel_contact_request: {
         Args: { p_request_id: string };
         Returns: Database['public']['Tables']['contact_requests']['Row'];

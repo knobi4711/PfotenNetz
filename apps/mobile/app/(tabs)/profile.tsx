@@ -422,7 +422,12 @@ export default function ProfileScreen() {
             <SectionTitle>Administration</SectionTitle>
             <EmptyText>Prüfe Gefahrenmeldungen und verwalte aktive Warnungen.</EmptyText>
             <ActionButton
-              title="Administration öffnen"
+              title="Helper-Anfragen prüfen"
+              variant="secondary"
+              onPress={() => router.push('/admin/verifications')}
+            />
+            <ActionButton
+              title="Gefahrenmeldungen prüfen"
               variant="secondary"
               onPress={() => router.push('/hazard/moderation')}
             />

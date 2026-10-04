@@ -60,7 +60,7 @@ export function WebHeader({
           </nav>
           <div className="flex items-center gap-4">
             {profile.data?.role === 'admin' ? (
-              <Link href="/hazard/moderation" className="text-sm font-bold text-primary">
+              <Link href="/admin/verifications" className="text-sm font-bold text-primary">
                 Administration
               </Link>
             ) : null}
