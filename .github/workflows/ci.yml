@@ -65,5 +65,8 @@ jobs:
           cp -R apps/web/.next/static apps/web/.next/standalone/apps/web/.next/
           cp -R apps/web/public apps/web/.next/standalone/apps/web/
 
+      - name: Install Playwright Chromium
+        run: pnpm --filter @pfotennetz/web exec playwright install --with-deps chromium
+
       - name: Web E2E
         run: pnpm --filter @pfotennetz/web test:e2e
