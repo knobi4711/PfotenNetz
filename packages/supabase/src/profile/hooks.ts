@@ -3,6 +3,7 @@ import { getSupabaseClient } from '../client/createClient';
 import { profileKeys } from './keys';
 import {
   fetchOwnProfile,
+  deleteOwnAccount,
   updateOwnProfile,
   uploadOwnAvatar,
   type Profile,
@@ -28,6 +29,11 @@ export function useUpdateOwnProfile() {
       void queryClient.invalidateQueries({ queryKey: profileKeys.own });
     },
   });
+}
+
+export function useDeleteOwnAccount() {
+  const client = getSupabaseClient();
+  return useMutation({ mutationFn: () => deleteOwnAccount(client) });
 }
 
 export function useUploadOwnAvatar() {

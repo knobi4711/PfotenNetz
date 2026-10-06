@@ -4,8 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   contactRequestErrorMessage,
+  USER_REPORT_REASON_LABELS,
+  userReportErrorMessage,
   useCreateContactRequest,
+  useCreateUserReport,
   useHelperDetail,
+  type UserReportReason,
 } from '@pfotennetz/supabase';
 import { bookingTypeLabels } from '../../lib/booking';
 import { formatAvailableDays } from '../../lib/helper-map';
@@ -39,10 +43,14 @@ export default function HelperDetailScreen() {
   const detailQuery = useHelperDetail(helperId);
   const detail = detailQuery.data ?? null;
   const createContact = useCreateContactRequest();
+  const createReport = useCreateUserReport();
   const [contactMessage, setContactMessage] = useState(
     'Hallo, ich würde dich gern vorab kennenlernen und die Betreuung besprechen.'
   );
   const [contactSent, setContactSent] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<UserReportReason>('fake_profile');
+  const [reportDetails, setReportDetails] = useState('');
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
@@ -189,6 +197,56 @@ export default function HelperDetailScreen() {
                 router.back();
               }}
             />
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setReportOpen((open) => !open)}
+              style={styles.reportLink}
+            >
+              <Text style={[styles.reportLinkText, { color: c.error }]}>
+                {reportOpen ? 'Meldung schließen' : 'Profil melden'}
+              </Text>
+            </Pressable>
+            {reportOpen ? (
+              <Card accentColor={c.error}>
+                <SectionTitle>Profil melden</SectionTitle>
+                <Text style={[styles.privacy, { color: c.onSurfaceVariant }]}>Warum möchtest du dieses Profil melden?</Text>
+                <View style={styles.reasonList}>
+                  {(Object.keys(USER_REPORT_REASON_LABELS) as UserReportReason[]).map((reason) => (
+                    <Pressable
+                      key={reason}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: reportReason === reason }}
+                      onPress={() => setReportReason(reason)}
+                      style={[styles.reason, { borderColor: reportReason === reason ? c.primary : c.outlineVariant }]}
+                    >
+                      <Text style={[styles.reasonText, { color: c.onSurface }]}>{USER_REPORT_REASON_LABELS[reason]}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput
+                  editable={!createReport.isPending}
+                  multiline
+                  maxLength={2000}
+                  onChangeText={setReportDetails}
+                  placeholder="Zusätzliche Informationen (optional)"
+                  placeholderTextColor={c.outline}
+                  style={[styles.messageInput, { backgroundColor: c.surfaceContainerLow, borderColor: c.outlineVariant, color: c.onSurface }]}
+                  value={reportDetails}
+                />
+                <Text style={[styles.privacy, { color: c.onSurfaceVariant }]}>Deine Meldung wird vertraulich geprüft.</Text>
+                {createReport.isError ? <ErrorBox message={userReportErrorMessage(createReport.error)} /> : null}
+                {createReport.isSuccess ? (
+                  <Text style={[styles.privacy, { color: c.secondary }]}>Danke, deine Meldung wurde übermittelt.</Text>
+                ) : (
+                  <ActionButton
+                    title="Meldung absenden"
+                    variant="danger"
+                    pending={createReport.isPending}
+                    onPress={() => helperId && createReport.mutate({ reportedUserId: helperId, reason: reportReason, details: reportDetails })}
+                  />
+                )}
+              </Card>
+            ) : null}
           </>
         )}
       </ScrollView>
@@ -234,4 +292,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   contactButtonText: { fontFamily: appFonts.bold, fontSize: 14 },
+  reportLink: { alignItems: 'center', paddingVertical: 14 },
+  reportLinkText: { fontFamily: appFonts.bold, fontSize: 13, textDecorationLine: 'underline' },
+  reasonList: { gap: 8, marginTop: 12 },
+  reason: { borderWidth: 1, borderRadius: 12, padding: 12 },
+  reasonText: { fontFamily: appFonts.semibold, fontSize: 13, lineHeight: 18 },
 });

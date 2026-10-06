@@ -9,6 +9,8 @@ import { useState } from 'react';
 import { NotificationBell } from './NotificationBell';
 
 export function WebHeader({
+  backHref,
+  backLabel,
   rightContent,
 }: {
   backHref?: string;
@@ -43,6 +45,11 @@ export function WebHeader({
             />
             <span className="text-xl font-extrabold text-on-surface">PfotenNetz</span>
           </Link>
+          {backHref ? (
+            <Link href={backHref} className="hidden text-sm font-bold text-primary sm:block">
+              ← {backLabel ?? 'Zurück'}
+            </Link>
+          ) : null}
           <nav className="hidden items-center gap-2 lg:flex" aria-label="Hauptnavigation">
             {navigation.map(([label, href]) => {
               const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -60,9 +67,14 @@ export function WebHeader({
           </nav>
           <div className="flex items-center gap-4">
             {profile.data?.role === 'admin' ? (
-              <Link href="/admin/verifications" className="text-sm font-bold text-primary">
-                Administration
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link href="/admin/verifications" className="text-sm font-bold text-primary">
+                  Administration
+                </Link>
+                <Link href="/admin/reports" className="text-sm font-bold text-error">
+                  Meldungen
+                </Link>
+              </div>
             ) : null}
             <span className="hidden rounded-full bg-secondary-container px-4 py-2 text-sm font-bold text-on-secondary-container md:inline-flex">
               {Number(account.data?.balance_hours ?? 0).toLocaleString('de-DE')} Std. Zeitbank

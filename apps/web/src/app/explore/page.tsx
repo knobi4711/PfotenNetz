@@ -5,7 +5,11 @@ import {
   contactRequestErrorMessage,
   nearbyHelperErrorMessage,
   useCreateContactRequest,
+  USER_REPORT_REASON_LABELS,
+  userReportErrorMessage,
+  useCreateUserReport,
   useNearbyHelpers,
+  type UserReportReason,
   type BookingType,
   type NearbyHelper,
 } from '@pfotennetz/supabase';
@@ -224,7 +228,11 @@ export default function ExplorePage() {
     'Hallo, ich würde dich gern vorab kennenlernen und die Betreuung besprechen.'
   );
   const [contactSent, setContactSent] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<UserReportReason>('fake_profile');
+  const [reportDetails, setReportDetails] = useState('');
   const createContact = useCreateContactRequest();
+  const createReport = useCreateUserReport();
   const search =
     center === null ? null : { ...center, radiusKm, bookingType, petSpecies, dayOfWeek };
   const helpersQuery = useNearbyHelpers(search);
@@ -451,8 +459,10 @@ export default function ExplorePage() {
                     selected={helper.helper_id === selectedId}
                     onSelect={() => {
                       setSelectedId(helper.helper_id);
-                      setContactSent(false);
-                      createContact.reset();
+                       setContactSent(false);
+                       createContact.reset();
+                       setReportOpen(false);
+                       createReport.reset();
                     }}
                   />
                 ))
@@ -485,7 +495,7 @@ export default function ExplorePage() {
                       Anfrage gesendet. Warte auf eine Antwort.
                     </p>
                   ) : (
-                    <button
+                   <button
                       type="button"
                       className="btn-primary mt-4 w-full"
                       disabled={createContact.isPending}
@@ -503,10 +513,62 @@ export default function ExplorePage() {
                     type="button"
                     className="btn-secondary mt-3 w-full"
                     onClick={() => router.push(`/booking/new?helperId=${selected.helper_id}`)}
-                  >
-                    Betreuung anfragen
-                  </button>
-                </div>
+                   >
+                     Betreuung anfragen
+                   </button>
+                   <button
+                     type="button"
+                     className="mt-3 w-full text-sm font-bold text-error underline underline-offset-4"
+                     onClick={() => setReportOpen((open) => !open)}
+                   >
+                     {reportOpen ? 'Meldung schließen' : 'Profil melden'}
+                   </button>
+                   {reportOpen ? (
+                     <div className="mt-4 rounded-xl border border-error/30 bg-error-container/40 p-4">
+                       <p className="text-sm font-bold text-on-error-container">Warum möchtest du dieses Profil melden?</p>
+                       <select
+                         aria-label="Meldegrund"
+                         value={reportReason}
+                         onChange={(event) => setReportReason(event.target.value as UserReportReason)}
+                         className="mt-3 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
+                         disabled={createReport.isPending}
+                       >
+                         {Object.entries(USER_REPORT_REASON_LABELS).map(([reason, label]) => (
+                           <option key={reason} value={reason}>{label}</option>
+                         ))}
+                       </select>
+                       <textarea
+                         aria-label="Zusätzliche Informationen zur Meldung"
+                         maxLength={2000}
+                         value={reportDetails}
+                         onChange={(event) => setReportDetails(event.target.value)}
+                         placeholder="Zusätzliche Informationen (optional)"
+                         className="mt-3 min-h-20 w-full rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-sm"
+                         disabled={createReport.isPending}
+                       />
+                       <p className="mt-2 text-xs text-on-error-container">
+                         Deine Meldung wird vertraulich von der Administration geprüft.
+                       </p>
+                       {createReport.isError ? (
+                         <p role="alert" className="mt-2 text-sm font-semibold text-error">
+                           {userReportErrorMessage(createReport.error)}
+                         </p>
+                       ) : null}
+                       {createReport.isSuccess ? (
+                         <p className="mt-3 text-sm font-bold text-secondary">Danke, deine Meldung wurde übermittelt.</p>
+                       ) : (
+                         <button
+                           type="button"
+                           className="btn-emergency mt-3 w-full"
+                           disabled={createReport.isPending}
+                           onClick={() => createReport.mutate({ reportedUserId: selected.helper_id, reason: reportReason, details: reportDetails })}
+                         >
+                           {createReport.isPending ? 'Wird gesendet …' : 'Meldung absenden'}
+                         </button>
+                       )}
+                     </div>
+                   ) : null}
+                 </div>
               ) : null}
             </div>
           </section>

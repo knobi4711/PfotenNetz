@@ -14,7 +14,7 @@ export type KiezRadius = (typeof KIEZ_RADIUS_OPTIONS)[number];
 export interface UpdateOwnProfileInput {
   displayName: string;
   phone: string | null;
-  postalCode?: string | null;
+  postalCode: string;
   profileBio?: string | null;
   kiezRadiusKm: KiezRadius;
   notificationPrefs?: NotificationPreferences;
@@ -32,6 +32,9 @@ export function validateUpdateOwnProfile(input: UpdateOwnProfileInput): string |
   if (input.displayName.trim().length < 2) {
     return 'Bitte gib einen Namen mit mindestens zwei Zeichen ein.';
   }
+  if (!/^\d{5}$/.test(input.postalCode?.trim() ?? '')) {
+    return 'Bitte gib eine gültige fünfstellige Postleitzahl ein.';
+  }
   if (input.phone !== null && input.phone !== '' && input.phone.trim().length < 3) {
     return 'Bitte gib eine gültige Telefonnummer ein oder lasse das Feld leer.';
   }
@@ -47,6 +50,12 @@ export async function fetchOwnProfile(client: SupabaseClient<Database>): Promise
 
   if (error) throw error;
   return data;
+}
+
+/** Permanently deletes the authenticated user's account through a server-side RPC. */
+export async function deleteOwnAccount(client: SupabaseClient<Database>): Promise<void> {
+  const { error } = await client.rpc('delete_own_account');
+  if (error) throw error;
 }
 
 /**
@@ -68,7 +77,7 @@ export async function updateOwnProfile(
     .update({
       display_name: input.displayName.trim(),
       phone,
-      ...(input.postalCode !== undefined ? { postal_code: input.postalCode?.trim() || null } : {}),
+      postal_code: input.postalCode.trim(),
       ...(input.profileBio !== undefined ? { profile_bio: input.profileBio?.trim() || null } : {}),
       kiez_radius_km: input.kiezRadiusKm,
       ...(input.notificationPrefs ? { notification_prefs: input.notificationPrefs } : {}),

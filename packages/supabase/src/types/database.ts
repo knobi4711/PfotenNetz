@@ -8,6 +8,42 @@ export type Database = {
   };
   public: {
     Tables: {
+      user_reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          reported_user_id: string;
+          reason: 'fake_profile' | 'spam' | 'harassment' | 'other';
+          details: string | null;
+          status: 'pending' | 'reviewed' | 'dismissed' | 'actioned';
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          reporter_id: string;
+          reported_user_id: string;
+          reason: 'fake_profile' | 'spam' | 'harassment' | 'other';
+          details?: string | null;
+          status?: 'pending' | 'reviewed' | 'dismissed' | 'actioned';
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          reporter_id?: string;
+          reported_user_id?: string;
+          reason?: 'fake_profile' | 'spam' | 'harassment' | 'other';
+          details?: string | null;
+          status?: 'pending' | 'reviewed' | 'dismissed' | 'actioned';
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       contact_requests: {
         Row: {
           id: string;
@@ -1418,6 +1454,10 @@ export type Database = {
       };
     };
     Functions: {
+      delete_own_account: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
       admin_list_helper_verifications: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -2777,7 +2817,7 @@ export type Database = {
       booking_status:
         'requested' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'disputed';
       booking_type: 'walk' | 'feeding' | 'vacation' | 'daycare';
-      currency: 'EUR' | 'KIEZ_HOURS';
+      currency: 'EUR' | 'KIEZ_HOURS' | 'PER_VISIT';
       event_type: 'group_walk' | 'playdate' | 'meetup' | 'swap_meet' | 'training' | 'other';
       hazard_severity: 'low' | 'medium' | 'high' | 'critical';
       hazard_status: 'draft' | 'pending_review' | 'active' | 'resolved' | 'expired' | 'rejected';
@@ -2945,7 +2985,7 @@ export const Constants = {
         'disputed',
       ],
       booking_type: ['walk', 'feeding', 'vacation', 'daycare'],
-      currency: ['EUR', 'KIEZ_HOURS'],
+      currency: ['EUR', 'KIEZ_HOURS', 'PER_VISIT'],
       event_type: ['group_walk', 'playdate', 'meetup', 'swap_meet', 'training', 'other'],
       hazard_severity: ['low', 'medium', 'high', 'critical'],
       hazard_status: ['draft', 'pending_review', 'active', 'resolved', 'expired', 'rejected'],
