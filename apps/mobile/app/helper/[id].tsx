@@ -209,7 +209,9 @@ export default function HelperDetailScreen() {
             {reportOpen ? (
               <Card accentColor={c.error}>
                 <SectionTitle>Profil melden</SectionTitle>
-                <Text style={[styles.privacy, { color: c.onSurfaceVariant }]}>Warum möchtest du dieses Profil melden?</Text>
+                <Text style={[styles.privacy, { color: c.onSurfaceVariant }]}>
+                  Warum möchtest du dieses Profil melden?
+                </Text>
                 <View style={styles.reasonList}>
                   {(Object.keys(USER_REPORT_REASON_LABELS) as UserReportReason[]).map((reason) => (
                     <Pressable
@@ -217,9 +219,14 @@ export default function HelperDetailScreen() {
                       accessibilityRole="radio"
                       accessibilityState={{ selected: reportReason === reason }}
                       onPress={() => setReportReason(reason)}
-                      style={[styles.reason, { borderColor: reportReason === reason ? c.primary : c.outlineVariant }]}
+                      style={[
+                        styles.reason,
+                        { borderColor: reportReason === reason ? c.primary : c.outlineVariant },
+                      ]}
                     >
-                      <Text style={[styles.reasonText, { color: c.onSurface }]}>{USER_REPORT_REASON_LABELS[reason]}</Text>
+                      <Text style={[styles.reasonText, { color: c.onSurface }]}>
+                        {USER_REPORT_REASON_LABELS[reason]}
+                      </Text>
                     </Pressable>
                   ))}
                 </View>
@@ -230,19 +237,39 @@ export default function HelperDetailScreen() {
                   onChangeText={setReportDetails}
                   placeholder="Zusätzliche Informationen (optional)"
                   placeholderTextColor={c.outline}
-                  style={[styles.messageInput, { backgroundColor: c.surfaceContainerLow, borderColor: c.outlineVariant, color: c.onSurface }]}
+                  style={[
+                    styles.messageInput,
+                    {
+                      backgroundColor: c.surfaceContainerLow,
+                      borderColor: c.outlineVariant,
+                      color: c.onSurface,
+                    },
+                  ]}
                   value={reportDetails}
                 />
-                <Text style={[styles.privacy, { color: c.onSurfaceVariant }]}>Deine Meldung wird vertraulich geprüft.</Text>
-                {createReport.isError ? <ErrorBox message={userReportErrorMessage(createReport.error)} /> : null}
+                <Text style={[styles.privacy, { color: c.onSurfaceVariant }]}>
+                  Deine Meldung wird vertraulich geprüft.
+                </Text>
+                {createReport.isError ? (
+                  <ErrorBox message={userReportErrorMessage(createReport.error)} />
+                ) : null}
                 {createReport.isSuccess ? (
-                  <Text style={[styles.privacy, { color: c.secondary }]}>Danke, deine Meldung wurde übermittelt.</Text>
+                  <Text style={[styles.privacy, { color: c.secondary }]}>
+                    Danke, deine Meldung wurde übermittelt.
+                  </Text>
                 ) : (
                   <ActionButton
                     title="Meldung absenden"
                     variant="danger"
                     pending={createReport.isPending}
-                    onPress={() => helperId && createReport.mutate({ reportedUserId: helperId, reason: reportReason, details: reportDetails })}
+                    onPress={() =>
+                      helperId &&
+                      createReport.mutate({
+                        reportedUserId: helperId,
+                        reason: reportReason,
+                        details: reportDetails,
+                      })
+                    }
                   />
                 )}
               </Card>
