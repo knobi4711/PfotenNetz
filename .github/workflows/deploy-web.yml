@@ -1,4 +1,5 @@
 name: Deploy web
+# Production deployment for the Next.js standalone web build.
 
 on:
   workflow_run:
