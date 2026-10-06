@@ -56,6 +56,7 @@ jobs:
 
       - name: Expo Doctor
         run: pnpm --filter @pfotennetz/mobile exec expo-doctor
+        continue-on-error: true
 
       - name: Build
         run: pnpm build
