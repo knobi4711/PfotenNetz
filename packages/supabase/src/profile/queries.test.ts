@@ -75,6 +75,7 @@ describe('profile queries', () => {
     const result = await updateOwnProfile(client, {
       displayName: 'Anna',
       phone: null,
+      postalCode: '10115',
       kiezRadiusKm: 1.5,
     });
 
@@ -83,16 +84,46 @@ describe('profile queries', () => {
     expect(updateCall?.values).toEqual({
       display_name: 'Anna',
       phone: null,
+      postal_code: '10115',
       kiez_radius_km: 1.5,
     });
   });
 
   it('validates the display name before updating', async () => {
     expect(
-      validateUpdateOwnProfile({ displayName: 'A', phone: null, kiezRadiusKm: 1.5 })
+      validateUpdateOwnProfile({
+        displayName: 'A',
+        phone: null,
+        postalCode: '10115',
+        kiezRadiusKm: 1.5,
+      })
     ).not.toBeNull();
     expect(
-      validateUpdateOwnProfile({ displayName: 'Anna', phone: null, kiezRadiusKm: 1.5 })
+      validateUpdateOwnProfile({
+        displayName: 'Anna',
+        phone: null,
+        postalCode: '10115',
+        kiezRadiusKm: 1.5,
+      })
+    ).toBeNull();
+  });
+
+  it('requires a five-digit postal code', () => {
+    expect(
+      validateUpdateOwnProfile({
+        displayName: 'Anna',
+        phone: null,
+        postalCode: '',
+        kiezRadiusKm: 1.5,
+      })
+    ).toBe('Bitte gib eine gültige fünfstellige Postleitzahl ein.');
+    expect(
+      validateUpdateOwnProfile({
+        displayName: 'Anna',
+        phone: null,
+        postalCode: '10115',
+        kiezRadiusKm: 1.5,
+      })
     ).toBeNull();
   });
 
@@ -106,6 +137,7 @@ describe('profile queries', () => {
     await updateOwnProfile(client, {
       displayName: 'Anna',
       phone: null,
+      postalCode: '10115',
       kiezRadiusKm: 1.5,
       notificationPrefs: { hazards: true, bookings: false, community: true },
     });
@@ -114,6 +146,7 @@ describe('profile queries', () => {
     expect(updateCall?.values).toEqual({
       display_name: 'Anna',
       phone: null,
+      postal_code: '10115',
       kiez_radius_km: 1.5,
       notification_prefs: { hazards: true, bookings: false, community: true },
     });

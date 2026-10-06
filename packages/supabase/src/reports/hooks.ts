@@ -5,12 +5,17 @@ import { reportKeys } from './keys';
 
 export function useCreateUserReport() {
   const client = getSupabaseClient();
-  return useMutation({ mutationFn: (input: Parameters<typeof createUserReport>[1]) => createUserReport(client, input) });
+  return useMutation({
+    mutationFn: (input: Parameters<typeof createUserReport>[1]) => createUserReport(client, input),
+  });
 }
 
 export function useUserReportModeration() {
   const client = getSupabaseClient();
-  return useQuery({ queryKey: reportKeys.moderation, queryFn: () => fetchUserReportModeration(client) });
+  return useQuery({
+    queryKey: reportKeys.moderation,
+    queryFn: () => fetchUserReportModeration(client),
+  });
 }
 
 export function useUpdateUserReportStatus() {

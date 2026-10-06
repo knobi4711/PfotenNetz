@@ -32,7 +32,8 @@ async function requireUserId(client: SupabaseClient<Database>): Promise<string> 
 
 export function validateUserReport(input: CreateUserReportInput): string | null {
   if (!input.reportedUserId.trim()) return 'Die gemeldete Nutzer-ID fehlt.';
-  if (!Object.hasOwn(USER_REPORT_REASON_LABELS, input.reason)) return 'Bitte wähle einen Meldegrund.';
+  if (!Object.hasOwn(USER_REPORT_REASON_LABELS, input.reason))
+    return 'Bitte wähle einen Meldegrund.';
   if ((input.details?.trim().length ?? 0) > 2000)
     return 'Die Beschreibung darf höchstens 2.000 Zeichen enthalten.';
   return null;
@@ -75,7 +76,9 @@ export async function fetchUserReportModeration(
     .limit(100);
   if (error) throw error;
   const reports = data ?? [];
-  const ids = [...new Set(reports.flatMap((report) => [report.reporter_id, report.reported_user_id]))];
+  const ids = [
+    ...new Set(reports.flatMap((report) => [report.reporter_id, report.reported_user_id])),
+  ];
   if (!ids.length) return [];
   const { data: profiles, error: profileError } = await client
     .from('profiles')
