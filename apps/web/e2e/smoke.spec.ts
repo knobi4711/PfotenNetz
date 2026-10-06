@@ -18,6 +18,15 @@ const routes = [
   '/chat/smoke-test',
 ];
 
+function supabaseAuthStorageKey(): string {
+  const url =
+    process.env.EXPO_PUBLIC_SUPABASE_URL ??
+    process.env.NEXT_PUBLIC_SUPABASE_URL ??
+    process.env.SUPABASE_URL;
+  if (url === undefined) throw new Error('Supabase URL is required for the E2E test.');
+  return `sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
+}
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/auth/v1/session', async (route) =>
     route.fulfill({
@@ -48,8 +57,9 @@ test.describe('Web smoke flows', () => {
 
   test('keeps the shared back navigation on the left', async ({ page }) => {
     await page.goto('/community', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('link', { name: /Dashboard/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Dashboard/ })).toHaveAttribute('href', '/');
+    const backLink = page.getByRole('link', { name: '← Dashboard' });
+    await expect(backLink).toBeVisible();
+    await expect(backLink).toHaveAttribute('href', '/');
   });
 
   test('renders a valid cached emergency card when offline', async ({ page }) => {
@@ -189,10 +199,10 @@ test.describe('Web smoke flows', () => {
       user: authUser,
     };
     await page.addInitScript(
-      ({ session }) => {
-        window.localStorage.setItem('sb-njkyujhbcolvtcnlahsk-auth-token', JSON.stringify(session));
+      ({ session, storageKey }) => {
+        window.localStorage.setItem(storageKey, JSON.stringify(session));
       },
-      { session: authSession }
+      { session: authSession, storageKey: supabaseAuthStorageKey() }
     );
     await page.unroute('**/auth/v1/session');
     await page.unroute('**/rest/v1/**');
