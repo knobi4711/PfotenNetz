@@ -4,12 +4,14 @@ import type { Booking } from './queries';
 
 export type BookingType = Database['public']['Enums']['booking_type'];
 export type BookingCurrency = Database['public']['Enums']['currency'];
+export type CareLocation = Database['public']['Tables']['bookings']['Row']['care_location'];
 
 export const BOOKING_TYPES: BookingType[] = ['walk', 'feeding', 'vacation', 'daycare'];
 
 export interface CreateBookingInput {
   type: BookingType;
-  petId: string;
+  /** One or more active pets. Several pets are stored as one grouped request. */
+  petIds: string[];
   /** ISO-8601 timestamps, end must be after start. */
   startAt: string;
   endAt: string;
@@ -25,6 +27,8 @@ export interface CreateBookingInput {
   isUrgent?: boolean | undefined;
   /** Care instructions and needs shared with the selected helper. */
   careNotes?: string | null | undefined;
+  /** Where longer-term care takes place: owner's home or helper's home. */
+  careLocation?: CareLocation | undefined;
 }
 
 async function requireUserId(client: SupabaseClient<Database>): Promise<string> {
@@ -48,6 +52,8 @@ export function generateBookingNumber(now: Date = new Date(), randomPart?: strin
 }
 
 export function validateCreateBooking(input: CreateBookingInput): string | null {
+  const petIds = [...new Set(input.petIds)];
+  if (petIds.length === 0) return 'Bitte wähle mindestens ein Tier aus.';
   const start = new Date(input.startAt).getTime();
   const end = new Date(input.endAt).getTime();
   if (!Number.isFinite(start) || !Number.isFinite(end)) {
@@ -56,7 +62,7 @@ export function validateCreateBooking(input: CreateBookingInput): string | null 
   if (end <= start) {
     return 'Das Ende muss nach dem Beginn liegen.';
   }
-  if (input.currency === 'EUR') {
+  if (input.currency === 'EUR' || input.currency === 'PER_VISIT') {
     if (input.priceEur === undefined || !Number.isFinite(input.priceEur) || input.priceEur <= 0) {
       return 'Bitte gib einen Preis über 0 € an.';
     }
@@ -96,39 +102,102 @@ export async function createBooking(
     throw new Error('Du kannst dich nicht selbst als Helper auswählen.');
   }
 
-  const { data: pet, error: petError } = await client
-    .from('pets')
-    .select('id,owner_id,is_active,is_deceased')
-    .eq('id', input.petId)
-    .maybeSingle();
-  if (petError) throw petError;
-  if (pet === null) throw new Error('Tier nicht gefunden.');
-  if (pet.owner_id !== seekerId) throw new Error('Das Tier gehört nicht zu deinem Konto.');
-  if (pet.is_deceased === true)
-    throw new Error('Für verstorbene Tiere sind keine neuen Aufträge möglich.');
-  if (pet.is_active !== true) throw new Error('Das Tier ist pausiert.');
+  const petIds = [...new Set(input.petIds)];
+  let pets: Array<{
+    id: string;
+    owner_id: string;
+    is_active: boolean;
+    is_deceased: boolean;
+  }> = [];
+
+  if (petIds.length === 1) {
+    const petId = petIds[0];
+    if (petId === undefined) throw new Error('Bitte wähle mindestens ein Tier aus.');
+    const { data: pet, error: petError } = await client
+      .from('pets')
+      .select('id,owner_id,is_active,is_deceased')
+      .eq('id', petId)
+      .maybeSingle();
+    if (petError) throw petError;
+    if (pet !== null) pets = [pet];
+  } else {
+    const { data: selectedPets, error: petError } = await client
+      .from('pets')
+      .select('id,owner_id,is_active,is_deceased')
+      .in('id', petIds);
+    if (petError) throw petError;
+    pets = selectedPets ?? [];
+  }
+
+  if (pets.length !== petIds.length)
+    throw new Error('Mindestens eines der Tiere wurde nicht gefunden.');
+  for (const pet of pets) {
+    if (pet.owner_id !== seekerId) throw new Error('Das Tier gehört nicht zu deinem Konto.');
+    if (pet.is_deceased === true)
+      throw new Error('Für verstorbene Tiere sind keine neuen Aufträge möglich.');
+    if (pet.is_active !== true) throw new Error('Mindestens eines der Tiere ist pausiert.');
+  }
 
   const address = input.meetingAddress?.trim();
-  const { data, error } = await client
-    .from('bookings')
-    .insert({
-      booking_number: generateBookingNumber(),
-      type: input.type,
-      seeker_id: seekerId,
-      helper_id: input.helperId ?? null,
-      pet_id: input.petId,
-      start_at: input.startAt,
-      end_at: input.endAt,
-      meeting_address: address !== undefined && address !== '' ? address : null,
-      price_eur_cents: input.currency === 'EUR' ? Math.round((input.priceEur ?? 0) * 100) : 0,
-      price_kiez_hours: input.currency === 'KIEZ_HOURS' ? (input.priceKiezHours ?? 0) : 0,
-      currency: input.currency,
-      is_urgent: input.isUrgent ?? false,
-      care_notes: input.careNotes?.trim() || null,
-    })
-    .select('*')
-    .single();
+  const bookingGroupId = petIds.length > 1 ? generateBookingGroupId() : null;
+  const priceEurCents =
+    input.currency === 'EUR' || input.currency === 'PER_VISIT'
+      ? Math.round((input.priceEur ?? 0) * 100)
+      : 0;
+  const priceKiezHours = input.currency === 'KIEZ_HOURS' ? (input.priceKiezHours ?? 0) : 0;
+  const common = {
+    type: input.type,
+    seeker_id: seekerId,
+    helper_id: input.helperId ?? null,
+    start_at: input.startAt,
+    end_at: input.endAt,
+    meeting_address: address !== undefined && address !== '' ? address : null,
+    currency: input.currency,
+    is_urgent: input.isUrgent ?? false,
+    care_notes: input.careNotes?.trim() || null,
+    ...(input.careLocation !== undefined ? { care_location: input.careLocation } : {}),
+  };
+  const rows = petIds.map((petId, index) => ({
+    ...common,
+    booking_number: generateBookingNumber(
+      new Date(),
+      `${index.toString(36)}${Math.floor(Math.random() * 36 ** 3)
+        .toString(36)
+        .toUpperCase()
+        .padStart(3, '0')}`
+    ),
+    pet_id: petId,
+    booking_group_id: bookingGroupId,
+    booking_group_position: index,
+    // The amount describes the complete grouped request. The server settles
+    // only position zero, so it is not charged once per animal.
+    price_eur_cents: priceEurCents,
+    price_kiez_hours: priceKiezHours,
+  }));
 
+  if (rows.length === 1) {
+    const firstRow = rows[0];
+    if (firstRow === undefined) throw new Error('Die Anfrage konnte nicht erstellt werden.');
+    const { data, error } = await client.from('bookings').insert(firstRow).select('*').single();
+    if (error) throw error;
+    return data;
+  }
+
+  const { data, error } = await client.from('bookings').insert(rows).select('*');
   if (error) throw error;
-  return data;
+  if (data === null || data.length === 0)
+    throw new Error('Die Anfrage konnte nicht erstellt werden.');
+  const firstBooking = data[0];
+  if (firstBooking === undefined) throw new Error('Die Anfrage konnte nicht erstellt werden.');
+  return firstBooking;
+}
+
+function generateBookingGroupId(): string {
+  // Avoid requiring a native crypto module in the Expo client; PostgreSQL
+  // still validates the UUID format and uses it only as a grouping key.
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
+    const random = Math.floor(Math.random() * 16);
+    const value = character === 'x' ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
 }

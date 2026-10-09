@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
   notificationDeepLink,
+  groupBookingsByRequest,
   useBookings,
   useCurrentUser,
   useMarkAllNotificationsRead,
@@ -15,6 +16,7 @@ import {
   useActiveTrackingSessions,
   useTrackingSubscription,
   type BookingWithRelations,
+  type BookingRequestGroup,
   type Notification,
 } from '@pfotennetz/supabase';
 import { formatCurrency, formatDate, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
@@ -37,7 +39,7 @@ function priceLabel(booking: BookingWithRelations): string {
   if (booking.currency === 'KIEZ_HOURS') {
     return formatTimebankHoursMagnitude(Number(booking.price_kiez_hours));
   }
-  return formatCurrency(booking.price_eur_cents);
+  return `${formatCurrency(booking.price_eur_cents)}${booking.currency === 'PER_VISIT' ? ' pro Besuch' : ''}`;
 }
 
 function roleLabel(booking: BookingWithRelations, currentUserId: string | null): string | null {
@@ -48,14 +50,16 @@ function roleLabel(booking: BookingWithRelations, currentUserId: string | null):
 }
 
 function BookingRow({
-  booking,
+  request,
   currentUserId,
 }: {
-  booking: BookingWithRelations;
+  request: BookingRequestGroup;
   currentUserId: string | null;
 }) {
   const c = usePalette();
+  const booking = request.primary;
   const role = roleLabel(booking, currentUserId);
+  const petNames = request.bookings.map((item) => item.pet?.name ?? 'Tier');
   return (
     <Pressable
       accessibilityRole="button"
@@ -71,7 +75,8 @@ function BookingRow({
       <View style={styles.rowMain}>
         <Text style={[styles.bookingNumber, { color: c.onSurface }]}>{booking.booking_number}</Text>
         <Text style={[styles.rowSub, { color: c.onSurfaceVariant }]}>
-          {bookingTypeLabels[booking.type]} · {booking.pet?.name ?? '–'}
+          {bookingTypeLabels[booking.type]} · {petNames.join(', ')}
+          {request.bookings.length > 1 ? ` · ${request.bookings.length} Tiere` : ''}
         </Text>
         <Text style={[styles.rowSub, { color: c.onSurfaceVariant }]}>
           {formatDate(booking.start_at, {
@@ -132,7 +137,7 @@ export default function TrackingScreen() {
           hasNotifications={unread > 0}
         />
         <ActionButton
-          title="Neue Anfrage"
+          title="Neue Betreuung buchen"
           onPress={() => {
             router.push('/booking/new');
           }}
@@ -182,8 +187,8 @@ export default function TrackingScreen() {
             <EmptyText>Für diesen Filter gibt es aktuell keine Buchungen.</EmptyText>
           </Card>
         ) : (
-          visibleBookings.map((booking) => (
-            <BookingRow key={booking.id} booking={booking} currentUserId={currentUserId} />
+          groupBookingsByRequest(visibleBookings).map((request) => (
+            <BookingRow key={request.id} request={request} currentUserId={currentUserId} />
           ))
         )}
 

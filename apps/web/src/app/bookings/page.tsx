@@ -1,6 +1,12 @@
 'use client';
 
-import { useBookings, useCurrentUser, type BookingWithRelations } from '@pfotennetz/supabase';
+import {
+  groupBookingsByRequest,
+  useBookings,
+  useCurrentUser,
+  type BookingRequestGroup,
+} from '@pfotennetz/supabase';
+import { bookingTypeLabel } from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { WebHeader } from '../../components/WebHeader';
 
@@ -13,14 +19,16 @@ const STATUS: Record<string, string> = {
 };
 
 function BookingCard({
-  booking,
+  request,
   currentUserId,
 }: {
-  booking: BookingWithRelations;
+  request: BookingRequestGroup;
   currentUserId: string | null;
 }) {
   const router = useRouter();
+  const booking = request.primary;
   const isHelper = booking.helper_id === currentUserId;
+  const petNames = request.bookings.map((item) => item.pet?.name ?? 'Tier');
   return (
     <button
       type="button"
@@ -33,10 +41,13 @@ function BookingCard({
             {booking.booking_number}
           </p>
           <h2 className="mt-1 text-xl font-extrabold text-on-surface">
-            {booking.pet?.name ?? 'Tierbetreuung'}
+            {request.bookings.length > 1 ? `Betreuung für ${petNames.join(', ')}` : petNames[0]}
           </h2>
           <p className="mt-1 text-sm text-on-surface-variant">
-            {booking.type} · {isHelper ? 'Du hilfst' : 'Deine Anfrage'}
+            {bookingTypeLabel(booking.type)} · {isHelper ? 'Du hilfst' : 'Deine Anfrage'}
+            {request.bookings.length > 1
+              ? ` · ${request.bookings.length} Tiere in einem Antrag`
+              : ''}
           </p>
         </div>
         <span className="rounded-full bg-primary-fixed px-3 py-1 text-xs font-bold text-on-primary-fixed-variant">
@@ -56,7 +67,7 @@ function BookingCard({
           <strong className="block text-on-surface">Abrechnung</strong>
           {booking.currency === 'KIEZ_HOURS'
             ? `${booking.price_kiez_hours ?? 0} Std.`
-            : `${((booking.price_eur_cents ?? 0) / 100).toFixed(2).replace('.', ',')} €`}
+            : `${((booking.price_eur_cents ?? 0) / 100).toFixed(2).replace('.', ',')} €${booking.currency === 'PER_VISIT' ? ' pro Besuch' : ''}`}
         </span>
       </div>
       <p className="mt-4 text-sm font-bold text-primary">Details öffnen →</p>
@@ -69,6 +80,7 @@ export default function BookingsPage() {
   const bookings = useBookings();
   const user = useCurrentUser();
   const data = bookings.data ?? [];
+  const requests = groupBookingsByRequest(data);
   return (
     <main className="min-h-screen bg-surface">
       <WebHeader backHref="/" backLabel="Dashboard" />
@@ -83,9 +95,18 @@ export default function BookingsPage() {
               Alle laufenden und vergangenen Betreuungen an einem Ort.
             </p>
           </div>
-          <button type="button" className="btn-primary" onClick={() => router.push('/explore')}>
-            Helfer:in finden
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => router.push('/booking/new')}
+            >
+              Neue Betreuung buchen
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => router.push('/explore')}>
+              Helfer:in finden
+            </button>
+          </div>
         </div>
         {bookings.isPending ? (
           <p className="py-12 text-center text-on-surface-variant">Buchungen werden geladen …</p>
@@ -103,10 +124,10 @@ export default function BookingsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {data.map((booking) => (
+            {requests.map((request) => (
               <BookingCard
-                key={booking.id}
-                booking={booking}
+                key={request.id}
+                request={request}
                 currentUserId={user.data?.id ?? null}
               />
             ))}

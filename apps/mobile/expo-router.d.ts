@@ -11,6 +11,7 @@ declare module 'expo-router' {
     '/(auth)/login': undefined;
     '/(auth)/forgot-password': undefined;
     '/scan': undefined;
+    '/marketplace': undefined;
     '/emergency/[token]': { token: string };
     '/booking/[id]': { id: string };
   }

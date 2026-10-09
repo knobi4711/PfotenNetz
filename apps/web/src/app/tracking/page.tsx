@@ -2,6 +2,7 @@
 
 import {
   useActiveTrackingSessions,
+  groupBookingsByRequest,
   useBookings,
   useCurrentUser,
   useTrackingPoints,
@@ -26,11 +27,18 @@ export default function TrackingPage() {
   const sessions = useActiveTrackingSessions();
   useTrackingSubscription();
   const active = (bookings.data ?? []).find((booking) => booking.status === 'in_progress');
+  const activeRequest = active
+    ? groupBookingsByRequest(bookings.data ?? []).find((request) =>
+        request.bookings.some((booking) => booking.id === active.id)
+      )
+    : undefined;
   const activeSession = active
     ? (sessions.data ?? []).find((session) => session.booking_id === active.id)
     : undefined;
   const points = useTrackingPoints(activeSession?.id ?? null);
-  const confirmed = (bookings.data ?? []).filter((booking) => booking.status === 'confirmed');
+  const confirmed = groupBookingsByRequest(bookings.data ?? []).filter(
+    (request) => request.primary.status === 'confirmed'
+  );
   return (
     <main className="min-h-screen bg-surface">
       <WebHeader backHref="/bookings" backLabel="Anfragen" />
@@ -78,7 +86,10 @@ export default function TrackingPage() {
                           Aktive Betreuung
                         </p>
                         <h2 className="mt-1 text-2xl font-extrabold text-on-surface">
-                          {active.pet?.name ?? 'Tier'} ist unterwegs
+                          {activeRequest?.bookings
+                            .map((booking) => booking.pet?.name ?? 'Tier')
+                            .join(', ') ?? 'Tier'}{' '}
+                          ist unterwegs
                         </h2>
                         <p className="mt-1 text-sm text-on-surface-variant">
                           {active.helper_id === user.data?.id
@@ -146,18 +157,20 @@ export default function TrackingPage() {
                 <h2 className="text-xl font-extrabold text-on-surface">Nächste Betreuung</h2>
                 {confirmed.length ? (
                   <div className="mt-4 space-y-3">
-                    {confirmed.slice(0, 3).map((booking) => (
+                    {confirmed.slice(0, 3).map((request) => (
                       <button
                         type="button"
-                        key={booking.id}
+                        key={request.id}
                         onClick={() => router.push('/bookings')}
                         className="w-full rounded-xl border border-outline-variant/40 p-4 text-left hover:bg-surface-container-low"
                       >
                         <p className="font-bold text-on-surface">
-                          {booking.pet?.name ?? 'Tierbetreuung'}
+                          {request.bookings
+                            .map((booking) => booking.pet?.name ?? 'Tier')
+                            .join(', ')}
                         </p>
                         <p className="mt-1 text-sm text-on-surface-variant">
-                          {new Date(booking.start_at).toLocaleString('de-DE')}
+                          {new Date(request.primary.start_at).toLocaleString('de-DE')}
                         </p>
                       </button>
                     ))}

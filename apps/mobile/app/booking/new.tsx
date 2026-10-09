@@ -1,5 +1,6 @@
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -11,6 +12,7 @@ import {
   useOwnPets,
   type BookingCurrency,
   type BookingType,
+  type CareLocation,
 } from '@pfotennetz/supabase';
 import { bookingTypeLabels } from '../../lib/booking';
 import { parseGermanDateTime } from '../../lib/datetime';
@@ -28,7 +30,21 @@ import {
 const CURRENCIES: { value: BookingCurrency; label: string }[] = [
   { value: 'KIEZ_HOURS', label: 'Nachbarschafts-Stunden' },
   { value: 'EUR', label: 'Euro' },
+  { value: 'PER_VISIT', label: 'Pro Besuch' },
 ];
+
+function formatDateInput(date: Date): string {
+  return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+}
+
+function dateFromInput(value: string): Date {
+  const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value);
+  if (match !== null) {
+    const date = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return new Date();
+}
 
 export default function NewBookingScreen() {
   const c = usePalette();
@@ -42,12 +58,14 @@ export default function NewBookingScreen() {
   const petsQuery = useOwnPets();
   const createBooking = useCreateBooking();
 
-  const [petId, setPetId] = useState<string | null>(null);
+  const [petIds, setPetIds] = useState<string[]>([]);
   const [bookingType, setBookingType] = useState<BookingType>('walk');
+  const [careLocation, setCareLocation] = useState<CareLocation>('at_owner_home');
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [datePicker, setDatePicker] = useState<'start' | 'end' | null>(null);
   const [currency, setCurrency] = useState<BookingCurrency>('KIEZ_HOURS');
   const [price, setPrice] = useState('');
   const [meetingAddress, setMeetingAddress] = useState('');
@@ -56,12 +74,24 @@ export default function NewBookingScreen() {
   const [safetyConfirmed, setSafetyConfirmed] = useState(false);
   const [formHint, setFormHint] = useState<string | null>(null);
 
-  const pets = (petsQuery.data ?? []).filter((pet) => pet.is_active);
+  const pets = (petsQuery.data ?? []).filter((pet) => pet.is_active && !pet.is_deceased);
   const pending = createBooking.isPending;
 
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      setDatePicker(null);
+      return;
+    }
+    if (selectedDate !== undefined) {
+      if (datePicker === 'start') setStartDate(formatDateInput(selectedDate));
+      if (datePicker === 'end') setEndDate(formatDateInput(selectedDate));
+    }
+    setDatePicker(null);
+  };
+
   const handleCreate = () => {
-    if (petId === null) {
-      setFormHint('Bitte wähle ein Tier aus.');
+    if (petIds.length === 0) {
+      setFormHint('Bitte wähle mindestens ein Tier aus.');
       return;
     }
     if (!safetyConfirmed) {
@@ -84,8 +114,12 @@ export default function NewBookingScreen() {
       setFormHint('Bitte gib einen gültigen Preis an.');
       return;
     }
-    if (currency === 'EUR' && priceValue <= 0) {
-      setFormHint('Bitte gib einen Preis über 0 € an.');
+    if ((currency === 'EUR' || currency === 'PER_VISIT') && priceValue <= 0) {
+      setFormHint(
+        currency === 'PER_VISIT'
+          ? 'Bitte gib einen Preis pro Besuch über 0 € an.'
+          : 'Bitte gib einen Preis über 0 € an.'
+      );
       return;
     }
 
@@ -106,16 +140,17 @@ export default function NewBookingScreen() {
     createBooking.mutate(
       {
         type: bookingType,
-        petId,
+        petIds,
         startAt,
         endAt,
         meetingAddress: meetingAddress.trim() === '' ? null : meetingAddress.trim(),
         currency,
-        priceEur: currency === 'EUR' ? priceValue : undefined,
+        priceEur: currency === 'EUR' || currency === 'PER_VISIT' ? priceValue : undefined,
         priceKiezHours: currency === 'KIEZ_HOURS' ? priceValue : undefined,
         helperId: helper?.helper_id ?? undefined,
         isUrgent,
         careNotes: careNotes.trim() || null,
+        careLocation,
       },
       {
         onSuccess: (booking) => {
@@ -128,10 +163,10 @@ export default function NewBookingScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: c.onSurface }]}>Neue Anfrage</Text>
+        <Text style={[styles.title, { color: c.onSurface }]}>Neue Betreuung buchen</Text>
         <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
-          Erstelle eine Betreuungsanfrage für eines deiner Tiere. Helfer:innen aus deiner
-          Nachbarschaft können sie annehmen.
+          Erstelle eine Betreuungsanfrage für eines oder mehrere deiner Tiere. Mehrere ausgewählte
+          Tiere werden als ein gemeinsamer Antrag an den Helper gesendet.
         </Text>
 
         {preselectedHelperId !== null ? (
@@ -174,40 +209,66 @@ export default function NewBookingScreen() {
           />
         ) : (
           <Card>
-            <SectionTitle>Tier</SectionTitle>
+            <SectionTitle>Tiere</SectionTitle>
             {pets.length === 0 ? (
               <EmptyText>
                 Du hast noch kein aktives Tier. Lege zuerst unter „Tiere“ ein Tier an.
               </EmptyText>
             ) : (
-              <View style={styles.chipRow}>
+              <View style={styles.selectionList}>
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: pets.length > 0 && petIds.length === pets.length }}
+                  disabled={pending}
+                  onPress={() => {
+                    setPetIds((selected) =>
+                      selected.length === pets.length ? [] : pets.map((pet) => pet.id)
+                    );
+                  }}
+                  style={styles.selectionRow}
+                >
+                  <Text
+                    style={[
+                      styles.checkbox,
+                      { color: petIds.length === pets.length ? c.primary : c.outline },
+                    ]}
+                  >
+                    {petIds.length === pets.length ? '☑' : '☐'}
+                  </Text>
+                  <Text style={[styles.selectionText, { color: c.onSurface }]}>
+                    Alle Tiere auswählen
+                  </Text>
+                </Pressable>
                 {pets.map((pet) => {
-                  const selected = pet.id === petId;
+                  const selected = petIds.includes(pet.id);
                   return (
                     <Pressable
                       key={pet.id}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
                       disabled={pending}
                       onPress={() => {
-                        setPetId(pet.id);
+                        setPetIds((current) =>
+                          selected ? current.filter((id) => id !== pet.id) : [...current, pet.id]
+                        );
                       }}
                       style={[
-                        styles.chip,
+                        styles.selectionRow,
                         {
-                          backgroundColor: selected ? c.primary : c.surfaceContainerHigh,
                           opacity: pending ? 0.6 : 1,
                         },
                       ]}
                     >
-                      <Text
-                        style={[styles.chipText, { color: selected ? c.onPrimary : c.onSurface }]}
-                      >
-                        {pet.name}
+                      <Text style={[styles.checkbox, { color: selected ? c.primary : c.outline }]}>
+                        {selected ? '☑' : '☐'}
                       </Text>
+                      <Text style={[styles.selectionText, { color: c.onSurface }]}>{pet.name}</Text>
                     </Pressable>
                   );
                 })}
+                <Text style={[styles.helperMeta, { color: c.onSurfaceVariant }]}>
+                  Mehrere Tiere werden beim Helper als ein Antrag angezeigt.
+                </Text>
               </View>
             )}
           </Card>
@@ -242,6 +303,45 @@ export default function NewBookingScreen() {
               );
             })}
           </View>
+          {bookingType === 'vacation' || bookingType === 'daycare' ? (
+            <>
+              <Text style={[styles.label, { color: c.onSurface }]}>Betreuungsort</Text>
+              <Text style={[styles.helperMeta, { color: c.onSurfaceVariant }]}>
+                Wähle, ob dein Tier bei dir besucht wird oder während deiner Abwesenheit beim Helper
+                wohnt.
+              </Text>
+              <View style={styles.chipRow}>
+                {(
+                  [
+                    ['at_owner_home', 'Bei mir zu Hause (Besuche)'],
+                    ['at_owner_home_live_in', 'Bei mir zu Hause – Helper zieht vorübergehend ein'],
+                    ['at_helper_home', 'Beim Helper zu Hause'],
+                  ] as const
+                ).map(([value, label]) => {
+                  const selected = careLocation === value;
+                  return (
+                    <Pressable
+                      key={value}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      disabled={pending}
+                      onPress={() => setCareLocation(value)}
+                      style={[
+                        styles.chip,
+                        { backgroundColor: selected ? c.primary : c.surfaceContainerHigh },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.chipText, { color: selected ? c.onPrimary : c.onSurface }]}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
         </Card>
 
         <Card>
@@ -249,21 +349,34 @@ export default function NewBookingScreen() {
           <View style={styles.twoColumns}>
             <View style={styles.column}>
               <Text style={[styles.label, { color: c.onSurface }]}>Start-Datum</Text>
-              <TextInput
-                editable={!pending}
-                onChangeText={setStartDate}
-                placeholder="TT.MM.JJJJ"
-                placeholderTextColor={c.outline}
+              <Pressable
+                accessibilityLabel="Start-Datum auswählen"
+                accessibilityRole="button"
+                disabled={pending}
+                onPress={() => setDatePicker(datePicker === 'start' ? null : 'start')}
                 style={[
                   styles.input,
                   {
                     backgroundColor: c.surfaceContainerLow,
                     borderColor: c.outlineVariant,
-                    color: c.onSurface,
                   },
                 ]}
-                value={startDate}
-              />
+              >
+                <Text
+                  style={[styles.dateInputText, { color: startDate ? c.onSurface : c.outline }]}
+                >
+                  {startDate || 'TT.MM.JJJJ'}
+                </Text>
+              </Pressable>
+              {datePicker === 'start' ? (
+                <DateTimePicker
+                  value={dateFromInput(startDate)}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  locale="de-DE"
+                  onChange={handleDateChange}
+                />
+              ) : null}
             </View>
             <View style={styles.column}>
               <Text style={[styles.label, { color: c.onSurface }]}>Uhrzeit</Text>
@@ -287,21 +400,32 @@ export default function NewBookingScreen() {
           <View style={styles.twoColumns}>
             <View style={styles.column}>
               <Text style={[styles.label, { color: c.onSurface }]}>End-Datum</Text>
-              <TextInput
-                editable={!pending}
-                onChangeText={setEndDate}
-                placeholder="TT.MM.JJJJ"
-                placeholderTextColor={c.outline}
+              <Pressable
+                accessibilityLabel="End-Datum auswählen"
+                accessibilityRole="button"
+                disabled={pending}
+                onPress={() => setDatePicker(datePicker === 'end' ? null : 'end')}
                 style={[
                   styles.input,
                   {
                     backgroundColor: c.surfaceContainerLow,
                     borderColor: c.outlineVariant,
-                    color: c.onSurface,
                   },
                 ]}
-                value={endDate}
-              />
+              >
+                <Text style={[styles.dateInputText, { color: endDate ? c.onSurface : c.outline }]}>
+                  {endDate || 'TT.MM.JJJJ'}
+                </Text>
+              </Pressable>
+              {datePicker === 'end' ? (
+                <DateTimePicker
+                  value={dateFromInput(endDate)}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  locale="de-DE"
+                  onChange={handleDateChange}
+                />
+              ) : null}
             </View>
             <View style={styles.column}>
               <Text style={[styles.label, { color: c.onSurface }]}>Uhrzeit</Text>
@@ -354,14 +478,18 @@ export default function NewBookingScreen() {
             })}
           </View>
           <Text style={[styles.label, { color: c.onSurface }]}>
-            {currency === 'EUR' ? 'Preis in €' : 'Stunden (0 = Gefallen ohne Abrechnung)'}
+            {currency === 'EUR'
+              ? 'Preis in €'
+              : currency === 'PER_VISIT'
+                ? 'Preis pro Besuch in €'
+                : 'Stunden (0 = Gefallen ohne Abrechnung)'}
           </Text>
           <TextInput
             editable={!pending}
             keyboardType="decimal-pad"
             onChangeText={setPrice}
             onSubmitEditing={handleCreate}
-            placeholder={currency === 'EUR' ? 'z. B. 12,50' : 'z. B. 2'}
+            placeholder={currency === 'KIEZ_HOURS' ? 'z. B. 2' : 'z. B. 12,50'}
             placeholderTextColor={c.outline}
             returnKeyType="go"
             style={[
@@ -492,6 +620,12 @@ const styles = StyleSheet.create({
     fontFamily: appFonts.regular,
     fontSize: 15,
   },
+  dateInputText: {
+    fontFamily: appFonts.regular,
+    fontSize: 15,
+    lineHeight: 20,
+    paddingTop: 1,
+  },
   multiline: { minHeight: 96, paddingTop: 14, textAlignVertical: 'top' },
   noticeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 12 },
   checkbox: { fontSize: 22, lineHeight: 24 },
@@ -500,6 +634,15 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
   chipText: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18 },
+  selectionList: { gap: 4, marginTop: 4 },
+  selectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 48,
+    paddingVertical: 6,
+  },
+  selectionText: { fontFamily: appFonts.semibold, fontSize: 14, lineHeight: 20 },
   twoColumns: { flexDirection: 'row', gap: 12 },
   column: { flex: 1 },
 });

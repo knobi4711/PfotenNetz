@@ -9,6 +9,8 @@ pnpm --filter @pfotennetz/web build
 ```
 
 Der Build erzeugt `apps/web/.next/standalone`, `apps/web/.next/static` und `apps/web/public`.
+Die beiden letztgenannten Verzeichnisse müssen ebenfalls übertragen werden: Der
+Standalone-Server enthält CSS/JS und öffentliche Assets nicht automatisch.
 
 ## Dateien übertragen
 
@@ -40,6 +42,8 @@ docker compose ps
 ```
 
 Der Container hört intern auf Port 3000 und veröffentlicht keinen Host-Port. Paperless auf Port 8000 bleibt unverändert.
+`docker-compose.yml` bindet `next-static` und `web-public` unter den von Next.js erwarteten
+Pfaden ein, damit Stylesheets, JavaScript und das Logo ausgeliefert werden.
 
 ## Caddy aktualisieren
 

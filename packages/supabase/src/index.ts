@@ -58,4 +58,7 @@ export * from './tracking/hooks';
 export * from './reports/keys';
 export * from './reports/queries';
 export * from './reports/hooks';
+export * from './marketplace/keys';
+export * from './marketplace/queries';
+export * from './marketplace/hooks';
 export * from './types/database';

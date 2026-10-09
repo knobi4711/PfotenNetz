@@ -12,7 +12,8 @@ Set these repository secrets under Settings → Secrets and variables → Action
 - `SUPABASE_PROJECT_REF`: Reference of the project whose migrations should match
   the checked-in types.
 
-Missing secrets produce an explicit failed configuration step. The workflow
+Missing secrets skip scheduled checks with a notice. A manually started workflow
+fails at its configuration step until both secrets are present. The workflow
 reads the remote schema; it does not apply migrations or modify repository files.
 
 ## Comparison and failures

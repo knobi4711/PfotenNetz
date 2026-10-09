@@ -21,6 +21,12 @@ export interface BookingWithRelations extends Booking {
   helperProfile: BookingProfile | null;
 }
 
+export interface BookingRequestGroup {
+  id: string;
+  primary: BookingWithRelations;
+  bookings: BookingWithRelations[];
+}
+
 // Narrow embed: only the fields the UI needs. Related rows that RLS hides
 // from the caller arrive as null instead of failing the whole query.
 export const BOOKING_SELECT = [
@@ -47,6 +53,48 @@ export async function fetchBooking(
   if (error) throw error;
   if (data === null) throw new Error(`Booking not found: ${bookingId}`);
   return addPetPhotoUrl(client, data as unknown as BookingWithRelations);
+}
+
+/** Loads all pet rows that belong to one multi-pet request. */
+export async function fetchBookingGroup(
+  client: SupabaseClient<Database>,
+  bookingGroupId: string
+): Promise<BookingWithRelations[]> {
+  const { data, error } = await client
+    .from('bookings')
+    .select(BOOKING_SELECT)
+    .eq('booking_group_id', bookingGroupId)
+    .order('booking_group_position', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return Promise.all(
+    (data ?? []).map((booking) =>
+      addPetPhotoUrl(client, booking as unknown as BookingWithRelations)
+    )
+  );
+}
+
+/** Collapses grouped rows for list views without merging independent requests. */
+export function groupBookingsByRequest(bookings: BookingWithRelations[]): BookingRequestGroup[] {
+  const groups = new Map<string, BookingWithRelations[]>();
+  for (const booking of bookings) {
+    const key = booking.booking_group_id ?? booking.id;
+    const group = groups.get(key);
+    if (group === undefined) groups.set(key, [booking]);
+    else group.push(booking);
+  }
+
+  return [...groups.entries()]
+    .map(([id, groupedBookings]) => ({
+      id,
+      primary: groupedBookings[0]!,
+      bookings: groupedBookings,
+    }))
+    .sort(
+      (left, right) =>
+        new Date(right.primary.start_at).getTime() - new Date(left.primary.start_at).getTime()
+    );
 }
 
 async function addPetPhotoUrl(

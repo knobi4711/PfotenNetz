@@ -21,13 +21,14 @@ export function WebHeader({
   const account = useTimebankAccount();
   const pathname = usePathname();
   const [signingOut, setSigningOut] = useState(false);
+  const [communityOpen, setCommunityOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const navigation = [
     ['Dashboard', '/'],
     ['Nachbarschaftskarte', '/explore'],
     ['Gefahrenradar', '/hazard/radar'],
     ['Betreuung & Tracking', '/tracking'],
     ['Community', '/community'],
-    ['Meine Tiere', '/pets'],
     ['Mein Profil', '/profile'],
   ] as const;
   return (
@@ -46,13 +47,99 @@ export function WebHeader({
             <span className="text-xl font-extrabold text-on-surface">PfotenNetz</span>
           </Link>
           {backHref ? (
-            <Link href={backHref} className="hidden text-sm font-bold text-primary sm:block">
+            <Link
+              href={backHref}
+              className="ml-6 hidden shrink-0 whitespace-nowrap text-sm font-bold text-primary sm:block lg:hidden"
+            >
               ← {backLabel ?? 'Zurück'}
             </Link>
           ) : null}
           <nav className="hidden items-center gap-2 lg:flex" aria-label="Hauptnavigation">
             {navigation.map(([label, href]) => {
-              const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
+              const active =
+                label === 'Community'
+                  ? pathname.startsWith('/community') || pathname.startsWith('/marketplace')
+                  : label === 'Mein Profil'
+                    ? pathname.startsWith('/profile') || pathname.startsWith('/pets')
+                    : href === '/'
+                      ? pathname === '/'
+                      : pathname.startsWith(href);
+              if (label === 'Community') {
+                return (
+                  <div key={href} className="relative">
+                    <button
+                      type="button"
+                      aria-expanded={communityOpen}
+                      aria-haspopup="menu"
+                      onClick={() => setCommunityOpen((open) => !open)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                    >
+                      Community <span aria-hidden="true">⌄</span>
+                    </button>
+                    {communityOpen ? (
+                      <div
+                        role="menu"
+                        className="absolute left-0 top-full z-20 mt-2 min-w-56 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]"
+                      >
+                        <Link
+                          href="/community"
+                          role="menuitem"
+                          onClick={() => setCommunityOpen(false)}
+                          className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
+                        >
+                          Community &amp; Treffen
+                        </Link>
+                        <Link
+                          href="/marketplace"
+                          role="menuitem"
+                          onClick={() => setCommunityOpen(false)}
+                          className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
+                        >
+                          Tauschbörse für Tierbedarf
+                        </Link>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
+              if (label === 'Mein Profil') {
+                return (
+                  <div key={href} className="relative">
+                    <button
+                      type="button"
+                      aria-expanded={profileOpen}
+                      aria-haspopup="menu"
+                      onClick={() => setProfileOpen((open) => !open)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                    >
+                      Mein Profil <span aria-hidden="true">⌄</span>
+                    </button>
+                    {profileOpen ? (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-full z-20 mt-2 min-w-56 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]"
+                      >
+                        <Link
+                          href="/profile"
+                          role="menuitem"
+                          onClick={() => setProfileOpen(false)}
+                          className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
+                        >
+                          Profileinstellungen
+                        </Link>
+                        <Link
+                          href="/pets"
+                          role="menuitem"
+                          onClick={() => setProfileOpen(false)}
+                          className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
+                        >
+                          Meine Tiere
+                        </Link>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
               return (
                 <Link
                   key={href}

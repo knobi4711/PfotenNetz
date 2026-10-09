@@ -27,6 +27,11 @@ export const petBreedSchema = z.string().max(50).optional().nullable();
 export const petSpeciesSchema = z.enum(['dog', 'cat', 'rabbit', 'guinea_pig', 'bird', 'other']);
 
 export const bookingTypeSchema = z.enum(['walk', 'feeding', 'vacation', 'daycare']);
+export const careLocationSchema = z.enum([
+  'at_owner_home',
+  'at_owner_home_live_in',
+  'at_helper_home',
+]);
 export const bookingStatusSchema = z.enum([
   'requested',
   'confirmed',
@@ -76,19 +81,20 @@ export const notificationPreferencesSchema = z.object({
 
 export const createBookingSchema = z.object({
   type: bookingTypeSchema,
-  pet_id: z.string().uuid(),
+  pet_ids: z.array(z.string().uuid()).min(1),
   start_at: z.string().datetime(),
   end_at: z.string().datetime(),
   meeting_address: z.string().min(5).max(200).optional(),
   key_handoff_type: z.enum(['lockbox', 'personal', 'smartlock', 'neighbor']).optional(),
   price_eur_cents: z.number().int().min(0).default(0),
   price_kiez_hours: z.number().min(0).default(0),
-  currency: z.enum(['EUR', 'KIEZ_HOURS']).default('KIEZ_HOURS'),
+  currency: z.enum(['EUR', 'KIEZ_HOURS', 'PER_VISIT']).default('KIEZ_HOURS'),
 });
 
 export const updateProfileSchema = z.object({
   display_name: displayNameSchema.optional(),
   phone: phoneSchema,
+  postal_code: z.string().regex(/^\d{5}$/, 'Bitte gib eine gültige fünfstellige Postleitzahl ein.'),
   kiez_radius_km: kiezRadiusSchema.optional(),
   notification_prefs: notificationPreferencesSchema.partial().optional(),
   timezone: z.string().optional(),

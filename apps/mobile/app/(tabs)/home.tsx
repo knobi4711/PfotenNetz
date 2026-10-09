@@ -1,10 +1,13 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native';
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import {
   useBookings,
+  groupBookingsByRequest,
   useOwnProfile,
   useTimebankAccount,
   useUnreadCount,
@@ -42,9 +45,11 @@ function greeting(): string {
 function HighlightCard({
   booking,
   kind,
+  petNames,
 }: {
   booking: BookingWithRelations;
   kind: 'current' | 'upcoming' | 'open';
+  petNames?: string[] | undefined;
 }) {
   const c = usePalette();
   return (
@@ -72,7 +77,8 @@ function HighlightCard({
           </View>
           <View style={styles.rowMain}>
             <Text style={[styles.bookingNumber, { color: c.onSurface }]}>
-              {bookingTypeLabels[booking.type]} mit {booking.pet?.name ?? 'deinem Tier'}
+              {bookingTypeLabels[booking.type]} für{' '}
+              {petNames?.join(', ') ?? booking.pet?.name ?? 'deinem Tier'}
             </Text>
             <Text style={[styles.rowSub, { color: c.onSurfaceVariant }]}>
               {formatDate(booking.start_at, {
@@ -90,7 +96,13 @@ function HighlightCard({
   );
 }
 
-function PreviewRow({ booking }: { booking: BookingWithRelations }) {
+function PreviewRow({
+  booking,
+  petNames,
+}: {
+  booking: BookingWithRelations;
+  petNames?: string[] | undefined;
+}) {
   const c = usePalette();
   return (
     <Pressable
@@ -107,7 +119,7 @@ function PreviewRow({ booking }: { booking: BookingWithRelations }) {
       <View style={styles.rowMain}>
         <Text style={[styles.rowTitle, { color: c.onSurface }]}>{booking.booking_number}</Text>
         <Text style={[styles.rowSub, { color: c.onSurfaceVariant }]}>
-          {bookingTypeLabels[booking.type]} · {booking.pet?.name ?? '–'}
+          {bookingTypeLabels[booking.type]} · {petNames?.join(', ') ?? booking.pet?.name ?? '–'}
         </Text>
         <Text style={[styles.rowSub, { color: c.onSurfaceVariant }]}>
           {formatDate(booking.start_at, {
@@ -123,6 +135,72 @@ function PreviewRow({ booking }: { booking: BookingWithRelations }) {
   );
 }
 
+function PawWeatherCard() {
+  const c = usePalette();
+  const [temperature, setTemperature] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadWeather = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== Location.PermissionStatus.GRANTED) {
+        throw new Error('Standortfreigabe wird für aktuelle Wetterdaten benötigt.');
+      }
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&current=temperature_2m&timezone=auto`
+      );
+      if (!response.ok) throw new Error('Wetterdaten konnten nicht geladen werden.');
+      const data = (await response.json()) as { current?: { temperature_2m?: number } };
+      const value = data.current?.temperature_2m;
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        throw new Error('Keine aktuelle Temperatur verfügbar.');
+      }
+      setTemperature(value);
+    } catch (cause) {
+      setTemperature(null);
+      setError(cause instanceof Error ? cause.message : 'Wetterdaten nicht verfügbar.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const recommendation =
+    temperature !== null && temperature >= 35
+      ? 'Bei großer Hitze Pfoten besonders schützen.'
+      : temperature !== null && temperature <= 0
+        ? 'Bei Frost auf Streusalz und kalte Pfoten achten.'
+        : 'Bei warmem Wetter den Asphalt trotzdem prüfen.';
+
+  return (
+    <Card accentColor={c.secondary}>
+      <SectionTitle>Pfotenschutz</SectionTitle>
+      <Text style={[styles.weatherTemperature, { color: c.onSurface }]}>
+        {temperature === null
+          ? loading
+            ? 'Wetter wird geladen …'
+            : 'Noch keine Wetterdaten'
+          : `${temperature.toLocaleString('de-DE', { maximumFractionDigits: 1 })}°C`}
+      </Text>
+      <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+        {error ??
+          (temperature !== null ? recommendation : 'Standort für aktuelle Wetterdaten verwenden.')}
+      </Text>
+      <ActionButton
+        title={loading ? 'Wird geladen …' : temperature === null ? 'Wetter laden' : 'Aktualisieren'}
+        variant="secondary"
+        onPress={() => void loadWeather()}
+        disabled={loading}
+      />
+    </Card>
+  );
+}
+
 export default function HomeScreen() {
   const c = usePalette();
   const bookingsQuery = useBookings();
@@ -131,6 +209,7 @@ export default function HomeScreen() {
   const unreadQuery = useUnreadCount();
 
   const bookings = bookingsQuery.data ?? [];
+  const requests = groupBookingsByRequest(bookings);
   const highlighted = selectHighlightedBooking(bookings);
   const preview = selectBookingPreview(bookings);
   const account = accountQuery.data ?? null;
@@ -192,7 +271,13 @@ export default function HomeScreen() {
             <EmptyText>Keine kommenden Betreuungen. Neue Anfragen erscheinen hier.</EmptyText>
           </Card>
         ) : (
-          <HighlightCard booking={highlighted.booking} kind={highlighted.kind} />
+          <HighlightCard
+            booking={highlighted.booking}
+            kind={highlighted.kind}
+            petNames={requests
+              .find((request) => request.primary.id === highlighted.booking.id)
+              ?.bookings.map((booking) => booking.pet?.name ?? 'Tier')}
+          />
         )}
 
         <Card>
@@ -214,6 +299,8 @@ export default function HomeScreen() {
           />
         </Card>
 
+        <PawWeatherCard />
+
         <Card>
           <SectionTitle>Gemeinsam unterwegs</SectionTitle>
           <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
@@ -223,6 +310,11 @@ export default function HomeScreen() {
             title="Community-Events entdecken"
             variant="secondary"
             onPress={() => router.push('/community')}
+          />
+          <ActionButton
+            title="Tauschbörse für Tierbedarf"
+            variant="secondary"
+            onPress={() => router.push('/marketplace')}
           />
         </Card>
 
@@ -295,7 +387,15 @@ export default function HomeScreen() {
           ) : preview.length === 0 ? (
             <EmptyText>Keine aktuellen Anfragen vorhanden.</EmptyText>
           ) : (
-            preview.map((booking) => <PreviewRow key={booking.id} booking={booking} />)
+            preview.map((booking) => (
+              <PreviewRow
+                key={booking.id}
+                booking={booking}
+                petNames={requests
+                  .find((request) => request.primary.id === booking.id)
+                  ?.bookings.map((item) => item.pet?.name ?? 'Tier')}
+              />
+            ))
           )}
           <ActionButton
             title="Anfragen anzeigen"
@@ -337,6 +437,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   balance: { fontFamily: appFonts.extrabold, fontSize: 36, lineHeight: 44, marginBottom: 8 },
+  weatherTemperature: {
+    fontFamily: appFonts.extrabold,
+    fontSize: 30,
+    lineHeight: 38,
+    marginTop: 8,
+  },
   highlightHeading: {
     flexDirection: 'row',
     alignItems: 'flex-start',

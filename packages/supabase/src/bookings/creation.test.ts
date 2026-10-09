@@ -39,7 +39,7 @@ function clientWithStubs(stubs: { userId: string | null; pet: unknown; booking: 
 
 const validInput = {
   type: 'walk' as const,
-  petId: 'pet-1',
+  petIds: ['pet-1'],
   startAt: '2026-10-01T10:00:00.000Z',
   endAt: '2026-10-01T12:00:00.000Z',
   currency: 'KIEZ_HOURS' as const,
@@ -120,5 +120,55 @@ describe('booking creation', () => {
     const values = inserts[0]?.values as Record<string, unknown>;
     expect(values['price_eur_cents']).toBe(1250);
     expect(values['price_kiez_hours']).toBe(0);
+  });
+
+  it('creates one grouped request for multiple owned pets', async () => {
+    const inserted: { table: string; values: unknown }[] = [];
+    const client = {
+      auth: {
+        getUser: () => Promise.resolve({ data: { user: { id: 'user-1' } } }),
+      },
+      from: (table: string) => {
+        if (table === 'pets') {
+          return {
+            select: () => ({
+              in: () =>
+                Promise.resolve({
+                  data: [
+                    { id: 'pet-1', owner_id: 'user-1', is_active: true, is_deceased: false },
+                    { id: 'pet-2', owner_id: 'user-1', is_active: true, is_deceased: false },
+                  ],
+                  error: null,
+                }),
+            }),
+          };
+        }
+        return {
+          insert: (values: unknown) => {
+            inserted.push({ table, values });
+            return {
+              select: () =>
+                Promise.resolve({
+                  data: [
+                    { id: 'booking-1', status: 'requested' },
+                    { id: 'booking-2', status: 'requested' },
+                  ],
+                  error: null,
+                }),
+            };
+          },
+        };
+      },
+    } as unknown as SupabaseClient<Database>;
+
+    const result = await createBooking(client, { ...validInput, petIds: ['pet-1', 'pet-2'] });
+    const rows = inserted[0]?.values as Array<Record<string, unknown>>;
+
+    expect(result.id).toBe('booking-1');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.booking_group_id).toBeTruthy();
+    expect(rows[0]?.booking_group_id).toBe(rows[1]?.booking_group_id);
+    expect(rows[0]?.booking_group_position).toBe(0);
+    expect(rows[1]?.booking_group_position).toBe(1);
   });
 });

@@ -6,6 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import {
   useAcceptBooking,
   useBooking,
+  useBookingGroup,
   useCancelBooking,
   useCompleteBooking,
   useCurrentUser,
@@ -123,6 +124,7 @@ export default function BookingDetailScreen() {
   const bookingId = typeof id === 'string' && id.length > 0 ? id : undefined;
 
   const bookingQuery = useBooking(bookingId);
+  const bookingGroupQuery = useBookingGroup(bookingQuery.data?.booking_group_id);
   const userQuery = useCurrentUser();
 
   const accept = useAcceptBooking();
@@ -150,6 +152,8 @@ export default function BookingDetailScreen() {
   const ratingError = rateHelper.error ?? rateSeeker.error ?? null;
 
   const booking = bookingQuery.data ?? null;
+  const groupedBookings = bookingGroupQuery.data ?? (booking ? [booking] : []);
+  const groupedPetNames = groupedBookings.map((item) => item.pet?.name ?? 'Tier');
   const currentUserId = userQuery.data?.id ?? null;
   const isHelper =
     booking !== null && booking.helper_id !== null && booking.helper_id === currentUserId;
@@ -197,9 +201,16 @@ export default function BookingDetailScreen() {
         ) : (
           <>
             <View style={styles.header}>
-              <Text style={[styles.bookingNumber, { color: c.onSurface }]}>
-                {booking.booking_number}
-              </Text>
+              <View style={styles.headerMain}>
+                <Text style={[styles.bookingNumber, { color: c.onSurface }]}>
+                  {booking.booking_number}
+                </Text>
+                {groupedBookings.length > 1 ? (
+                  <Text style={[styles.groupTitle, { color: c.onSurface }]}>
+                    Betreuung für {groupedPetNames.join(', ')}
+                  </Text>
+                ) : null}
+              </View>
               <StatusBadge status={booking.status} />
             </View>
 
@@ -229,7 +240,20 @@ export default function BookingDetailScreen() {
                 </Pressable>
               ) : null}
               <InfoRow label="Typ" value={bookingTypeLabels[booking.type]} />
+              <InfoRow
+                label="Betreuungsort"
+                value={
+                  booking.care_location === 'at_owner_home_live_in'
+                    ? 'Bei der Halterin/dem Halter zu Hause – Helper zieht vorübergehend ein'
+                    : booking.care_location === 'at_helper_home'
+                      ? 'Beim Helper zu Hause'
+                      : 'Bei der Halterin/dem Halter zu Hause (Besuche)'
+                }
+              />
               <InfoRow label="Tier" value={booking.pet?.name ?? '–'} />
+              {groupedBookings.length > 1 ? (
+                <InfoRow label="Tiere im Antrag" value={groupedPetNames.join(', ')} />
+              ) : null}
               <InfoRow label="Suchende:r" value={booking.seekerProfile?.display_name ?? '–'} />
               <InfoRow label="Helfende:r" value={booking.helperProfile?.display_name ?? '–'} />
               <InfoRow
@@ -266,7 +290,7 @@ export default function BookingDetailScreen() {
                 value={
                   booking.currency === 'KIEZ_HOURS'
                     ? formatTimebankHoursMagnitude(booking.price_kiez_hours)
-                    : formatCurrency(booking.price_eur_cents)
+                    : `${formatCurrency(booking.price_eur_cents)}${booking.currency === 'PER_VISIT' ? ' pro Besuch' : ''}`
                 }
               />
               {booking.status === 'completed' ? (
@@ -446,7 +470,9 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 12,
   },
+  headerMain: { flex: 1, flexShrink: 1, gap: 2 },
   bookingNumber: { fontFamily: appFonts.extrabold, fontSize: 20, lineHeight: 28, flexShrink: 1 },
+  groupTitle: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
   timeline: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   timelineStep: { flex: 1, alignItems: 'center', gap: 6 },
   timelineDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },

@@ -8,17 +8,12 @@ import {
   useOwnPets,
   type BookingCurrency,
   type BookingType,
+  type CareLocation,
 } from '@pfotennetz/supabase';
+import { BOOKING_TYPE_LABELS } from '@pfotennetz/shared';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { WebHeader } from '../../../components/WebHeader';
-
-const LABELS: Record<BookingType, string> = {
-  walk: 'Gassi',
-  feeding: 'Füttern',
-  vacation: 'Urlaub',
-  daycare: 'Tagesbetreuung',
-};
 
 function NewBookingForm() {
   const router = useRouter();
@@ -27,8 +22,10 @@ function NewBookingForm() {
   const helper = useHelperDetail(helperId);
   const pets = useOwnPets();
   const create = useCreateBooking();
-  const [petId, setPetId] = useState('');
+  const [petIds, setPetIds] = useState<string[]>([]);
+  const [petsOpen, setPetsOpen] = useState(false);
   const [type, setType] = useState<BookingType>('walk');
+  const [careLocation, setCareLocation] = useState<CareLocation>('at_owner_home');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [currency, setCurrency] = useState<BookingCurrency>('KIEZ_HOURS');
@@ -42,12 +39,15 @@ function NewBookingForm() {
 
   const submit = () => {
     setFormError(null);
-    if (!petId) return setFormError('Bitte wähle ein Tier aus.');
+    if (petIds.length === 0) return setFormError('Bitte wähle mindestens ein Tier aus.');
     if (!start || !end || new Date(end).getTime() <= new Date(start).getTime())
       return setFormError('Bitte wähle einen gültigen Zeitraum.');
     if (!safety) return setFormError('Bitte bestätige die Sicherheitshinweise.');
     const amount = Number(price.replace(',', '.'));
-    if (currency === 'EUR' && (!Number.isFinite(amount) || amount <= 0))
+    if (
+      (currency === 'EUR' || currency === 'PER_VISIT') &&
+      (!Number.isFinite(amount) || amount <= 0)
+    )
       return setFormError('Bitte gib einen Preis über 0 € an.');
     if (currency === 'KIEZ_HOURS' && (!Number.isFinite(amount) || amount < 0))
       return setFormError('Bitte gib gültige Nachbarschafts-Stunden an.');
@@ -63,16 +63,17 @@ function NewBookingForm() {
     create.mutate(
       {
         type,
-        petId,
+        petIds,
         startAt: new Date(start).toISOString(),
         endAt: new Date(end).toISOString(),
         helperId,
         meetingAddress: address.trim() || null,
         currency,
-        priceEur: currency === 'EUR' ? amount : undefined,
+        priceEur: currency === 'EUR' || currency === 'PER_VISIT' ? amount : undefined,
         priceKiezHours: currency === 'KIEZ_HOURS' ? amount : undefined,
         isUrgent: urgent,
         careNotes: notes.trim() || null,
+        careLocation,
       },
       { onSuccess: (booking) => router.replace(`/booking/${booking.id}`) }
     );
@@ -83,7 +84,7 @@ function NewBookingForm() {
       <WebHeader backHref="/explore" backLabel="Helfersuche" />
       <div className="mx-auto max-w-3xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">Betreuung</p>
-        <h1 className="mt-2 text-4xl font-extrabold">Neue Betreuungsanfrage</h1>
+        <h1 className="mt-2 text-4xl font-extrabold">Neue Betreuung buchen</h1>
         {helperId && helper.data ? (
           <p className="mt-3 text-on-surface-variant">
             Anfrage an <strong>{helper.data.display_name}</strong>
@@ -97,21 +98,83 @@ function NewBookingForm() {
         <div className="mt-8 space-y-6">
           <section className="card p-7">
             <h2 className="text-xl font-extrabold">Tier und Leistung</h2>
-            <label className="mt-4 block text-sm font-bold">
-              Tier
-              <select
-                className="input mt-1"
-                value={petId}
-                onChange={(event) => setPetId(event.target.value)}
+            {pets.isError ? (
+              <p
+                role="alert"
+                className="mt-4 rounded-xl bg-error-container p-4 text-on-error-container"
               >
-                <option value="">Bitte auswählen …</option>
-                {activePets.map((pet) => (
-                  <option key={pet.id} value={pet.id}>
-                    {pet.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                Deine Tiere konnten nicht geladen werden: {pets.error.message}
+              </p>
+            ) : activePets.length === 0 && !pets.isPending ? (
+              <p className="mt-4 rounded-xl bg-surface-container p-4 text-sm text-on-surface-variant">
+                Du hast noch kein aktives Tier. Lege zuerst unter „Meine Tiere“ ein Tier an oder
+                aktiviere ein vorhandenes.
+              </p>
+            ) : null}
+            <div className="relative mt-4">
+              <p className="text-sm font-bold">Tiere</p>
+              <button
+                type="button"
+                className="input mt-1 flex w-full items-center justify-between text-left"
+                aria-expanded={petsOpen}
+                aria-haspopup="listbox"
+                onClick={() => setPetsOpen((open) => !open)}
+              >
+                <span>
+                  {petIds.length === 0
+                    ? 'Bitte auswählen …'
+                    : petIds.length === activePets.length
+                      ? 'Alle Tiere'
+                      : activePets
+                          .filter((pet) => petIds.includes(pet.id))
+                          .map((pet) => pet.name)
+                          .join(', ')}
+                </span>
+                <span aria-hidden="true">⌄</span>
+              </button>
+              {petsOpen ? (
+                <div
+                  role="listbox"
+                  aria-multiselectable="true"
+                  className="absolute left-0 right-0 top-full z-20 mt-2 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]"
+                >
+                  <label className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold hover:bg-surface-container">
+                    <input
+                      type="checkbox"
+                      checked={activePets.length > 0 && petIds.length === activePets.length}
+                      onChange={(event) =>
+                        setPetIds(event.target.checked ? activePets.map((pet) => pet.id) : [])
+                      }
+                      className="h-5 w-5 accent-primary"
+                    />
+                    Alle Tiere auswählen
+                  </label>
+                  {activePets.map((pet) => (
+                    <label
+                      key={pet.id}
+                      className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold hover:bg-surface-container"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={petIds.includes(pet.id)}
+                        onChange={(event) =>
+                          setPetIds((selected) =>
+                            event.target.checked
+                              ? [...selected, pet.id]
+                              : selected.filter((id) => id !== pet.id)
+                          )
+                        }
+                        className="h-5 w-5 accent-primary"
+                      />
+                      {pet.name}
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+              <p className="mt-2 text-xs text-on-surface-variant">
+                Mehrere ausgewählte Tiere werden als ein gemeinsamer Antrag gesendet.
+              </p>
+            </div>
             <p className="mt-5 text-sm font-bold">Betreuungsart</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {BOOKING_TYPES.map((value) => (
@@ -121,10 +184,41 @@ function NewBookingForm() {
                   className={`chip ${type === value ? 'chip-selected' : ''}`}
                   onClick={() => setType(value)}
                 >
-                  {LABELS[value]}
+                  {BOOKING_TYPE_LABELS[value]}
                 </button>
               ))}
             </div>
+            {type === 'vacation' || type === 'daycare' ? (
+              <div className="mt-6 rounded-2xl bg-secondary-container/50 p-4">
+                <p className="text-sm font-bold">Wo soll dein Tier betreut werden?</p>
+                <p className="mt-1 text-xs text-on-surface-variant">
+                  So können Urlaubspflege und längere Aufenthalte eindeutig abgestimmt werden.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={`chip ${careLocation === 'at_owner_home' ? 'chip-selected' : ''}`}
+                    onClick={() => setCareLocation('at_owner_home')}
+                  >
+                    Bei mir zu Hause (Besuche)
+                  </button>
+                  <button
+                    type="button"
+                    className={`chip ${careLocation === 'at_owner_home_live_in' ? 'chip-selected' : ''}`}
+                    onClick={() => setCareLocation('at_owner_home_live_in')}
+                  >
+                    Bei mir zu Hause – Helper zieht vorübergehend ein
+                  </button>
+                  <button
+                    type="button"
+                    className={`chip ${careLocation === 'at_helper_home' ? 'chip-selected' : ''}`}
+                    onClick={() => setCareLocation('at_helper_home')}
+                  >
+                    Beim Helper zu Hause
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </section>
           <section className="card p-7">
             <h2 className="text-xl font-extrabold">Zeitraum und Treffpunkt</h2>
@@ -170,6 +264,13 @@ function NewBookingForm() {
               </button>
               <button
                 type="button"
+                className={`chip ${currency === 'PER_VISIT' ? 'chip-selected' : ''}`}
+                onClick={() => setCurrency('PER_VISIT')}
+              >
+                Pro Besuch
+              </button>
+              <button
+                type="button"
                 className={`chip ${currency === 'EUR' ? 'chip-selected' : ''}`}
                 onClick={() => setCurrency('EUR')}
               >
@@ -177,7 +278,11 @@ function NewBookingForm() {
               </button>
             </div>
             <label className="mt-4 block text-sm font-bold">
-              {currency === 'EUR' ? 'Preis in €' : 'Stunden'}
+              {currency === 'EUR'
+                ? 'Preis in €'
+                : currency === 'PER_VISIT'
+                  ? 'Preis pro Besuch in €'
+                  : 'Stunden'}
               <input
                 className="input mt-1"
                 type="number"
@@ -231,7 +336,7 @@ function NewBookingForm() {
           <button
             type="button"
             className="btn-primary w-full"
-            disabled={create.isPending || pets.isPending}
+            disabled={create.isPending || pets.isPending || activePets.length === 0}
             onClick={submit}
           >
             {create.isPending ? 'Wird gesendet …' : 'Betreuungsanfrage senden'}

@@ -11,6 +11,7 @@ import {
 import { useState } from 'react';
 
 const DAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+const DAY_VALUES = DAYS.map((_, index) => index);
 const SPECIES: Record<string, string> = {
   dog: 'Hund',
   cat: 'Katze',
@@ -30,12 +31,13 @@ export function AvailabilityManager() {
   const query = useOwnAvailabilities();
   const create = useCreateAvailability();
   const remove = useDeleteAvailability();
-  const [day, setDay] = useState(1);
+  const [days, setDays] = useState<number[]>([1]);
   const [start, setStart] = useState('09:00');
   const [end, setEnd] = useState('12:00');
   const [radius, setRadius] = useState('5');
   const [types, setTypes] = useState<BookingType[]>(['walk']);
   const [species, setSpecies] = useState<string[]>([...AVAILABILITY_PET_SPECIES]);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const toggle = <T,>(items: T[], value: T, setItems: (next: T[]) => void) =>
     setItems(items.includes(value) ? items.filter((item) => item !== value) : [...items, value]);
@@ -77,18 +79,26 @@ export function AvailabilityManager() {
       </div>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <label className="text-sm font-bold">
-          Wochentag
-          <select
-            className="input mt-1"
-            value={day}
-            onChange={(event) => setDay(Number(event.target.value))}
-          >
+          Wochentage
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={`chip ${days.length === DAY_VALUES.length ? 'chip-selected' : ''}`}
+              onClick={() => setDays(days.length === DAY_VALUES.length ? [] : DAY_VALUES)}
+            >
+              Alle Tage
+            </button>
             {DAYS.map((label, value) => (
-              <option key={label} value={value}>
+              <button
+                key={label}
+                type="button"
+                className={`chip ${days.includes(value) ? 'chip-selected' : ''}`}
+                onClick={() => toggle(days, value, setDays)}
+              >
                 {label}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
         </label>
         <label className="text-sm font-bold">
           Maximaler Radius (km)
@@ -152,21 +162,32 @@ export function AvailabilityManager() {
           ))}
         </div>
       </div>
+      {formError ? <p className="mt-4 text-sm text-error">{formError}</p> : null}
       {create.isError ? <p className="mt-4 text-sm text-error">{create.error.message}</p> : null}
       <button
         type="button"
         className="btn-primary mt-5"
         disabled={create.isPending}
-        onClick={() =>
-          create.mutate({
-            dayOfWeek: day,
+        onClick={() => {
+          setFormError(null);
+          if (days.length === 0) {
+            setFormError('Bitte wähle mindestens einen Wochentag.');
+            return;
+          }
+          const input = (dayOfWeek: number) => ({
+            dayOfWeek,
             startTime: start,
             endTime: end,
             maxDistanceKm: Number(radius),
             bookingTypes: types,
             petSpecies: species,
-          })
-        }
+          });
+          void Promise.all(days.map((dayOfWeek) => create.mutateAsync(input(dayOfWeek)))).catch(
+            () => {
+              // The mutation exposes the server-side validation error below the form.
+            }
+          );
+        }}
       >
         {create.isPending ? 'Wird gespeichert …' : 'Zeitfenster hinzufügen'}
       </button>

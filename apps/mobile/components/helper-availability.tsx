@@ -241,6 +241,30 @@ export function AvailabilityManager() {
 
       <Text style={[styles.label, { color: c.onSurface }]}>Wochentage</Text>
       <View style={styles.chipRow}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Alle Tage auswählen"
+          accessibilityState={{ selected: days.length === WEEKDAYS.length }}
+          disabled={create.isPending}
+          onPress={() =>
+            setDays(days.length === WEEKDAYS.length ? [] : WEEKDAYS.map((d) => d.value))
+          }
+          style={[
+            styles.chip,
+            {
+              backgroundColor: days.length === WEEKDAYS.length ? c.primary : c.surfaceContainerHigh,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.chipText,
+              { color: days.length === WEEKDAYS.length ? c.onPrimary : c.onSurface },
+            ]}
+          >
+            Alle Tage
+          </Text>
+        </Pressable>
         {WEEKDAYS.map((d) => {
           const selected = days.includes(d.value);
           return (

@@ -3,12 +3,14 @@
 import {
   useAcceptBooking,
   useBooking,
+  useBookingGroup,
   useCancelBooking,
   useCompleteBooking,
   useCurrentUser,
   useRejectBooking,
   useStartBooking,
 } from '@pfotennetz/supabase';
+import { bookingTypeLabel } from '@pfotennetz/shared';
 import { useParams, useRouter } from 'next/navigation';
 import { WebHeader } from '../../../components/WebHeader';
 import { WebTrackingRecorder } from '../../../components/WebTrackingRecorder';
@@ -33,6 +35,9 @@ export default function BookingDetailPage() {
   const complete = useCompleteBooking();
   const cancel = useCancelBooking();
   const value = booking.data;
+  const bookingGroup = useBookingGroup(value?.booking_group_id);
+  const groupedBookings = bookingGroup.data ?? (value ? [value] : []);
+  const groupedPetNames = groupedBookings.map((item) => item.pet?.name ?? 'Tier');
   const isHelper = value?.helper_id === user.data?.id;
   const pending =
     accept.isPending ||
@@ -59,8 +64,13 @@ export default function BookingDetailPage() {
                   {value.booking_number}
                 </p>
                 <h1 className="mt-2 text-4xl font-extrabold text-on-surface">
-                  Betreuung für {value.pet?.name ?? 'Tier'}
+                  Betreuung für {groupedPetNames.join(', ') || 'Tier'}
                 </h1>
+                {groupedBookings.length > 1 ? (
+                  <p className="mt-2 text-sm text-on-surface-variant">
+                    Ein gemeinsamer Antrag für {groupedBookings.length} Tiere
+                  </p>
+                ) : null}
               </div>
               <span className="rounded-full bg-primary-fixed px-4 py-2 text-sm font-bold text-on-primary-fixed-variant">
                 {STATUS[value.status] ?? value.status}
@@ -70,11 +80,24 @@ export default function BookingDetailPage() {
               <section className="card p-7">
                 <h2 className="text-xl font-extrabold">Details</h2>
                 <dl className="mt-5 space-y-4 text-sm">
-                  <Row label="Art" value={value.type} />
+                  <Row label="Art" value={bookingTypeLabel(value.type)} />
+                  <Row
+                    label="Betreuungsort"
+                    value={
+                      value.care_location === 'at_owner_home_live_in'
+                        ? 'Bei der Halterin/dem Halter zu Hause – Helper zieht vorübergehend ein'
+                        : value.care_location === 'at_helper_home'
+                          ? 'Beim Helper zu Hause'
+                          : 'Bei der Halterin/dem Halter zu Hause (Besuche)'
+                    }
+                  />
                   <Row label="Start" value={new Date(value.start_at).toLocaleString('de-DE')} />
                   <Row label="Ende" value={new Date(value.end_at).toLocaleString('de-DE')} />
                   <Row label="Treffpunkt" value={value.meeting_address ?? 'Nicht angegeben'} />
                   <Row label="Dringend" value={value.is_urgent ? 'Ja' : 'Nein'} />
+                  {groupedBookings.length > 1 ? (
+                    <Row label="Tiere im Antrag" value={groupedPetNames.join(', ')} />
+                  ) : null}
                   <Row label="Betreuungsnotizen" value={value.care_notes ?? 'Keine'} />
                   <Row label="Suchende:r" value={value.seekerProfile?.display_name ?? '–'} />
                   <Row

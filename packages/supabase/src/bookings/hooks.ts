@@ -11,6 +11,7 @@ import { bookingKeys } from './keys';
 import { timebankKeys } from '../timebank/keys';
 import {
   fetchBooking,
+  fetchBookingGroup,
   fetchBookingsForUser,
   type Booking,
   type BookingWithRelations,
@@ -38,6 +39,14 @@ export function invalidateBookingQueries(queryClient: QueryClient, bookingId: st
   void queryClient.invalidateQueries({ queryKey: timebankKeys.transactions });
 }
 
+function invalidateGroupQuery(queryClient: QueryClient, booking: Booking): void {
+  if (booking.booking_group_id !== null) {
+    void queryClient.invalidateQueries({
+      queryKey: bookingKeys.detail(`group:${booking.booking_group_id}`),
+    });
+  }
+}
+
 /** Booking detail with pet and participant display info. */
 export function useBooking(
   bookingId: string | undefined
@@ -50,6 +59,23 @@ export function useBooking(
       return fetchBooking(client, bookingId);
     },
     enabled: bookingId !== undefined,
+  });
+}
+
+/** Other pet rows belonging to the same grouped request, if any. */
+export function useBookingGroup(
+  bookingGroupId: string | null | undefined
+): UseQueryResult<BookingWithRelations[], Error> {
+  const client = getSupabaseClient();
+  return useQuery({
+    queryKey: bookingKeys.detail(`group:${bookingGroupId ?? 'none'}`),
+    queryFn: () => {
+      if (bookingGroupId === undefined || bookingGroupId === null) {
+        throw new Error('bookingGroupId is required');
+      }
+      return fetchBookingGroup(client, bookingGroupId);
+    },
+    enabled: bookingGroupId !== undefined && bookingGroupId !== null,
   });
 }
 
@@ -75,8 +101,9 @@ function useBookingMutationWithClient(
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (bookingId: string) => mutationFn(client, bookingId),
-    onSuccess: (_booking, bookingId) => {
+    onSuccess: (booking, bookingId) => {
       invalidateBookingQueries(queryClient, bookingId);
+      invalidateGroupQuery(queryClient, booking);
     },
   });
 }
@@ -99,8 +126,9 @@ export function useRejectBooking(reason?: string): UseMutationResult<Booking, Er
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (bookingId: string) => rejectBooking(client, bookingId, reason),
-    onSuccess: (_booking, bookingId) => {
+    onSuccess: (booking, bookingId) => {
       invalidateBookingQueries(queryClient, bookingId);
+      invalidateGroupQuery(queryClient, booking);
     },
   });
 }
@@ -111,8 +139,9 @@ export function useCancelBooking(reason?: string): UseMutationResult<Booking, Er
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (bookingId: string) => cancelBooking(client, bookingId, reason),
-    onSuccess: (_booking, bookingId) => {
+    onSuccess: (booking, bookingId) => {
       invalidateBookingQueries(queryClient, bookingId);
+      invalidateGroupQuery(queryClient, booking);
     },
   });
 }
@@ -132,6 +161,7 @@ export function useRateHelper(): UseMutationResult<Booking, Error, RateInput> {
       rateHelper(client, input.bookingId, input.rating, input.review),
     onSuccess: (booking) => {
       invalidateBookingQueries(queryClient, booking.id);
+      invalidateGroupQuery(queryClient, booking);
     },
   });
 }
@@ -145,6 +175,7 @@ export function useRateSeeker(): UseMutationResult<Booking, Error, RateInput> {
       rateSeeker(client, input.bookingId, input.rating, input.review),
     onSuccess: (booking) => {
       invalidateBookingQueries(queryClient, booking.id);
+      invalidateGroupQuery(queryClient, booking);
     },
   });
 }

@@ -91,6 +91,11 @@ export default function CommunityScreen() {
         variant="secondary"
         onPress={() => setShowCreate((visible) => !visible)}
       />
+      <ActionButton
+        title="Tauschbörse für Tierbedarf"
+        variant="secondary"
+        onPress={() => router.push('/marketplace')}
+      />
       {profile.data?.role === 'admin' ? (
         <ActionButton
           title="Community-Moderation"

@@ -13,7 +13,7 @@ import {
   type BookingType,
   type NearbyHelper,
 } from '@pfotennetz/supabase';
-import { searchOpenStreetMap, type GeocodingResult } from '@pfotennetz/shared';
+import { BOOKING_TYPE_LABELS, searchOpenStreetMap, type GeocodingResult } from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useEffect, useRef } from 'react';
@@ -359,13 +359,7 @@ export default function ExplorePage() {
                 onClick={() => setBookingType(type)}
                 className={`chip ${bookingType === type ? 'chip-selected' : ''}`}
               >
-                {type === 'walk'
-                  ? 'Gassi'
-                  : type === 'feeding'
-                    ? 'Füttern'
-                    : type === 'vacation'
-                      ? 'Urlaub'
-                      : 'Tagesbetreuung'}
+                {BOOKING_TYPE_LABELS[type]}
               </button>
             ))}
           </div>

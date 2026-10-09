@@ -2,6 +2,7 @@
 
 import {
   signOut,
+  groupBookingsByRequest,
   useAuth,
   useBookings,
   useOwnPets,
@@ -15,9 +16,12 @@ import {
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import QRCode from 'qrcode';
+import { useEffect, useState } from 'react';
+import { bookingTypeLabel } from '@pfotennetz/shared';
 import { PasskeyPanel } from './PasskeyPanel';
 import { NotificationBell } from './NotificationBell';
+import { getCurrentBrowserLocation } from '../lib/location';
 
 function statusLabel(status: string): string {
   const labels: Record<string, string> = {
@@ -30,10 +34,147 @@ function statusLabel(status: string): string {
   return labels[status] ?? status;
 }
 
+function PawWeatherCard() {
+  const [temperature, setTemperature] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadWeather = () => {
+    setLoading(true);
+    setError(null);
+    void getCurrentBrowserLocation()
+      .then(({ latitude, longitude }) =>
+        fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&timezone=auto`
+        )
+      )
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Wetterdaten konnten nicht geladen werden.');
+        const data = (await response.json()) as { current?: { temperature_2m?: number } };
+        const value = data.current?.temperature_2m;
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          throw new Error('Keine aktuelle Temperatur verfügbar.');
+        }
+        setTemperature(value);
+      })
+      .catch((cause: unknown) => {
+        setTemperature(null);
+        setError(cause instanceof Error ? cause.message : 'Wetterdaten nicht verfügbar.');
+      })
+      .finally(() => setLoading(false));
+  };
+
+  const recommendation =
+    temperature !== null && temperature >= 35
+      ? 'Bei großer Hitze Pfoten besonders schützen.'
+      : temperature !== null && temperature <= 0
+        ? 'Bei Frost auf Streusalz und kalte Pfoten achten.'
+        : 'Bei warmem Wetter den Asphalt trotzdem prüfen.';
+
+  return (
+    <article className="card bg-secondary-container p-6">
+      <p className="mb-2 text-sm font-bold uppercase tracking-wider text-on-secondary-container">
+        Pfotenschutz
+      </p>
+      {temperature !== null ? (
+        <p className="text-3xl font-extrabold text-on-secondary-container">
+          {temperature.toLocaleString('de-DE', { maximumFractionDigits: 1 })}°C
+        </p>
+      ) : (
+        <p className="text-lg font-bold text-on-secondary-container">
+          {loading ? 'Wetter wird geladen …' : 'Noch keine Wetterdaten'}
+        </p>
+      )}
+      <p className="mt-1 text-on-secondary-container">
+        {error ??
+          (temperature !== null ? recommendation : 'Standort für aktuelle Wetterdaten verwenden.')}
+      </p>
+      <button
+        type="button"
+        onClick={loadWeather}
+        disabled={loading}
+        className="mt-4 rounded-full border border-on-secondary-container/40 px-4 py-2 text-sm font-bold text-on-secondary-container disabled:opacity-60"
+      >
+        {loading ? 'Wird geladen …' : temperature === null ? 'Wetter laden' : 'Aktualisieren'}
+      </button>
+    </article>
+  );
+}
+
+const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4700161905065273613';
+
+function PlayStoreCard() {
+  const [qrCode, setQrCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    void QRCode.toDataURL(PLAY_STORE_URL, {
+      width: 220,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#211a16', light: '#ffffff' },
+    })
+      .then((dataUrl) => {
+        if (mounted) setQrCode(dataUrl);
+      })
+      .catch(() => {
+        // Keep the card usable with the direct link if QR generation fails.
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return (
+    <article className="card overflow-hidden bg-primary-fixed p-6">
+      <div className="mb-5">
+        <p className="mb-2 text-sm font-bold uppercase tracking-wider text-on-primary-fixed-variant">
+          PfotenNetz unterwegs
+        </p>
+        <h2 className="text-xl font-extrabold text-on-primary-fixed">Die App herunterladen</h2>
+        <p className="mt-2 text-sm text-on-primary-fixed-variant">
+          Mit der App bist du auch unterwegs direkt mit deiner Nachbarschaft verbunden.
+        </p>
+      </div>
+      <div className="flex flex-col items-center gap-4 rounded-2xl bg-white p-4">
+        {qrCode ? (
+          <Image
+            src={qrCode}
+            alt="QR-Code zum Herunterladen der PfotenNetz-App im Google Play Store"
+            width={220}
+            height={220}
+            unoptimized
+            className="h-auto w-full max-w-[220px]"
+          />
+        ) : (
+          <div
+            className="flex h-[220px] w-[220px] items-center justify-center text-center text-sm text-on-surface-variant"
+            aria-label="QR-Code wird geladen"
+          >
+            QR-Code wird geladen …
+          </div>
+        )}
+        <a
+          href={PLAY_STORE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="w-full rounded-full bg-on-primary-fixed px-4 py-3 text-center text-sm font-bold text-primary-fixed transition-opacity hover:opacity-85"
+        >
+          Im Google Play Store öffnen ↗
+        </a>
+      </div>
+    </article>
+  );
+}
+
 export function Dashboard() {
   const auth = useAuth();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
+  const [communityOpen, setCommunityOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const profile = useOwnProfile();
   const pets = useOwnPets();
   const bookings = useBookings();
@@ -63,8 +204,8 @@ export function Dashboard() {
   }
 
   const displayName = profile.data?.display_name ?? 'Nachbarin oder Nachbar';
-  const visibleBookings = (bookings.data ?? [])
-    .filter((booking) => booking.status !== 'cancelled')
+  const visibleBookings = groupBookingsByRequest(bookings.data ?? [])
+    .filter((request) => request.primary.status !== 'cancelled')
     .slice(0, 4);
 
   const handleSignOut = () => {
@@ -94,25 +235,93 @@ export function Dashboard() {
               'Gefahrenradar',
               'Betreuung & Tracking',
               'Community',
-              'Meine Tiere',
               'Mein Profil',
-            ].map((item, index) => (
-              <button
-                key={item}
-                type="button"
-                className={`rounded-full px-4 py-2 text-sm font-semibold ${index === 0 ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
-                onClick={() => {
-                  if (item === 'Nachbarschaftskarte') router.push('/explore');
-                  if (item === 'Gefahrenradar') router.push('/hazard/radar');
-                  if (item === 'Betreuung & Tracking') router.push('/tracking');
-                  if (item === 'Community') router.push('/community');
-                  if (item === 'Meine Tiere') router.push('/pets');
-                  if (item === 'Mein Profil') router.push('/profile');
-                }}
-              >
-                {item}
-              </button>
-            ))}
+            ].map((item, index) =>
+              item === 'Community' ? (
+                <div key={item} className="relative">
+                  <button
+                    type="button"
+                    aria-expanded={communityOpen}
+                    aria-haspopup="menu"
+                    className="rounded-full px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container"
+                    onClick={() => setCommunityOpen((open) => !open)}
+                  >
+                    Community <span aria-hidden="true">⌄</span>
+                  </button>
+                  {communityOpen ? (
+                    <div
+                      role="menu"
+                      className="absolute left-0 top-full z-20 mt-2 min-w-56 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]"
+                    >
+                      <Link
+                        href="/community"
+                        role="menuitem"
+                        onClick={() => setCommunityOpen(false)}
+                        className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
+                      >
+                        Community &amp; Treffen
+                      </Link>
+                      <Link
+                        href="/marketplace"
+                        role="menuitem"
+                        onClick={() => setCommunityOpen(false)}
+                        className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
+                      >
+                        Tauschbörse für Tierbedarf
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
+              ) : item === 'Mein Profil' ? (
+                <div key={item} className="relative">
+                  <button
+                    type="button"
+                    aria-expanded={profileOpen}
+                    aria-haspopup="menu"
+                    className="rounded-full px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container"
+                    onClick={() => setProfileOpen((open) => !open)}
+                  >
+                    Mein Profil <span aria-hidden="true">⌄</span>
+                  </button>
+                  {profileOpen ? (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full z-20 mt-2 min-w-56 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]"
+                    >
+                      <Link
+                        href="/profile"
+                        role="menuitem"
+                        onClick={() => setProfileOpen(false)}
+                        className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
+                      >
+                        Profileinstellungen
+                      </Link>
+                      <Link
+                        href="/pets"
+                        role="menuitem"
+                        onClick={() => setProfileOpen(false)}
+                        className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
+                      >
+                        Meine Tiere
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${index === 0 ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                  onClick={() => {
+                    if (item === 'Nachbarschaftskarte') router.push('/explore');
+                    if (item === 'Gefahrenradar') router.push('/hazard/radar');
+                    if (item === 'Betreuung & Tracking') router.push('/tracking');
+                  }}
+                >
+                  {item}
+                </button>
+              )
+            )}
           </nav>
           <div className="flex items-center gap-3">
             <span className="hidden rounded-full bg-secondary-container px-4 py-2 text-sm font-bold text-on-secondary-container md:inline-flex">
@@ -144,13 +353,29 @@ export function Dashboard() {
               Alles Wichtige für deine Tiere und deine Nachbarschaft auf einen Blick.
             </p>
           </div>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => router.push('/hazard/radar')}
-          >
-            Gefahrenradar öffnen
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => router.push('/booking/new')}
+            >
+              Neue Betreuung buchen
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => router.push('/hazard/radar')}
+            >
+              Gefahrenradar öffnen
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => router.push('/marketplace')}
+            >
+              Tauschbörse
+            </button>
+          </div>
         </div>
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_1.4fr_1fr]" aria-label="Dashboard">
@@ -292,44 +517,51 @@ export function Dashboard() {
                 <p className="text-sm text-on-surface-variant">Noch keine Kennenlernanfragen.</p>
               )}
             </article>
-            <article className="card bg-secondary-container p-6">
-              <p className="mb-2 text-sm font-bold uppercase tracking-wider text-on-secondary-container">
-                Pfotenschutz
-              </p>
-              <p className="text-3xl font-extrabold text-on-secondary-container">21°C</p>
-              <p className="mt-1 text-on-secondary-container">Asphalt heute sicher für Pfoten.</p>
-            </article>
+            <PawWeatherCard />
           </div>
 
           <div className="space-y-6">
             <article className="card p-6">
               <div className="mb-5 flex items-center justify-between">
                 <h2 className="text-xl font-extrabold">Betreuung & Anfragen</h2>
-                <button
-                  type="button"
-                  className="text-sm font-bold text-primary"
-                  onClick={() => router.push('/bookings')}
-                >
-                  Alle anzeigen
-                </button>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    className="text-sm font-bold text-primary"
+                    onClick={() => router.push('/bookings')}
+                  >
+                    Alle anzeigen
+                  </button>
+                  <button
+                    type="button"
+                    className="text-sm font-bold text-primary"
+                    onClick={() => router.push('/booking/new')}
+                  >
+                    Neue Betreuung buchen
+                  </button>
+                </div>
               </div>
               {bookings.isPending ? (
                 <p className="text-sm text-on-surface-variant">Anfragen werden geladen …</p>
               ) : visibleBookings.length ? (
                 <div className="space-y-3">
-                  {visibleBookings.map((booking) => (
+                  {visibleBookings.map((request) => (
                     <button
                       type="button"
-                      key={booking.id}
+                      key={request.id}
                       className="flex w-full items-center justify-between rounded-xl border border-outline-variant/40 p-4 text-left hover:bg-surface-container-low"
-                      onClick={() => router.push(`/booking/${booking.id}`)}
+                      onClick={() => router.push(`/booking/${request.primary.id}`)}
                     >
                       <span>
                         <span className="block font-bold">
-                          {booking.pet?.name ?? 'Tierbetreuung'}
+                          {request.bookings
+                            .map((booking) => booking.pet?.name ?? 'Tier')
+                            .join(', ')}
                         </span>
                         <span className="text-sm text-on-surface-variant">
-                          {booking.type} · {statusLabel(booking.status)}
+                          {bookingTypeLabel(request.primary.type)} ·{' '}
+                          {statusLabel(request.primary.status)}
+                          {request.bookings.length > 1 ? ` · ${request.bookings.length} Tiere` : ''}
                         </span>
                       </span>
                       <span className="text-sm font-bold text-primary">Öffnen →</span>
@@ -380,6 +612,7 @@ export function Dashboard() {
                 Gefahrenradar
               </button>
             </article>
+            <PlayStoreCard />
             <article className="card p-6">
               <h2 className="mb-4 text-xl font-extrabold">Zeitbank-Konto</h2>
               <p className="text-4xl font-extrabold text-primary">

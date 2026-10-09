@@ -1,4 +1,4 @@
-import type { BookingWithRelations } from '@pfotennetz/supabase';
+import { groupBookingsByRequest, type BookingWithRelations } from '@pfotennetz/supabase';
 
 export type HighlightKind = 'current' | 'upcoming' | 'open';
 
@@ -43,18 +43,19 @@ export function selectHighlightedBooking(
   now: Date | number = new Date()
 ): HighlightedBooking | null {
   const nowMs = toNowMs(now);
+  const grouped = groupBookingsByRequest(bookings).map((request) => request.primary);
 
-  const current = bookings.filter((b) => b.status === 'in_progress').sort(byStartAsc);
+  const current = grouped.filter((b) => b.status === 'in_progress').sort(byStartAsc);
   const currentFirst = current[0];
   if (currentFirst !== undefined) return { booking: currentFirst, kind: 'current' };
 
-  const upcoming = bookings
+  const upcoming = grouped
     .filter((b) => b.status === 'confirmed' && startsNowOrLater(b, nowMs))
     .sort(byStartAsc);
   const upcomingFirst = upcoming[0];
   if (upcomingFirst !== undefined) return { booking: upcomingFirst, kind: 'upcoming' };
 
-  const open = bookings
+  const open = grouped
     .filter((b) => b.status === 'requested' && startsNowOrLater(b, nowMs))
     .sort(byStartAsc);
   const openFirst = open[0];
@@ -82,7 +83,8 @@ export function selectBookingPreview(
   const limit = options?.limit ?? 3;
   const highlightedId = selectHighlightedBooking(bookings, nowMs)?.booking.id;
 
-  return bookings
+  return groupBookingsByRequest(bookings)
+    .map((request) => request.primary)
     .filter((b) => {
       if (b.id === highlightedId) return false;
       if (b.status === 'in_progress') return true;

@@ -8,7 +8,11 @@ import {
   type HazardSeverity,
   type HazardType,
 } from '@pfotennetz/supabase';
-import { searchOpenStreetMap, type GeocodingResult } from '@pfotennetz/shared';
+import {
+  reverseGeocodeOpenStreetMap,
+  searchOpenStreetMap,
+  type GeocodingResult,
+} from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { WebHeader } from '../../../components/WebHeader';
 import { getCurrentBrowserLocation } from '../../../lib/location';
@@ -38,14 +42,22 @@ export default function WebHazardReportPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<GeocodingResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const setCurrentLocation = () => {
     setError(null);
+    setLocating(true);
     void getCurrentBrowserLocation()
-      .then(setLocation)
+      .then(async (point) => {
+        const addressResult = await reverseGeocodeOpenStreetMap(point.latitude, point.longitude);
+        setLocation(point);
+        setAddress(addressResult.displayName);
+        setSearchResults([]);
+      })
       .catch((cause: unknown) =>
         setError(cause instanceof Error ? cause.message : 'Standort konnte nicht bestimmt werden.')
-      );
+      )
+      .finally(() => setLocating(false));
   };
   const searchAddress = async () => {
     setError(null);
@@ -132,7 +144,11 @@ export default function WebHazardReportPage() {
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <button type="button" onClick={setCurrentLocation} className="btn-secondary">
-                {location ? 'Fundort aktualisiert' : 'Aktuellen Fundort verwenden'}
+                {locating
+                  ? 'Adresse wird ermittelt …'
+                  : location
+                    ? 'Fundort aktualisiert'
+                    : 'Aktuellen Fundort verwenden'}
               </button>
               <input
                 aria-label="Adresse oder Ort suchen"

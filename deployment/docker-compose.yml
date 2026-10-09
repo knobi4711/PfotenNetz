@@ -7,6 +7,10 @@ services:
     command: node apps/web/server.js
     volumes:
       - ./next-standalone:/app:ro
+      # Standalone does not contain these build artifacts. Mount them at the
+      # paths expected by the generated Next.js server.
+      - ./next-static:/app/apps/web/.next/static:ro
+      - ./web-public:/app/apps/web/public:ro
     environment:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0

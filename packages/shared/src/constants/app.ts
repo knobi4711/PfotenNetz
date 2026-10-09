@@ -20,6 +20,17 @@ export const TRUST_LEVELS = ['basic', 'bronze', 'silver', 'gold'] as const;
 export const USER_ROLES = ['user', 'helper', 'admin'] as const;
 
 export const BOOKING_TYPES = ['walk', 'feeding', 'vacation', 'daycare'] as const;
+export const BOOKING_TYPE_LABELS: Record<(typeof BOOKING_TYPES)[number], string> = {
+  walk: 'Gassirunde',
+  feeding: 'Fütterung',
+  vacation: 'Urlaubsbetreuung',
+  daycare: 'Tagesbetreuung',
+};
+
+export function bookingTypeLabel(type: (typeof BOOKING_TYPES)[number]): string {
+  return BOOKING_TYPE_LABELS[type];
+}
+
 export const BOOKING_STATUSES = [
   'requested',
   'confirmed',

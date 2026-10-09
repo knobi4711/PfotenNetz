@@ -5,6 +5,11 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'PfotenNetz',
   description: 'Nachbarschafts-Plattform für Haustierbetreuung',
+  icons: {
+    icon: '/pfotennetz-logo.png',
+    shortcut: '/pfotennetz-logo.png',
+    apple: '/pfotennetz-logo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,13 +1,13 @@
 # PfotenNetz — Gesamte Plattform-Architektur & Screen-Spezifikation
 
 **Projekt:** PfotenNetz — Mobile-First & Desktop Nachbarschafts-Plattform für Haustierbetreuung, P2P-Solidarität & hyperlokale Gefahrenwarnung  
-**Version:** 3.7.0 (Standabgleich Mobile/Web/Android/Deployment, 04.10.2026)
+**Version:** 4.0.0 (Mehrtier-Betreuungsanträge, Standabgleich Mobile/Web/Supabase, 09.10.2026)
 **Design-System:** Warm Community Pet Care (`#e26d46` Terracotta, `#2e7d32` Salbeigrün/Waldgrün, `#fff8f5` Warm Linen)  
-**Status:** Mobile-Betreuungsplattform, zentrale Web-Flows und produktionsnahe Web-Auslieferung implementiert; Passwort-Reset, robuste Android-Biometrie, native/Web-Plattformtrennung und Deployment-Vorbereitung ergänzt, rechtliche Freigabe und einzelne native Abnahmen sind noch offen
+**Status:** Mobile-Betreuungsplattform und zentrale Web-Flows produktiv auf `paperless`/`pfotennetz.app` veröffentlicht; Passwort-Reset, robuste Android-Biometrie, native/Web-Plattformtrennung, Nutzer:innen-Meldungen und Google-Play-konforme Account-Löschung ergänzt, rechtliche Freigabe und einzelne native Abnahmen sind noch offen
 
 ---
 
-## 0. Aktueller Implementierungsstand (04.10.2026)
+## 0. Aktueller Implementierungsstand (09.10.2026)
 
 Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsächlich implementierte Stand ist:
 
@@ -25,6 +25,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Öffentliche Notfallkarten mit zeitlich validiertem Browser-Offline-Cache und Mobile-SecureStore-Fallback
 - OpenStreetMap-/Leaflet-Karten für Helfer:innen-Suche, Gefahrenradar und Tracking-Flows
 - Buchungsworkflow inklusive Statuswechseln, Zeitbank und Benachrichtigungen
+- Mehrtier-Betreuungsanträge: Im Web-Dropdown und in Mobile-Checkboxen lassen sich mehrere aktive Tiere oder „Alle Tiere“ auswählen; sie werden als ein gemeinsamer Antrag gruppiert, während separat gestartete Anträge unabhängig bleiben
 - Buchungs-Chat mit Nachrichtenliste und Realtime-Grundlage
 - Gefahrenmeldung, Gefahrenradar, Foto-Upload, Zeit-/Dringlichkeitsfilter, Realtime-Aktualisierung und Moderationsansicht
 - Rich-Push-Kategorien mit internen Deep-Links für Gefahren- und Vermisst-Tier-Warnungen
@@ -35,6 +36,8 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Deutschlandweite Nutzung ohne Pilotregion- oder PLZ-Beschränkung; Web-Standortwahl per hochgenauer Browser-Geolokalisierung und manueller Ort-/PLZ-Suche
 - Dringende Betreuungsanfragen mit Betreuungsnotizen und serverseitiger Kennzeichnung
 - Unverbindliche Kontaktanfragen an verifizierte Helfer:innen vor einer Buchung
+- Meldung von Fake-Profilen, Spam, Belästigung und sonstigen Verstößen direkt aus Helferprofilen
+- Serverseitig geschützte Nutzer:innen-Meldungen mit Duplikatschutz und Admin-Moderationsstatus
 - Sicherheitsbestätigung vor der ersten Betreuung mit Empfehlung eines persönlichen Probetreffens
 - Hinweise zu Haftung, Versicherungsschutz, ehrenamtlicher Gegenseitigkeit und möglichen Folgen von Geldzahlungen
 - Technische Entwürfe für Nutzungsbedingungen und Datenschutzhinweise in Web und Mobile
@@ -62,6 +65,9 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - `/chat/[bookingId]`: Web-Chat mit Text-, Foto- und Medienanzeige
 - `/profile`: Profil und Zeitbank-Verlauf
 - `/profile`: vollständige Bearbeitung von Anzeigename, Telefon, PLZ, Kurzvorstellung, Suchradius und Benachrichtigungen
+- `/account/delete`: nicht in der Hauptnavigation aufgeführte Seite zur dauerhaften Selbstlöschung des Accounts; Bestätigung per Checkbox und Eingabe `LÖSCHEN`
+- `/explore`: „Profil melden“ mit Meldegrund und optionaler vertraulicher Beschreibung
+- `/admin/reports`: Admin-Queue zur Prüfung, Verwerfung und Bearbeitung von Nutzer:innen-Meldungen
 - Anmeldung mit „Passwort vergessen?“, Reset-E-Mail und sicherer Passwortvergabe unter `/reset-password`
 - `/pets`: Tierprofile mit Anlegen/Bearbeiten, Tierfoto-Upload, Aktiv-/Pausiert-/Verstorben-Status, strukturierten Gesundheitsdaten und Notfallkarten-Aktionen
 - `/pets/[petId]/emergency`: Web-Notfallkarte mit sicherem 30-Tage-Link, Teilen/Kopieren und sofortigem Widerruf
@@ -75,6 +81,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Root-`.env`-Laden für den Web-Build im Monorepo
 - Next.js-Produktionsbuild als Standalone-Ausgabe mit vorbereitetem Docker-Container hinter Caddy auf `pfotennetz.app`
 - Deployment-Dokumentation, Docker-Compose-Datei und Caddy-Konfiguration unter `deployment/`; Paperless bleibt auf Port 8000 unverändert
+- Direkter Produktionsdeploy per SSH auf den Mini-PC `paperless`; Web-Container `pfotennetz-web` hinter Caddy auf `https://pfotennetz.app`
 
 ### Qualitätsstand
 
@@ -82,7 +89,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Mobile-Lint: erfolgreich
 - Web-Typecheck und Web-Lint: erfolgreich
 - Mobile-Typecheck und Mobile-Lint: erfolgreich
-- Supabase-Tests: 88 erfolgreich
+- Supabase-Tests: 90 erfolgreich
 - Mobile-Tests: 67 erfolgreich
 - Repository-Lint: erfolgreich
 - Web-E2E: **18/18 erfolgreich**, inklusive Passwort-Reset-Route, authentifizierten Tier-, Buchungs-, Chat-, Medien- und Kontaktanfrage-Flüssen, Offline-Notfallkarten-Smoke-Test sowie Community-Moderation und Web-Notfallkartenroute
@@ -91,7 +98,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Web-Deployment-Vorbereitung: Next.js-Standalone-Build, interner Container-Port 3000 sowie Caddy-Reverse-Proxy-Konfiguration dokumentiert
 - Android-Development-Build: erfolgreich erzeugt, installiert und mit einem nativen Login-/Dashboard-Smoke-Test auf dem verbundenen Gerät geprüft; aktueller EAS-Build `92fc3272-1f8b-42a8-9c16-a82c584e9afc`
 - Android-Login-Smoke: leerer lokaler Zustand ohne Fingerprint-Angebot und ohne blockierenden Ladezustand geprüft
-- Remote-Migrationen bis `059_fix_missing_sighting_reporter_read.sql` angewendet; die Migrationen umfassen Anforderungen, Helfersuche, Kontaktanfragen, Duplikatschutz und RPC-Korrekturen
+- Remote-Migrationen bis `070_multi_pet_price_anchor.sql` angewendet; `069` ergänzt die Gruppierung mehrerer Tiere pro Antrag und gruppenweite Statuswechsel, `070` verankert die Gesamtvergütung am ersten Gruppen-Eintrag
 
 ### Noch nicht vollständig umgesetzt
 
@@ -108,6 +115,8 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Rechtstexte sind technische Entwürfe und benötigen Betreiberangaben sowie Rechtsprüfung
 - Web-Parität ist noch nicht vollständig: einige native Sonderfunktionen fehlen noch im Web
 - Kontaktanfragen können auf Mobile und Web erstellt, angenommen, abgelehnt oder storniert werden; Backend- und Web-Flows sind getestet, die produktive Push-/Antwort-/Chat-Abnahme auf echten Geräten bleibt noch offen
+- Urlaubspflege mit expliziten Betreuungsoptionen „bei der Halterin/dem Halter zu Hause“ (Besuche oder temporärer Helper-Einzug) oder „beim Helper zu Hause“ (zeitweiser Tieraufenthalt) auf Web und Mobile; der gewählte Ort wird in der Buchung gespeichert und nur den Beteiligten angezeigt
+- Nachbarschafts-Tauschbörse auf Web und Mobile: Tierfutter, Zubehör und Utensilien zu verschenken, zu tauschen, zu verkaufen oder zu suchen; Suche nach Freitext, Kategorie und Angebotsart, sichere Interessenanfrage ohne Veröffentlichung privater Kontaktdaten
 
 ---
 
@@ -144,6 +153,8 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - **Top Navigation Bar:**
   - Logo & Brandmark (`PfotenNetz`)
   - Hauptreiter: `Dashboard`, `Nachbarschaftskarte & Helfer`, `Gefahren- & Notfall-Leitstelle`, `Betreuung & Live-Tracking`, `Community & Treff`
+  - Community-Untermenü: `Community & Treffen`, `Tauschbörse für Tierbedarf`
+  - Profil-Untermenü: `Profileinstellungen`, `Meine Tiere`
   - Standort-Badge mit frei wählbarem Suchradius
   - Zeitbank-Guthaben Pill (`14,5 Std. Zeitbank`)
   - Profil-Avatar & Schnelleinstieg
@@ -361,6 +372,41 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
   - Push-Notification-Präferenzen (Akute Gefahren, Gassi-Anfragen, Community-Events).
   - Theme-Umschaltung: Hell, Dunkel (Hoher Kontrast) und System-Automatik.
 
+#### Screen 22: Urlaubspflege — Betreuungsort wählen (Mobile & Web)
+
+- **Route:** `/booking/new`
+- **Shell:** Mobile Stack / Desktop Portal
+- **Beschreibung:** Erweiterung der Urlaubs- und Tagesbetreuung für längere Abwesenheiten. Vor dem Absenden wird eindeutig festgelegt, ob der Helper zum Tier nach Hause kommt oder das Tier während der Abwesenheit beim Helper wohnt.
+- **Komponenten & Features:**
+  - Auswahl `Bei mir zu Hause (Besuche)`, `Bei mir zu Hause – Helper zieht vorübergehend ein` oder `Beim Helper zu Hause` für Urlaubs- und Tagesbetreuung.
+  - Zeitraum, Betreuungsnotizen, Vergütung und Sicherheitsbestätigung bleiben Teil derselben Buchungsanfrage.
+  - Der Betreuungsort wird als serverseitig geprüfte Eigenschaft (`care_location`) gespeichert und in Web-/Mobile-Buchungsdetails angezeigt; der temporäre Einzug ist dabei eine ausdrückliche Opt-in-Auswahl.
+  - Persönliches Kennenlernen, geschützter Chat sowie Hinweise zu Haftung und Versicherung vor der ersten Betreuung.
+
+#### Screen 23: Nachbarschafts-Tauschbörse (Mobile & Web)
+
+- **Route:** `/marketplace`
+- **Shell:** Mobile Stack / Desktop Portal
+- **Beschreibung:** Hyperlokaler Marktplatz für nicht mehr benötigtes Futter, Zubehör, Transport- und Pflegeutensilien.
+- **Komponenten & Features:**
+  - Angebotsarten `Zu verschenken`, `Tauschen`, `Verkaufen` und `Gesucht`.
+  - Filter nach Angebotsart, Kategorie und Freitext; Kategorien umfassen Futter, Spielzeug, Zubehör, Transport, Pflege und Sonstiges.
+  - Angebotserstellung mit Titel, Beschreibung, Zustand, optionalem Preis, Tauschwunsch und grobem Stadtteil/PLZ-Bereich.
+  - Besitzer:innen können Einträge als erledigt markieren oder zurückziehen.
+  - Geschützte Interessenanfrage innerhalb der Plattform; genaue Wohnadressen, Telefonnummern und E-Mail-Adressen werden nicht veröffentlicht.
+
+#### Screen 24: Mehrtier-Betreuungsantrag (Mobile & Web)
+
+- **Route:** `/booking/new`
+- **Shell:** Mobile Stack / Desktop Portal
+- **Beschreibung:** Ein Seeker kann mehrere aktive Tiere auswählen und sie mit identischem Zeitraum, Helper, Leistungsart, Betreuungsort, Vergütung und Hinweisen als einen gemeinsamen Antrag senden.
+- **Komponenten & Features:**
+  - Web-Auswahl als zugängliches Mehrfach-Dropdown mit Einzel-Checkboxen und Aktion `Alle Tiere auswählen`.
+  - Mobile-Auswahl als Checkbox-Liste mit derselben `Alle`-Aktion.
+  - Ein gemeinsamer `booking_group_id` verbindet die zugehörigen Tierzeilen; der Helper sieht sie in Übersicht und Detail als einen Antrag mit allen Tiernamen.
+  - Annehmen, Ablehnen, Stornieren, Starten und Abschließen gelten atomar für die gesamte Gruppe; die eingegebene Vergütung wird bei einem Mehrtier-Antrag nur einmal als Gesamtpreis abgerechnet.
+  - Separat abgesendete Suchanfragen erhalten keine gemeinsame Gruppe und erscheinen weiterhin als einzelne Anträge, auch wenn derselbe Seeker mehrere Tiere nacheinander verschiedenen Helpern zuweist.
+
 ---
 
 ### Flow 04: Desktop Web-Portale (1440px Widescreen)
@@ -493,7 +539,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 - Öffentliche Notfallkarten verwenden widerrufbare SHA-256-Tokens; private Medien werden über kurzlebige
   Signed URLs ausgeliefert.
 - Push-Präferenzen, Tracking-Positionen, Distanz und Dauer werden serverseitig berücksichtigt bzw. berechnet.
-- Letzte angewendete Remote-Migration: `059_fix_missing_sighting_reporter_read.sql`
-- Remote angewendet: `050_original-requirements.sql` bis `059_fix_missing_sighting_reporter_read.sql`
+- Letzte angewendete Remote-Migration: `068_owner_home_helper_live_in.sql`
+- Remote angewendet: `050_original-requirements.sql` bis `068_owner_home_helper_live_in.sql`
 - Letzter Remote-Commit: nicht Bestandteil dieses lokalen Standabgleichs
 - Bewusst nicht überschreiben: `packages/supabase/src/auth/index.ts`, `supabase/config.toml`

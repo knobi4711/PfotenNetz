@@ -84,9 +84,12 @@ export type Database = {
           currency: Database['public']['Enums']['currency'];
           end_at: string;
           helper_id: string | null;
+          booking_group_id: string | null;
+          booking_group_position: number;
           id: string;
           is_urgent: boolean;
           care_notes: string | null;
+          care_location: 'at_owner_home' | 'at_owner_home_live_in' | 'at_helper_home';
           key_handoff_details: Json | null;
           key_handoff_type: Database['public']['Enums']['key_handoff_type'] | null;
           meeting_address: string | null;
@@ -115,8 +118,11 @@ export type Database = {
           currency?: Database['public']['Enums']['currency'];
           end_at: string;
           helper_id?: string | null;
+          booking_group_id?: string | null;
+          booking_group_position?: number;
           is_urgent?: boolean;
           care_notes?: string | null;
+          care_location?: 'at_owner_home' | 'at_owner_home_live_in' | 'at_helper_home';
           id?: string;
           key_handoff_details?: Json | null;
           key_handoff_type?: Database['public']['Enums']['key_handoff_type'] | null;
@@ -146,8 +152,11 @@ export type Database = {
           currency?: Database['public']['Enums']['currency'];
           end_at?: string;
           helper_id?: string | null;
+          booking_group_id?: string | null;
+          booking_group_position?: number;
           is_urgent?: boolean;
           care_notes?: string | null;
+          care_location?: 'at_owner_home' | 'at_owner_home_live_in' | 'at_helper_home';
           id?: string;
           key_handoff_details?: Json | null;
           key_handoff_type?: Database['public']['Enums']['key_handoff_type'] | null;
@@ -671,6 +680,113 @@ export type Database = {
           {
             foreignKeyName: 'messages_sender_id_fkey';
             columns: ['sender_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      marketplace_inquiries: {
+        Row: {
+          id: string;
+          listing_id: string;
+          requester_id: string;
+          message: string;
+          status: 'pending' | 'answered' | 'closed';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          requester_id: string;
+          message: string;
+          status?: 'pending' | 'answered' | 'closed';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          listing_id?: string;
+          requester_id?: string;
+          message?: string;
+          status?: 'pending' | 'answered' | 'closed';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'marketplace_inquiries_listing_id_fkey';
+            columns: ['listing_id'];
+            isOneToOne: false;
+            referencedRelation: 'marketplace_listings';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'marketplace_inquiries_requester_id_fkey';
+            columns: ['requester_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      marketplace_listings: {
+        Row: {
+          id: string;
+          owner_id: string;
+          kind: Database['public']['Enums']['marketplace_listing_kind'];
+          category: string;
+          title: string;
+          description: string | null;
+          condition: string | null;
+          price_eur_cents: number | null;
+          exchange_for: string | null;
+          location_area: string | null;
+          status: Database['public']['Enums']['marketplace_listing_status'];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          kind: Database['public']['Enums']['marketplace_listing_kind'];
+          category: string;
+          title: string;
+          description?: string | null;
+          condition?: string | null;
+          price_eur_cents?: number | null;
+          exchange_for?: string | null;
+          location_area?: string | null;
+          status?: Database['public']['Enums']['marketplace_listing_status'];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          kind?: Database['public']['Enums']['marketplace_listing_kind'];
+          category?: string;
+          title?: string;
+          description?: string | null;
+          condition?: string | null;
+          price_eur_cents?: number | null;
+          exchange_for?: string | null;
+          location_area?: string | null;
+          status?: Database['public']['Enums']['marketplace_listing_status'];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'marketplace_listings_owner_id_fkey';
+            columns: ['owner_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'marketplace_listings_owner_id_fkey';
+            columns: ['owner_id'];
             isOneToOne: false;
             referencedRelation: 'public_profiles';
             referencedColumns: ['id'];
@@ -1877,6 +1993,8 @@ export type Database = {
           currency: Database['public']['Enums']['currency'];
           end_at: string;
           helper_id: string | null;
+          booking_group_id: string | null;
+          booking_group_position: number;
           id: string;
           key_handoff_details: Json | null;
           key_handoff_type: Database['public']['Enums']['key_handoff_type'] | null;
@@ -1915,6 +2033,8 @@ export type Database = {
           currency: Database['public']['Enums']['currency'];
           end_at: string;
           helper_id: string | null;
+          booking_group_id: string | null;
+          booking_group_position: number;
           id: string;
           key_handoff_details: Json | null;
           key_handoff_type: Database['public']['Enums']['key_handoff_type'] | null;
@@ -1953,6 +2073,8 @@ export type Database = {
           currency: Database['public']['Enums']['currency'];
           end_at: string;
           helper_id: string | null;
+          booking_group_id: string | null;
+          booking_group_position: number;
           id: string;
           key_handoff_details: Json | null;
           key_handoff_type: Database['public']['Enums']['key_handoff_type'] | null;
@@ -1991,6 +2113,8 @@ export type Database = {
           currency: Database['public']['Enums']['currency'];
           end_at: string;
           helper_id: string | null;
+          booking_group_id: string | null;
+          booking_group_position: number;
           id: string;
           key_handoff_details: Json | null;
           key_handoff_type: Database['public']['Enums']['key_handoff_type'] | null;
@@ -2029,6 +2153,8 @@ export type Database = {
           currency: Database['public']['Enums']['currency'];
           end_at: string;
           helper_id: string | null;
+          booking_group_id: string | null;
+          booking_group_position: number;
           id: string;
           key_handoff_details: Json | null;
           key_handoff_type: Database['public']['Enums']['key_handoff_type'] | null;
@@ -2109,6 +2235,8 @@ export type Database = {
           currency: Database['public']['Enums']['currency'];
           end_at: string;
           helper_id: string | null;
+          booking_group_id: string | null;
+          booking_group_position: number;
           id: string;
           key_handoff_details: Json | null;
           key_handoff_type: Database['public']['Enums']['key_handoff_type'] | null;
@@ -2147,6 +2275,8 @@ export type Database = {
           currency: Database['public']['Enums']['currency'];
           end_at: string;
           helper_id: string | null;
+          booking_group_id: string | null;
+          booking_group_position: number;
           id: string;
           key_handoff_details: Json | null;
           key_handoff_type: Database['public']['Enums']['key_handoff_type'] | null;
@@ -2825,6 +2955,8 @@ export type Database = {
         'poison_bait' | 'glass_shards' | 'wasp_nest' | 'aggressive_dog' | 'trap' | 'other';
       key_handoff_type: 'lockbox' | 'personal' | 'smartlock' | 'neighbor';
       message_type: 'text' | 'image' | 'location' | 'voice' | 'system';
+      marketplace_listing_kind: 'giveaway' | 'swap' | 'sell' | 'wanted';
+      marketplace_listing_status: 'active' | 'reserved' | 'completed' | 'withdrawn';
       missing_pet_status: 'active' | 'found' | 'cancelled';
       notification_type:
         | 'chat_message'
@@ -2992,6 +3124,8 @@ export const Constants = {
       hazard_type: ['poison_bait', 'glass_shards', 'wasp_nest', 'aggressive_dog', 'trap', 'other'],
       key_handoff_type: ['lockbox', 'personal', 'smartlock', 'neighbor'],
       message_type: ['text', 'image', 'location', 'voice', 'system'],
+      marketplace_listing_kind: ['giveaway', 'swap', 'sell', 'wanted'],
+      marketplace_listing_status: ['active', 'reserved', 'completed', 'withdrawn'],
       missing_pet_status: ['active', 'found', 'cancelled'],
       notification_type: [
         'chat_message',

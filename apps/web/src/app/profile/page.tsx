@@ -137,11 +137,14 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <label className="font-bold text-on-surface-variant" htmlFor="profile-postal">
-                    Postleitzahl (optional)
+                    Postleitzahl *
                   </label>
                   <input
                     id="profile-postal"
                     inputMode="numeric"
+                    maxLength={5}
+                    pattern="[0-9]{5}"
+                    required
                     value={postalCode}
                     onChange={(event) => setPostalCode(event.target.value)}
                     className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"

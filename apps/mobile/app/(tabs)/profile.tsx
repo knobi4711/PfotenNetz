@@ -435,6 +435,16 @@ export default function ProfileScreen() {
         ) : null}
 
         <Card>
+          <SectionTitle>Mein Profil</SectionTitle>
+          <EmptyText>Verwalte dein Profil oder öffne deine Tierprofile.</EmptyText>
+          <ActionButton
+            title="Meine Tiere öffnen"
+            variant="secondary"
+            onPress={() => router.push('/(tabs)/pets')}
+          />
+        </Card>
+
+        <Card>
           {profileQuery.isPending ? (
             <LoadingView label="Profil wird geladen …" />
           ) : profileQuery.isError ? (
@@ -484,7 +494,7 @@ export default function ProfileScreen() {
                 value={phone}
               />
               <Text style={[styles.label, { color: c.onSurface }]}>
-                Postleitzahl (für Regionalprüfung)
+                Postleitzahl * (für Regionalprüfung)
               </Text>
               <TextInput
                 editable={!updateProfile.isPending}
