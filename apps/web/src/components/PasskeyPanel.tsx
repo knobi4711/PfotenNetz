@@ -24,6 +24,11 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : 'Unbekannter Fehler';
 }
 
+function webRedirectUrl(path = ''): string {
+  const configuredBaseUrl = process.env.NEXT_PUBLIC_WEB_URL?.replace(/\/$/, '');
+  return `${configuredBaseUrl ?? window.location.origin}${path}`;
+}
+
 export function PasskeyPanel() {
   const auth = useAuth();
   const [email, setEmail] = useState('');
@@ -74,7 +79,7 @@ export function PasskeyPanel() {
       displayName: displayName.trim(),
       email: email.trim(),
       password,
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: webRedirectUrl(),
     })
       .then((result) => {
         setRegistering(false);
@@ -97,7 +102,7 @@ export function PasskeyPanel() {
       return;
     }
     run(() =>
-      resetPassword(email.trim(), `${window.location.origin}/reset-password`).then(() => {
+      resetPassword(email.trim(), webRedirectUrl('/reset-password')).then(() => {
         setResetSent(true);
       })
     );
