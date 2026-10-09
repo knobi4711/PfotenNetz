@@ -55,11 +55,25 @@ test.describe('Web smoke flows', () => {
     });
   }
 
-  test('keeps the shared back navigation on the left', async ({ page }) => {
+  test('provides dashboard navigation on desktop', async ({ page }) => {
+    await page.goto('/community', { waitUntil: 'domcontentloaded' });
+    const dashboardLink = page
+      .getByRole('navigation', { name: 'Hauptnavigation' })
+      .getByRole('link', { name: 'Dashboard', exact: true });
+    await expect(dashboardLink).toBeVisible();
+    await expect(dashboardLink).toHaveAttribute('href', '/');
+    await dashboardLink.click();
+    await expect(page).toHaveURL('/');
+  });
+
+  test('provides shared back navigation on tablet', async ({ page }) => {
+    await page.setViewportSize({ width: 800, height: 900 });
     await page.goto('/community', { waitUntil: 'domcontentloaded' });
     const backLink = page.getByRole('link', { name: '← Dashboard' });
     await expect(backLink).toBeVisible();
     await expect(backLink).toHaveAttribute('href', '/');
+    await backLink.click();
+    await expect(page).toHaveURL('/');
   });
 
   test('renders a valid cached emergency card when offline', async ({ page }) => {
