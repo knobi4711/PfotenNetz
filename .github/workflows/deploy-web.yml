@@ -52,10 +52,24 @@ jobs:
           cp -R apps/web/.next/static apps/web/.next/standalone/apps/web/.next/
           cp -R apps/web/public apps/web/.next/standalone/apps/web/
 
+      - name: Validate deployment secrets
+        env:
+          DEPLOY_KEY: ${{ secrets.PFOTENNETZ_DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.PFOTENNETZ_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.PFOTENNETZ_DEPLOY_USER }}
+        run: |
+          test -n "$DEPLOY_KEY" || { echo "Missing repository secret: PFOTENNETZ_DEPLOY_SSH_KEY"; exit 1; }
+          test -n "$DEPLOY_HOST" || { echo "Missing repository secret: PFOTENNETZ_DEPLOY_HOST"; exit 1; }
+          test -n "$DEPLOY_USER" || { echo "Missing repository secret: PFOTENNETZ_DEPLOY_USER"; exit 1; }
+
       - name: Configure deployment SSH
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.PFOTENNETZ_DEPLOY_SSH_KEY }}
+        env:
+          DEPLOY_KEY: ${{ secrets.PFOTENNETZ_DEPLOY_SSH_KEY }}
+        run: |
+          eval "$(ssh-agent -s)"
+          printf '%s\n' "$DEPLOY_KEY" | ssh-add -
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
 
       - name: Trust deployment host
         run: ssh-keyscan -H "${{ secrets.PFOTENNETZ_DEPLOY_HOST }}" >> ~/.ssh/known_hosts
