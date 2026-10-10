@@ -102,6 +102,23 @@ function PawWeatherCard() {
 }
 
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4700161905065273613';
+const BUILD_TIME = process.env.NEXT_PUBLIC_BUILD_TIME;
+
+function formatBuildTime(value: string | undefined): string {
+  if (!value) return 'nicht verfügbar';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'nicht verfügbar';
+
+  return new Intl.DateTimeFormat('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Berlin',
+  }).format(date);
+}
 
 function PlayStoreCard() {
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -156,6 +173,9 @@ function PlayStoreCard() {
             QR-Code wird geladen …
           </div>
         )}
+        <p className="text-center text-xs text-on-surface-variant">
+          Letzter Website-Build: {formatBuildTime(BUILD_TIME)} Uhr
+        </p>
         <a
           href={PLAY_STORE_URL}
           target="_blank"
