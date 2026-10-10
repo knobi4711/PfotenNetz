@@ -102,22 +102,26 @@ function PawWeatherCard() {
 }
 
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4700161905065273613';
-const BUILD_TIME = process.env.NEXT_PUBLIC_BUILD_TIME;
+// Latest finished Android EAS build (preview, version 6).
+const MOBILE_BUILD_TIME = '2026-10-09T15:47:03.612Z';
 
-function formatBuildTime(value: string | undefined): string {
-  if (!value) return 'nicht verfügbar';
-
+function formatMobileBuildTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'nicht verfügbar';
 
-  return new Intl.DateTimeFormat('de-DE', {
+  const dateLabel = new Intl.DateTimeFormat('de-DE', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    timeZone: 'Europe/Berlin',
+  }).format(date);
+  const timeLabel = new Intl.DateTimeFormat('de-DE', {
     hour: '2-digit',
     minute: '2-digit',
     timeZone: 'Europe/Berlin',
   }).format(date);
+
+  return `${dateLabel} um ${timeLabel} Uhr`;
 }
 
 function PlayStoreCard() {
@@ -174,7 +178,7 @@ function PlayStoreCard() {
           </div>
         )}
         <p className="text-center text-xs text-on-surface-variant">
-          Letzter Website-Build: {formatBuildTime(BUILD_TIME)} Uhr
+          Die aktuelle App-Version wurde am {formatMobileBuildTime(MOBILE_BUILD_TIME)} erstellt.
         </p>
         <a
           href={PLAY_STORE_URL}

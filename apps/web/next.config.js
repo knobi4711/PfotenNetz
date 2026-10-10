@@ -9,17 +9,12 @@ const { PHASE_DEVELOPMENT_SERVER } = require('next/constants');
 // for local monorepo development without committing any credentials.
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const buildTime = new Date().toISOString();
-
 module.exports = (phase) => ({
   // Keep development chunks separate from production builds. Running a build
   // while the local dev server is open must not invalidate its module graph.
   distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next',
   output: 'standalone',
   reactStrictMode: true,
-  env: {
-    NEXT_PUBLIC_BUILD_TIME: buildTime,
-  },
   eslint: {
     ignoreDuringBuilds: true,
   },
