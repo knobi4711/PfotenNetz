@@ -11,7 +11,12 @@ import { PlusJakartaSans_600SemiBold } from '@expo-google-fonts/plus-jakarta-san
 import { PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans/700Bold';
 import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans/800ExtraBold';
 import { useFonts } from 'expo-font';
-import { getSupabaseClient, useAuth, useRegisterDevice } from '@pfotennetz/supabase';
+import {
+  getSupabaseClient,
+  useAuth,
+  useNotificationSubscription,
+  useRegisterDevice,
+} from '@pfotennetz/supabase';
 import { Providers } from '../providers/Providers';
 import '../lib/geofence';
 import '../lib/tracking-background';
@@ -143,6 +148,7 @@ function AuthGate() {
   const redirectToLogin = auth.status === 'unauthenticated' && !inAuthGroup && !inPublicEmergency;
 
   usePushSetup(auth.status === 'authenticated');
+  useNotificationSubscription(auth.status === 'authenticated');
 
   useEffect(() => {
     if (redirectToHome) {

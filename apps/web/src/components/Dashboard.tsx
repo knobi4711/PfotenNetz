@@ -241,7 +241,11 @@ export function Dashboard() {
     <div className="min-h-screen bg-surface">
       <header className="sticky top-0 z-10 border-b border-outline-variant/30 bg-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6 px-6 py-4 lg:px-10">
-          <a href="/" className="flex items-center gap-3" aria-label="PfotenNetz Startseite">
+          <a
+            href="/"
+            className="flex shrink-0 items-center gap-3 whitespace-nowrap"
+            aria-label="PfotenNetz Startseite"
+          >
             <Image
               src="/pfotennetz-logo.png"
               alt=""

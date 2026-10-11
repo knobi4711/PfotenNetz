@@ -154,6 +154,11 @@ function NewBookingForm() {
             Anfrage an <strong>{helper.data.display_name}</strong>
           </p>
         ) : null}
+        {!isEditMode && !helperId ? (
+          <p className="mt-3 text-on-surface-variant">
+            Ohne ausgewählten Helper wird die Anfrage offen für verifizierte Helper veröffentlicht.
+          </p>
+        ) : null}
         {helper.isError ? (
           <p className="mt-4 text-error">
             Helfer:in konnte nicht geladen werden: {helper.error.message}

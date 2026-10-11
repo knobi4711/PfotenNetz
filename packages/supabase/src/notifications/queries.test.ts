@@ -95,6 +95,7 @@ describe('notifications', () => {
 
   it('extracts deep links only for internal paths', () => {
     expect(notificationDeepLink({ data: { url: '/booking/abc' } })).toBe('/booking/abc');
+    expect(notificationDeepLink({ data: { url: '/profile', web_url: '/' } }, 'web')).toBe('/');
     expect(notificationDeepLink({ data: { url: 'https://evil.example' } })).toBeNull();
     expect(notificationDeepLink({ data: {} })).toBeNull();
     expect(notificationDeepLink({ data: [] })).toBeNull();

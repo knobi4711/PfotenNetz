@@ -11,7 +11,6 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
-  useNotificationSubscription,
   useUnreadCount,
   useActiveTrackingSessions,
   useTrackingSubscription,
@@ -98,7 +97,6 @@ export default function TrackingScreen() {
   const c = usePalette();
   const bookingsQuery = useBookings();
   const userQuery = useCurrentUser();
-  useNotificationSubscription();
   const notificationsQuery = useNotifications();
   const unreadQuery = useUnreadCount();
   const markRead = useMarkNotificationRead();

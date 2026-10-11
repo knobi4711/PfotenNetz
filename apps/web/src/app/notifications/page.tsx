@@ -4,7 +4,6 @@ import {
   notificationDeepLink,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
-  useNotificationSubscription,
   useNotifications,
 } from '@pfotennetz/supabase';
 import Link from 'next/link';
@@ -14,7 +13,6 @@ export default function NotificationsPage() {
   const notifications = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
-  useNotificationSubscription();
   const data = notifications.data ?? [];
 
   return (
@@ -51,7 +49,7 @@ export default function NotificationsPage() {
         ) : (
           <div className="mt-8 space-y-3">
             {data.map((notification) => {
-              const href = notificationDeepLink(notification);
+              const href = notificationDeepLink(notification, 'web');
               const content = (
                 <>
                   <div className="flex items-start justify-between gap-4">

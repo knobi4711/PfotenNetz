@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router/tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useUnreadCount } from '@pfotennetz/supabase';
 import { appFonts, usePalette } from '../../components/ui';
 
 // Stitch "PfotenNetz App": Bottom-Navigation (Übersicht, Karte, Anfragen, Profil).
@@ -9,6 +10,8 @@ import { appFonts, usePalette } from '../../components/ui';
 export default function TabLayout() {
   const c = usePalette();
   const { bottom } = useSafeAreaInsets();
+  const unreadQuery = useUnreadCount();
+  const unread = unreadQuery.data ?? 0;
 
   return (
     <Tabs
@@ -63,6 +66,7 @@ export default function TabLayout() {
         name="tracking"
         options={{
           title: 'Anfragen',
+          ...(unread > 0 ? { tabBarBadge: unread > 99 ? '99+' : unread } : {}),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="calendar-month" color={color} size={size} />
           ),

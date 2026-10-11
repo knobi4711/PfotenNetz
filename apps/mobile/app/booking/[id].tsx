@@ -10,6 +10,7 @@ import {
   useCancelBooking,
   useCompleteBooking,
   useCurrentUser,
+  useOwnProfile,
   useRateHelper,
   useRateSeeker,
   useRejectBooking,
@@ -127,6 +128,7 @@ export default function BookingDetailScreen() {
   const bookingQuery = useBooking(bookingId);
   const bookingGroupQuery = useBookingGroup(bookingQuery.data?.booking_group_id);
   const userQuery = useCurrentUser();
+  const profileQuery = useOwnProfile();
 
   const accept = useAcceptBooking();
   const reject = useRejectBooking();
@@ -167,6 +169,12 @@ export default function BookingDetailScreen() {
   const isHelper =
     booking !== null && booking.helper_id !== null && booking.helper_id === currentUserId;
   const isSeeker = booking !== null && booking.seeker_id === currentUserId;
+  const isOpenRequest =
+    booking !== null &&
+    booking.status === 'requested' &&
+    booking.helper_id === null &&
+    booking.seeker_id !== currentUserId &&
+    profileQuery.data?.role === 'helper';
 
   const handleRateHelper = (rating: number) => {
     if (bookingId === undefined) return;
@@ -355,6 +363,23 @@ export default function BookingDetailScreen() {
                   disabled={anyPending}
                   onPress={() => {
                     if (bookingId !== undefined) reject.mutate(bookingId);
+                  }}
+                />
+              </Card>
+            ) : null}
+
+            {isOpenRequest ? (
+              <Card>
+                <SectionTitle>Offene Anfrage</SectionTitle>
+                <EmptyText>
+                  Übernimm diese Betreuung, wenn Zeitraum und Aufgabe für dich passen.
+                </EmptyText>
+                <ActionButton
+                  title="Anfrage annehmen"
+                  pending={accept.isPending}
+                  disabled={anyPending}
+                  onPress={() => {
+                    if (bookingId !== undefined) accept.mutate(bookingId);
                   }}
                 />
               </Card>

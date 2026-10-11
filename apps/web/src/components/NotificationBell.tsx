@@ -1,9 +1,10 @@
 'use client';
 
-import { useUnreadCount } from '@pfotennetz/supabase';
+import { useNotificationSubscription, useUnreadCount } from '@pfotennetz/supabase';
 import Link from 'next/link';
 
 export function NotificationBell() {
+  useNotificationSubscription();
   const unread = useUnreadCount();
   const count = unread.data ?? 0;
   return (

@@ -237,7 +237,7 @@ export default function NewBookingScreen() {
         <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
           {isEditMode
             ? 'Ändere die Anfrage, solange noch kein Helper zugesagt hat.'
-            : 'Erstelle eine Betreuungsanfrage für eines oder mehrere deiner Tiere. Mehrere ausgewählte Tiere werden als ein gemeinsamer Antrag an den Helper gesendet.'}
+            : 'Erstelle eine Betreuungsanfrage für eines oder mehrere deiner Tiere. Wähle einen Helper direkt aus oder veröffentliche die Anfrage offen für verifizierte Helper.'}
         </Text>
 
         {isEditMode && bookingQuery.isPending ? (

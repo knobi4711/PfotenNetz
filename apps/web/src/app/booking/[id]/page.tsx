@@ -7,6 +7,7 @@ import {
   useCancelBooking,
   useCompleteBooking,
   useCurrentUser,
+  useOwnProfile,
   useRejectBooking,
   useStartBooking,
 } from '@pfotennetz/supabase';
@@ -29,6 +30,7 @@ export default function BookingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const booking = useBooking(id);
   const user = useCurrentUser();
+  const profile = useOwnProfile();
   const accept = useAcceptBooking();
   const reject = useRejectBooking();
   const start = useStartBooking();
@@ -40,6 +42,11 @@ export default function BookingDetailPage() {
   const groupedPetNames = groupedBookings.map((item) => item.pet?.name ?? 'Tier');
   const isHelper = value?.helper_id === user.data?.id;
   const isSeeker = value?.seeker_id === user.data?.id;
+  const isOpenRequest =
+    value?.status === 'requested' &&
+    value.helper_id === null &&
+    value.seeker_id !== user.data?.id &&
+    profile.data?.role === 'helper';
   const pending =
     accept.isPending ||
     reject.isPending ||
@@ -127,6 +134,15 @@ export default function BookingDetailPage() {
                         Ablehnen
                       </button>
                     </>
+                  ) : null}
+                  {value.status === 'requested' && isOpenRequest ? (
+                    <button
+                      className="btn-primary w-full"
+                      disabled={pending}
+                      onClick={() => accept.mutate(id)}
+                    >
+                      Anfrage annehmen
+                    </button>
                   ) : null}
                   {value.status === 'confirmed' && isHelper ? (
                     <button

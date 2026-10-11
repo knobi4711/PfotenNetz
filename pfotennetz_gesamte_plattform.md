@@ -1,7 +1,7 @@
 # PfotenNetz — Gesamte Plattform-Architektur & Screen-Spezifikation
 
 **Projekt:** PfotenNetz — Mobile-First & Desktop Nachbarschafts-Plattform für Haustierbetreuung, P2P-Solidarität & hyperlokale Gefahrenwarnung  
-**Version:** 4.0.0 (Mehrtier-Betreuungsanträge, Standabgleich Mobile/Web/Supabase, 09.10.2026)
+**Version:** 4.1.0 (Lokaler Android-Build, Play-Store-Signierung, Verfügbarkeits- und Profilpflege, 11.10.2026)
 **Design-System:** Warm Community Pet Care (`#e26d46` Terracotta, `#2e7d32` Salbeigrün/Waldgrün, `#fff8f5` Warm Linen)  
 **Status:** Mobile-Betreuungsplattform und zentrale Web-Flows produktiv auf `paperless`/`pfotennetz.app` veröffentlicht; Passwort-Reset, robuste Android-Biometrie, native/Web-Plattformtrennung, Nutzer:innen-Meldungen und Google-Play-konforme Account-Löschung ergänzt, rechtliche Freigabe und einzelne native Abnahmen sind noch offen
 
@@ -31,8 +31,10 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Rich-Push-Kategorien mit internen Deep-Links für Gefahren- und Vermisst-Tier-Warnungen
 - Admin-Zugangspunkt „Administration“ im Profil/Header; sichere Gefahrenmoderation für Admins
 - Helfer:innen-Verfügbarkeiten mit Mehrfachauswahl beliebiger Wochentage und Zeit-Dropdowns in 30-Minuten-Schritten
+- Helfer:innen-Verfügbarkeiten mit Auswahl einzelner Tage oder „Alle Tage“; mehrere ausgewählte Tage werden als eigene Zeitfenster gespeichert
 - Helfer:innen-Verfügbarkeiten mit unterstützten Tierarten (Hund, Katze, Kleintiere, Vogel und andere)
 - Profilfoto-Upload, Kurzvorstellung und frei editierbare Profil-/Standortangabe
+- PLZ als Pflichtfeld im Profil; gespeichert werden ausschließlich fünfstellige deutsche Postleitzahlen
 - Deutschlandweite Nutzung ohne Pilotregion- oder PLZ-Beschränkung; Web-Standortwahl per hochgenauer Browser-Geolokalisierung und manueller Ort-/PLZ-Suche
 - Dringende Betreuungsanfragen mit Betreuungsnotizen und serverseitiger Kennzeichnung
 - Unverbindliche Kontaktanfragen an verifizierte Helfer:innen vor einer Buchung
@@ -51,6 +53,8 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Plattformgetrennte Native-/Web-Implementierungen für Geofence, Hintergrund-Tracking, Provider und Theme; native APIs werden im Browser nicht mehr geladen
 - Expo-Web-Konfiguration mit Metro-Bundler, statischer Ausgabe, deutscher Sprache und Deep-Link-Schema `pfotennetz`
 - EAS-Profile für Development-Builds, interne Preview-Verteilung und Production-Builds mit automatischer Versionsnummer
+- Lokales Expo-Prebuild mit nativer Android-Projektstruktur und Gradle-Build ohne EAS-Warteschlange
+- Lokale Android-Release-Signierung mit separatem PfotenNetz-Upload-Key für Google-Play-AABs
 
 ### Umgesetzt – Web-App
 
@@ -65,6 +69,9 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - `/chat/[bookingId]`: Web-Chat mit Text-, Foto- und Medienanzeige
 - `/profile`: Profil und Zeitbank-Verlauf
 - `/profile`: vollständige Bearbeitung von Anzeigename, Telefon, PLZ, Kurzvorstellung, Suchradius und Benachrichtigungen
+- `/profile`: PLZ ist auf Web und Mobile ein Pflichtfeld und wird vor dem Speichern serverseitig validiert
+- Web und Mobile verwenden für den Erstellungsfluss einheitlich die Bezeichnung „Neue Betreuung buchen"
+- Web und Mobile erlauben in den Helfer:innen-Verfügbarkeiten einzelne Wochentage sowie die Sammelauswahl „Alle Tage"
 - `/account/delete`: nicht in der Hauptnavigation aufgeführte Seite zur dauerhaften Selbstlöschung des Accounts; Bestätigung per Checkbox und Eingabe `LÖSCHEN`
 - `/explore`: „Profil melden“ mit Meldegrund und optionaler vertraulicher Beschreibung
 - `/admin/reports`: Admin-Queue zur Prüfung, Verwerfung und Bearbeitung von Nutzer:innen-Meldungen
@@ -94,6 +101,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Repository-Lint: erfolgreich
 - Web-E2E: **18/18 erfolgreich**, inklusive Passwort-Reset-Route, authentifizierten Tier-, Buchungs-, Chat-, Medien- und Kontaktanfrage-Flüssen, Offline-Notfallkarten-Smoke-Test sowie Community-Moderation und Web-Notfallkartenroute
 - Web-Build: erfolgreich
+- Lokale Android-Toolchain: Android Studio/SDK, Java 21, Expo-Prebuild und Gradle-Wrapper eingerichtet; lokales AAB wird aktuell erstmals gebaut
 - Expo-Android-Bundle: erfolgreich erzeugt
 - Web-Deployment-Vorbereitung: Next.js-Standalone-Build, interner Container-Port 3000 sowie Caddy-Reverse-Proxy-Konfiguration dokumentiert
 - Android-Development-Build: erfolgreich erzeugt, installiert und mit einem nativen Login-/Dashboard-Smoke-Test auf dem verbundenen Gerät geprüft; aktueller EAS-Build `92fc3272-1f8b-42a8-9c16-a82c584e9afc`

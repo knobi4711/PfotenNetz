@@ -4,6 +4,7 @@ import {
   useOwnProfile,
   useTimebankAccount,
   useTimebankTransactions,
+  useUpdateOwnLocation,
   useUpdateOwnProfile,
   useUploadOwnAvatar,
   KIEZ_RADIUS_OPTIONS,
@@ -14,12 +15,14 @@ import { WebHeader } from '../../components/WebHeader';
 import { AvailabilityManager } from '../../components/AvailabilityManager';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { getCurrentBrowserLocation } from '../../lib/location';
 
 export default function ProfilePage() {
   const profile = useOwnProfile();
   const account = useTimebankAccount();
   const transactions = useTimebankTransactions();
   const updateProfile = useUpdateOwnProfile();
+  const updateLocation = useUpdateOwnLocation();
   const uploadAvatar = useUploadOwnAvatar();
   const value = profile.data;
   const [preferences, setPreferences] = useState<NotificationPreferences>({
@@ -32,6 +35,9 @@ export default function ProfilePage() {
   const [postalCode, setPostalCode] = useState('');
   const [profileBio, setProfileBio] = useState('');
   const [radius, setRadius] = useState<KiezRadius>(1.5);
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationPending, setLocationPending] = useState(false);
   const avatarUrl = value?.avatar_url
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${value.avatar_url}`
     : null;
@@ -54,6 +60,26 @@ export default function ProfilePage() {
       community: 'community' in current ? current.community === true : true,
     });
   }, [value]);
+
+  const saveHelperLocation = () => {
+    setLocationMessage(null);
+    setLocationError(null);
+    setLocationPending(true);
+    void getCurrentBrowserLocation()
+      .then((location) => updateLocation.mutateAsync(location))
+      .then(() =>
+        setLocationMessage(
+          'Standort sicher gespeichert. Er wird in der Suche nur gerundet angezeigt.'
+        )
+      )
+      .catch((error: unknown) =>
+        setLocationError(
+          error instanceof Error ? error.message : 'Standort konnte nicht gespeichert werden.'
+        )
+      )
+      .finally(() => setLocationPending(false));
+  };
+
   return (
     <main className="min-h-screen bg-surface">
       <WebHeader backHref="/" backLabel="Dashboard" />
@@ -197,6 +223,42 @@ export default function ProfilePage() {
               </div>
             </section>
             <div className="space-y-6">
+              {value.role === 'helper' ? (
+                <section className="card p-7">
+                  <h2 className="text-xl font-extrabold text-on-surface">Helper-Standort</h2>
+                  <p className="mt-2 text-sm text-on-surface-variant">
+                    Damit du in der Nachbarschaftssuche erscheinst, muss dein Standort gespeichert
+                    sein. Andere Nutzer:innen sehen ihn nur auf etwa 100 Meter gerundet.
+                  </p>
+                  <p className="mt-4 text-sm font-semibold text-on-surface">
+                    {value.location_updated_at
+                      ? `Zuletzt gespeichert: ${new Date(value.location_updated_at).toLocaleDateString('de-DE')}`
+                      : 'Noch kein Standort gespeichert'}
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-primary mt-5"
+                    disabled={locationPending || updateLocation.isPending}
+                    onClick={saveHelperLocation}
+                  >
+                    {locationPending || updateLocation.isPending
+                      ? 'Standort wird gespeichert …'
+                      : value.location_updated_at
+                        ? 'Standort aktualisieren'
+                        : 'Standort speichern'}
+                  </button>
+                  {locationMessage ? (
+                    <p role="status" className="mt-3 text-sm font-semibold text-green-700">
+                      {locationMessage}
+                    </p>
+                  ) : null}
+                  {locationError ? (
+                    <p role="alert" className="mt-3 text-sm text-error">
+                      {locationError}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
               <AvailabilityManager />
               <section className="card p-7">
                 <h2 className="text-xl font-extrabold text-on-surface">Benachrichtigungen</h2>

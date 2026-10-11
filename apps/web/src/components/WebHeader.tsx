@@ -35,7 +35,11 @@ export function WebHeader({
     <header className="sticky top-0 z-10 border-b border-outline-variant/30 bg-surface/95 backdrop-blur">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         <div className="flex min-h-20 items-center justify-between gap-6 py-4">
-          <Link href="/" className="flex items-center gap-3" aria-label="PfotenNetz Startseite">
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-3 whitespace-nowrap"
+            aria-label="PfotenNetz Startseite"
+          >
             <Image
               src="/pfotennetz-logo.png"
               alt=""

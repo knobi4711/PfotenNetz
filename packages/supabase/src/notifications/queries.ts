@@ -70,10 +70,15 @@ export async function markAllNotificationsRead(client: SupabaseClient<Database>)
   if (error) throw error;
 }
 
-export function notificationDeepLink(notification: Pick<Notification, 'data'>): string | null {
+export function notificationDeepLink(
+  notification: Pick<Notification, 'data'>,
+  target: 'default' | 'web' = 'default'
+): string | null {
   const data = notification.data;
   if (typeof data !== 'object' || data === null || Array.isArray(data)) return null;
-  const url = (data as Record<string, unknown>)['url'];
+  const values = data as Record<string, unknown>;
+  const url =
+    target === 'web' && typeof values['web_url'] === 'string' ? values['web_url'] : values['url'];
   return typeof url === 'string' && url.startsWith('/') ? url : null;
 }
 

@@ -29,9 +29,10 @@ export function useUnreadCount(): UseQueryResult<number, Error> {
 }
 
 /** Realtime subscription: invalidates notification queries on any own row event. */
-export function useNotificationSubscription(): void {
+export function useNotificationSubscription(enabled = true): void {
   const queryClient = useQueryClient();
   useEffect(() => {
+    if (!enabled) return;
     let unsubscribe: (() => void) | null = null;
     let cancelled = false;
     void (async () => {
@@ -46,7 +47,7 @@ export function useNotificationSubscription(): void {
       cancelled = true;
       unsubscribe?.();
     };
-  }, [queryClient]);
+  }, [enabled, queryClient]);
 }
 
 function useInvalidateNotifications() {

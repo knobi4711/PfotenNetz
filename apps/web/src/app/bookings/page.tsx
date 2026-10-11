@@ -28,6 +28,7 @@ function BookingCard({
   const router = useRouter();
   const booking = request.primary;
   const isHelper = booking.helper_id === currentUserId;
+  const isOwnRequest = booking.seeker_id === currentUserId;
   const petNames = request.bookings.map((item) => item.pet?.name ?? 'Tier');
   return (
     <button
@@ -44,7 +45,8 @@ function BookingCard({
             {request.bookings.length > 1 ? `Betreuung für ${petNames.join(', ')}` : petNames[0]}
           </h2>
           <p className="mt-1 text-sm text-on-surface-variant">
-            {bookingTypeLabel(booking.type)} · {isHelper ? 'Du hilfst' : 'Deine Anfrage'}
+            {bookingTypeLabel(booking.type)} ·{' '}
+            {isHelper ? 'Du hilfst' : isOwnRequest ? 'Deine Anfrage' : 'Offene Anfrage'}
             {request.bookings.length > 1
               ? ` · ${request.bookings.length} Tiere in einem Antrag`
               : ''}
