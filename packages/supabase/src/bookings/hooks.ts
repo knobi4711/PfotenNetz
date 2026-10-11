@@ -24,6 +24,8 @@ import {
   rateSeeker,
   rejectBooking,
   startBooking,
+  updateBookingRequest,
+  type UpdateBookingRequestInput,
 } from './mutations';
 import { createBooking, type CreateBookingInput } from './creation';
 
@@ -141,6 +143,23 @@ export function useCancelBooking(reason?: string): UseMutationResult<Booking, Er
     mutationFn: (bookingId: string) => cancelBooking(client, bookingId, reason),
     onSuccess: (booking, bookingId) => {
       invalidateBookingQueries(queryClient, bookingId);
+      invalidateGroupQuery(queryClient, booking);
+    },
+  });
+}
+
+/** Edit a seeker's booking request while it is still requested. */
+export function useUpdateBookingRequest(): UseMutationResult<
+  Booking,
+  Error,
+  UpdateBookingRequestInput
+> {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateBookingRequestInput) => updateBookingRequest(client, input),
+    onSuccess: (booking, input) => {
+      invalidateBookingQueries(queryClient, input.bookingId);
       invalidateGroupQuery(queryClient, booking);
     },
   });

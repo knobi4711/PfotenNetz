@@ -14,6 +14,7 @@ import {
   useRateSeeker,
   useRejectBooking,
   useStartBooking,
+  useUpdateBookingRequest,
   type Database,
 } from '@pfotennetz/supabase';
 import { formatCurrency, formatDate, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
@@ -132,6 +133,7 @@ export default function BookingDetailScreen() {
   const start = useStartBooking();
   const complete = useCompleteBooking();
   const cancel = useCancelBooking();
+  const updateRequest = useUpdateBookingRequest();
   const rateHelper = useRateHelper();
   const rateSeeker = useRateSeeker();
 
@@ -144,11 +146,18 @@ export default function BookingDetailScreen() {
     start.isPending ||
     complete.isPending ||
     cancel.isPending ||
+    updateRequest.isPending ||
     rateHelper.isPending ||
     rateSeeker.isPending;
 
   const mutationError =
-    accept.error ?? reject.error ?? start.error ?? complete.error ?? cancel.error ?? null;
+    accept.error ??
+    reject.error ??
+    start.error ??
+    complete.error ??
+    cancel.error ??
+    updateRequest.error ??
+    null;
   const ratingError = rateHelper.error ?? rateSeeker.error ?? null;
 
   const booking = bookingQuery.data ?? null;
@@ -391,12 +400,33 @@ export default function BookingDetailScreen() {
               <Card>
                 <SectionTitle>Stornierung</SectionTitle>
                 <ActionButton
-                  title="Buchung stornieren"
+                  title={
+                    booking.status === 'requested' ? 'Anfrage stornieren' : 'Buchung stornieren'
+                  }
                   variant="danger"
                   pending={cancel.isPending}
                   disabled={anyPending}
                   onPress={() => {
                     if (bookingId !== undefined) cancel.mutate(bookingId);
+                  }}
+                />
+              </Card>
+            ) : null}
+
+            {booking.status === 'requested' && isSeeker ? (
+              <Card>
+                <SectionTitle>Anfrage ändern</SectionTitle>
+                <EmptyText>
+                  Solange noch kein Helper zugesagt hat, kannst du die Angaben anpassen.
+                </EmptyText>
+                <ActionButton
+                  title="Anfrage bearbeiten"
+                  variant="secondary"
+                  disabled={anyPending}
+                  onPress={() => {
+                    if (bookingId !== undefined) {
+                      router.push({ pathname: '/booking/new', params: { bookingId } });
+                    }
                   }}
                 />
               </Card>

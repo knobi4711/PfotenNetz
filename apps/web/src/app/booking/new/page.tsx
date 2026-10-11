@@ -3,25 +3,41 @@
 import {
   BOOKING_TYPES,
   isBookingCoveredByAvailabilities,
+  useBooking,
+  useBookingGroup,
   useCreateBooking,
   useHelperDetail,
   useOwnPets,
+  useUpdateBookingRequest,
   type BookingCurrency,
   type BookingType,
   type CareLocation,
 } from '@pfotennetz/supabase';
 import { BOOKING_TYPE_LABELS } from '@pfotennetz/shared';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { WebHeader } from '../../../components/WebHeader';
+
+function toDateTimeLocal(value: string): string {
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
 
 function NewBookingForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const helperId = params.get('helperId');
+  const helperIdFromParams = params.get('helperId');
+  const bookingId = params.get('bookingId');
+  const isEditMode = bookingId !== null;
+  const booking = useBooking(bookingId ?? undefined);
+  const bookingGroup = useBookingGroup(booking.data?.booking_group_id);
+  const helperId = booking.data?.helper_id ?? (isEditMode ? null : helperIdFromParams);
   const helper = useHelperDetail(helperId);
   const pets = useOwnPets();
   const create = useCreateBooking();
+  const update = useUpdateBookingRequest();
+  const initializedBooking = useRef<string | null>(null);
   const [petIds, setPetIds] = useState<string[]>([]);
   const [petsOpen, setPetsOpen] = useState(false);
   const [type, setType] = useState<BookingType>('walk');
@@ -36,6 +52,27 @@ function NewBookingForm() {
   const [safety, setSafety] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const activePets = (pets.data ?? []).filter((pet) => pet.is_active && !pet.is_deceased);
+
+  useEffect(() => {
+    const value = booking.data;
+    if (!isEditMode || value === undefined || initializedBooking.current === value.id) return;
+    setPetIds((bookingGroup.data ?? [value]).map((item) => item.pet_id));
+    setType(value.type);
+    setCareLocation(value.care_location);
+    setStart(toDateTimeLocal(value.start_at));
+    setEnd(toDateTimeLocal(value.end_at));
+    setCurrency(value.currency);
+    setPrice(
+      value.currency === 'KIEZ_HOURS'
+        ? String(value.price_kiez_hours)
+        : (value.price_eur_cents / 100).toFixed(2)
+    );
+    setAddress(value.meeting_address ?? '');
+    setNotes(value.care_notes ?? '');
+    setUrgent(value.is_urgent);
+    setSafety(true);
+    initializedBooking.current = value.id;
+  }, [booking.data, bookingGroup.data, isEditMode]);
 
   const submit = () => {
     setFormError(null);
@@ -60,6 +97,27 @@ function NewBookingForm() {
       })
     )
       return setFormError('Der Zeitraum liegt außerhalb der Verfügbarkeit dieses Helfers.');
+    if (isEditMode && bookingId !== null) {
+      update.mutate(
+        {
+          bookingId,
+          type,
+          startAt: new Date(start).toISOString(),
+          endAt: new Date(end).toISOString(),
+          meetingAddress: address.trim() || null,
+          currency,
+          priceEurCents:
+            currency === 'EUR' || currency === 'PER_VISIT' ? Math.round(amount * 100) : 0,
+          priceKiezHours: currency === 'KIEZ_HOURS' ? amount : 0,
+          isUrgent: urgent,
+          careNotes: notes.trim() || null,
+          careLocation,
+        },
+        { onSuccess: () => router.replace(`/booking/${bookingId}`) }
+      );
+      return;
+    }
+
     create.mutate(
       {
         type,
@@ -84,8 +142,14 @@ function NewBookingForm() {
       <WebHeader backHref="/explore" backLabel="Helfersuche" />
       <div className="mx-auto max-w-3xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">Betreuung</p>
-        <h1 className="mt-2 text-4xl font-extrabold">Neue Betreuung buchen</h1>
-        {helperId && helper.data ? (
+        <h1 className="mt-2 text-4xl font-extrabold">
+          {isEditMode ? 'Betreuungsanfrage bearbeiten' : 'Neue Betreuung buchen'}
+        </h1>
+        {isEditMode ? (
+          <p className="mt-3 text-on-surface-variant">
+            Ändere die Anfrage, solange noch kein Helper zugesagt hat.
+          </p>
+        ) : helperId && helper.data ? (
           <p className="mt-3 text-on-surface-variant">
             Anfrage an <strong>{helper.data.display_name}</strong>
           </p>
@@ -142,6 +206,7 @@ function NewBookingForm() {
                     <input
                       type="checkbox"
                       checked={activePets.length > 0 && petIds.length === activePets.length}
+                      disabled={isEditMode}
                       onChange={(event) =>
                         setPetIds(event.target.checked ? activePets.map((pet) => pet.id) : [])
                       }
@@ -157,6 +222,7 @@ function NewBookingForm() {
                       <input
                         type="checkbox"
                         checked={petIds.includes(pet.id)}
+                        disabled={isEditMode}
                         onChange={(event) =>
                           setPetIds((selected) =>
                             event.target.checked
@@ -322,24 +388,34 @@ function NewBookingForm() {
               <input
                 type="checkbox"
                 checked={safety}
+                disabled={isEditMode}
                 onChange={(event) => setSafety(event.target.checked)}
                 className="h-5 w-5 accent-primary"
               />
               Ich habe die Hinweise gelesen.
             </label>
           </section>
-          {formError || create.isError ? (
+          {formError || create.isError || update.isError ? (
             <p role="alert" className="rounded-xl bg-error-container p-4 text-on-error-container">
-              {formError ?? create.error?.message}
+              {formError ?? update.error?.message ?? create.error?.message}
             </p>
           ) : null}
           <button
             type="button"
             className="btn-primary w-full"
-            disabled={create.isPending || pets.isPending || activePets.length === 0}
+            disabled={
+              create.isPending ||
+              update.isPending ||
+              pets.isPending ||
+              (!isEditMode && activePets.length === 0)
+            }
             onClick={submit}
           >
-            {create.isPending ? 'Wird gesendet …' : 'Betreuungsanfrage senden'}
+            {create.isPending || update.isPending
+              ? 'Wird gespeichert …'
+              : isEditMode
+                ? 'Änderungen speichern'
+                : 'Betreuungsanfrage senden'}
           </button>
         </div>
       </div>

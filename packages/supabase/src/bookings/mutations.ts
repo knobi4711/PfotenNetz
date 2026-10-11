@@ -76,6 +76,48 @@ export async function cancelBooking(
   return unwrapBooking(await client.rpc('seeker_cancel_booking', args).single());
 }
 
+export interface UpdateBookingRequestInput {
+  bookingId: string;
+  type: Database['public']['Enums']['booking_type'];
+  startAt: string;
+  endAt: string;
+  meetingAddress?: string | null;
+  currency: Database['public']['Enums']['currency'];
+  priceEurCents?: number;
+  priceKiezHours?: number;
+  isUrgent?: boolean;
+  careNotes?: string | null;
+  careLocation?: Database['public']['Tables']['bookings']['Row']['care_location'];
+}
+
+/** Seeker edits their own still-requested booking request. */
+export async function updateBookingRequest(
+  client: SupabaseClient<Database>,
+  input: UpdateBookingRequestInput
+): Promise<Booking> {
+  const priceEurCents =
+    input.currency === 'EUR' || input.currency === 'PER_VISIT' ? (input.priceEurCents ?? 0) : 0;
+  const priceKiezHours = input.currency === 'KIEZ_HOURS' ? (input.priceKiezHours ?? 0) : 0;
+
+  return unwrapBooking(
+    await client
+      .rpc('seeker_update_booking_request', {
+        p_booking_id: input.bookingId,
+        p_type: input.type,
+        p_start_at: input.startAt,
+        p_end_at: input.endAt,
+        p_meeting_address: input.meetingAddress ?? null,
+        p_currency: input.currency,
+        p_price_eur_cents: priceEurCents,
+        p_price_kiez_hours: priceKiezHours,
+        p_is_urgent: input.isUrgent ?? false,
+        p_care_notes: input.careNotes ?? null,
+        p_care_location: input.careLocation ?? 'at_owner_home',
+      })
+      .single()
+  );
+}
+
 /** Seeker rates the helper after completion (rating 1-5, server-validated). */
 export async function rateHelper(
   client: SupabaseClient<Database>,

@@ -39,6 +39,7 @@ export default function BookingDetailPage() {
   const groupedBookings = bookingGroup.data ?? (value ? [value] : []);
   const groupedPetNames = groupedBookings.map((item) => item.pet?.name ?? 'Tier');
   const isHelper = value?.helper_id === user.data?.id;
+  const isSeeker = value?.seeker_id === user.data?.id;
   const pending =
     accept.isPending ||
     reject.isPending ||
@@ -145,15 +146,22 @@ export default function BookingDetailPage() {
                       Betreuung abschließen
                     </button>
                   ) : null}
-                  {value.status !== 'completed' &&
-                  value.status !== 'cancelled' &&
-                  value.status !== 'disputed' ? (
+                  {value.status === 'requested' && isSeeker ? (
+                    <button
+                      className="btn-secondary w-full"
+                      disabled={pending}
+                      onClick={() => router.push(`/booking/new?bookingId=${id}`)}
+                    >
+                      Anfrage bearbeiten
+                    </button>
+                  ) : null}
+                  {isSeeker && (value.status === 'requested' || value.status === 'confirmed') ? (
                     <button
                       className="btn-secondary w-full"
                       disabled={pending}
                       onClick={() => cancel.mutate(id)}
                     >
-                      Buchung stornieren
+                      {value.status === 'requested' ? 'Anfrage stornieren' : 'Buchung stornieren'}
                     </button>
                   ) : null}
                   {value.helper_id ? (

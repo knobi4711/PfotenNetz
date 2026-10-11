@@ -1,5 +1,5 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,9 +7,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import {
   BOOKING_TYPES,
   isBookingCoveredByAvailabilities,
+  useBooking,
+  useBookingGroup,
   useCreateBooking,
   useHelperDetail,
   useOwnPets,
+  useUpdateBookingRequest,
   type BookingCurrency,
   type BookingType,
   type CareLocation,
@@ -37,6 +40,10 @@ function formatDateInput(date: Date): string {
   return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
 }
 
+function formatTimeInput(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
 function dateFromInput(value: string): Date {
   const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value);
   if (match !== null) {
@@ -48,15 +55,29 @@ function dateFromInput(value: string): Date {
 
 export default function NewBookingScreen() {
   const c = usePalette();
-  const params = useLocalSearchParams<{ helperId?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    helperId?: string | string[];
+    bookingId?: string | string[];
+  }>();
   const rawHelperId = params.helperId;
   const preselectedHelperId = Array.isArray(rawHelperId)
     ? (rawHelperId[0] ?? null)
     : (rawHelperId ?? null);
-  const helperQuery = useHelperDetail(preselectedHelperId);
+  const rawBookingId = params.bookingId;
+  const bookingId = Array.isArray(rawBookingId)
+    ? (rawBookingId[0] ?? null)
+    : (rawBookingId ?? null);
+  const isEditMode = bookingId !== null;
+  const bookingQuery = useBooking(bookingId ?? undefined);
+  const bookingGroupQuery = useBookingGroup(bookingQuery.data?.booking_group_id);
+  const helperIdForQuery =
+    bookingQuery.data?.helper_id ?? (isEditMode ? null : preselectedHelperId);
+  const helperQuery = useHelperDetail(helperIdForQuery);
   const helper = helperQuery.data ?? null;
   const petsQuery = useOwnPets();
   const createBooking = useCreateBooking();
+  const updateBooking = useUpdateBookingRequest();
+  const initializedBooking = useRef<string | null>(null);
 
   const [petIds, setPetIds] = useState<string[]>([]);
   const [bookingType, setBookingType] = useState<BookingType>('walk');
@@ -74,8 +95,32 @@ export default function NewBookingScreen() {
   const [safetyConfirmed, setSafetyConfirmed] = useState(false);
   const [formHint, setFormHint] = useState<string | null>(null);
 
+  useEffect(() => {
+    const booking = bookingQuery.data;
+    if (!isEditMode || booking === undefined || initializedBooking.current === booking.id) return;
+    const grouped = bookingGroupQuery.data ?? [booking];
+    setPetIds(grouped.map((item) => item.pet_id));
+    setBookingType(booking.type);
+    setCareLocation(booking.care_location);
+    setStartDate(formatDateInput(new Date(booking.start_at)));
+    setStartTime(formatTimeInput(new Date(booking.start_at)));
+    setEndDate(formatDateInput(new Date(booking.end_at)));
+    setEndTime(formatTimeInput(new Date(booking.end_at)));
+    setCurrency(booking.currency);
+    setPrice(
+      booking.currency === 'KIEZ_HOURS'
+        ? String(booking.price_kiez_hours)
+        : (booking.price_eur_cents / 100).toFixed(2).replace('.', ',')
+    );
+    setMeetingAddress(booking.meeting_address ?? '');
+    setCareNotes(booking.care_notes ?? '');
+    setIsUrgent(booking.is_urgent);
+    setSafetyConfirmed(true);
+    initializedBooking.current = booking.id;
+  }, [bookingGroupQuery.data, bookingQuery.data, isEditMode]);
+
   const pets = (petsQuery.data ?? []).filter((pet) => pet.is_active && !pet.is_deceased);
-  const pending = createBooking.isPending;
+  const pending = createBooking.isPending || updateBooking.isPending;
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -137,6 +182,29 @@ export default function NewBookingScreen() {
         return;
       }
     }
+    if (isEditMode && bookingId !== null) {
+      updateBooking.mutate(
+        {
+          bookingId,
+          type: bookingType,
+          startAt,
+          endAt,
+          meetingAddress: meetingAddress.trim() === '' ? null : meetingAddress.trim(),
+          currency,
+          priceEurCents:
+            currency === 'EUR' || currency === 'PER_VISIT' ? Math.round(priceValue * 100) : 0,
+          priceKiezHours: currency === 'KIEZ_HOURS' ? priceValue : 0,
+          isUrgent,
+          careNotes: careNotes.trim() || null,
+          careLocation,
+        },
+        {
+          onSuccess: () => router.replace({ pathname: '/booking/[id]', params: { id: bookingId } }),
+        }
+      );
+      return;
+    }
+
     createBooking.mutate(
       {
         type: bookingType,
@@ -163,13 +231,20 @@ export default function NewBookingScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: c.onSurface }]}>Neue Betreuung buchen</Text>
+        <Text style={[styles.title, { color: c.onSurface }]}>
+          {isEditMode ? 'Betreuungsanfrage bearbeiten' : 'Neue Betreuung buchen'}
+        </Text>
         <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
-          Erstelle eine Betreuungsanfrage für eines oder mehrere deiner Tiere. Mehrere ausgewählte
-          Tiere werden als ein gemeinsamer Antrag an den Helper gesendet.
+          {isEditMode
+            ? 'Ändere die Anfrage, solange noch kein Helper zugesagt hat.'
+            : 'Erstelle eine Betreuungsanfrage für eines oder mehrere deiner Tiere. Mehrere ausgewählte Tiere werden als ein gemeinsamer Antrag an den Helper gesendet.'}
         </Text>
 
-        {preselectedHelperId !== null ? (
+        {isEditMode && bookingQuery.isPending ? (
+          <LoadingView label="Anfrage wird geladen …" />
+        ) : null}
+
+        {!isEditMode && preselectedHelperId !== null ? (
           <Card>
             <SectionTitle>Ausgewählte:r Helper</SectionTitle>
             {helperQuery.isPending ? (
@@ -219,7 +294,7 @@ export default function NewBookingScreen() {
                 <Pressable
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: pets.length > 0 && petIds.length === pets.length }}
-                  disabled={pending}
+                  disabled={pending || isEditMode}
                   onPress={() => {
                     setPetIds((selected) =>
                       selected.length === pets.length ? [] : pets.map((pet) => pet.id)
@@ -246,7 +321,7 @@ export default function NewBookingScreen() {
                       key={pet.id}
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: selected }}
-                      disabled={pending}
+                      disabled={pending || isEditMode}
                       onPress={() => {
                         setPetIds((current) =>
                           selected ? current.filter((id) => id !== pet.id) : [...current, pet.id]
@@ -542,6 +617,7 @@ export default function NewBookingScreen() {
           <Pressable
             accessibilityRole="checkbox"
             accessibilityState={{ checked: isUrgent }}
+            disabled={pending}
             onPress={() => setIsUrgent((value) => !value)}
             style={styles.noticeRow}
           >
@@ -579,12 +655,16 @@ export default function NewBookingScreen() {
         {formHint !== null ? (
           <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
         ) : null}
-        {createBooking.isError ? (
+        {createBooking.isError || updateBooking.isError ? (
           <ErrorBox
-            message={`Anfrage konnte nicht erstellt werden: ${createBooking.error.message}`}
+            message={`${isEditMode ? 'Anfrage konnte nicht gespeichert werden' : 'Anfrage konnte nicht erstellt werden'}: ${(updateBooking.error ?? createBooking.error)?.message}`}
           />
         ) : null}
-        <ActionButton title="Anfrage erstellen" pending={pending} onPress={handleCreate} />
+        <ActionButton
+          title={isEditMode ? 'Änderungen speichern' : 'Anfrage erstellen'}
+          pending={pending}
+          onPress={handleCreate}
+        />
         <ActionButton
           title="Abbrechen"
           variant="secondary"

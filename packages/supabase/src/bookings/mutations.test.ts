@@ -9,6 +9,7 @@ import {
   rateSeeker,
   rejectBooking,
   startBooking,
+  updateBookingRequest,
 } from './mutations';
 
 interface RpcCall {
@@ -91,6 +92,40 @@ describe('booking mutations', () => {
     ]);
   });
 
+  it('updateBookingRequest calls the guarded seeker RPC', async () => {
+    const { client, rpcCalls } = createMutationMock();
+    await updateBookingRequest(client, {
+      bookingId: 'booking-1',
+      type: 'walk',
+      startAt: '2026-10-01T10:00:00.000Z',
+      endAt: '2026-10-01T12:00:00.000Z',
+      meetingAddress: 'Park 1',
+      currency: 'EUR',
+      priceEurCents: 1250,
+      isUrgent: true,
+      careNotes: 'Leine mitbringen',
+      careLocation: 'at_owner_home',
+    });
+    expect(rpcCalls).toEqual([
+      {
+        fn: 'seeker_update_booking_request',
+        args: {
+          p_booking_id: 'booking-1',
+          p_type: 'walk',
+          p_start_at: '2026-10-01T10:00:00.000Z',
+          p_end_at: '2026-10-01T12:00:00.000Z',
+          p_meeting_address: 'Park 1',
+          p_currency: 'EUR',
+          p_price_eur_cents: 1250,
+          p_price_kiez_hours: 0,
+          p_is_urgent: true,
+          p_care_notes: 'Leine mitbringen',
+          p_care_location: 'at_owner_home',
+        },
+      },
+    ]);
+  });
+
   it('rateHelper calls seeker_rate_helper with rating and review', async () => {
     const { client, rpcCalls } = createMutationMock();
     await rateHelper(client, 'booking-1', 5, 'great walk');
@@ -117,6 +152,13 @@ describe('booking mutations', () => {
     await completeBooking(client, 'b');
     await rejectBooking(client, 'b');
     await cancelBooking(client, 'b');
+    await updateBookingRequest(client, {
+      bookingId: 'b',
+      type: 'walk',
+      startAt: '2026-10-01T10:00:00.000Z',
+      endAt: '2026-10-01T12:00:00.000Z',
+      currency: 'KIEZ_HOURS',
+    });
     await rateHelper(client, 'b', 5);
     await rateSeeker(client, 'b', 5);
     expect(rpcCalls.some((call) => call.fn === 'timebank_adjust')).toBe(false);

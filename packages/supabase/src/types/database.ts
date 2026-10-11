@@ -2264,6 +2264,61 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      seeker_update_booking_request: {
+        Args: {
+          p_booking_id: string;
+          p_care_location: string;
+          p_care_notes: string | null;
+          p_currency: Database['public']['Enums']['currency'];
+          p_end_at: string;
+          p_is_urgent: boolean;
+          p_meeting_address: string | null;
+          p_price_eur_cents: number;
+          p_price_kiez_hours: number;
+          p_start_at: string;
+          p_type: Database['public']['Enums']['booking_type'];
+        };
+        Returns: {
+          booking_number: string;
+          cancellation_reason: string | null;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          care_location: 'at_owner_home' | 'at_owner_home_live_in' | 'at_helper_home';
+          care_notes: string | null;
+          created_at: string;
+          currency: Database['public']['Enums']['currency'];
+          end_at: string;
+          helper_id: string | null;
+          booking_group_id: string | null;
+          booking_group_position: number;
+          id: string;
+          is_urgent: boolean;
+          key_handoff_details: Json | null;
+          key_handoff_type: Database['public']['Enums']['key_handoff_type'] | null;
+          meeting_address: string | null;
+          meeting_location: unknown;
+          pet_id: string;
+          price_eur_cents: number;
+          price_kiez_hours: number;
+          rating_helper: number | null;
+          rating_seeker: number | null;
+          review_helper: string | null;
+          review_seeker: string | null;
+          seeker_id: string;
+          start_at: string;
+          status: Database['public']['Enums']['booking_status'];
+          timebank_credits_earned: number;
+          timebank_credits_spent: number;
+          type: Database['public']['Enums']['booking_type'];
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'bookings';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       seeker_rate_helper: {
         Args: { p_booking_id: string; p_rating: number; p_review?: string };
         Returns: {
