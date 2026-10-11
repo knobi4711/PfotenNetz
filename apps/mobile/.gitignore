@@ -8,3 +8,6 @@ expo-env.d.ts
 # Expo Prebuild output (Continuous Native Generation)
 /android/
 /ios/
+/.secrets/
+/credentials.json
+/credentials/
