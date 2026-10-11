@@ -30,6 +30,7 @@
     },
     "android": {
       "package": "app.pfotennetz",
+      "versionCode": 3,
       "intentFilters": [
         {
           "action": "VIEW",
