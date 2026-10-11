@@ -102,8 +102,9 @@ function PawWeatherCard() {
 }
 
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4700161905065273613';
-// Latest finished Android EAS build (preview, version 6).
-const MOBILE_BUILD_TIME = '2026-10-09T15:47:03.612Z';
+const MOBILE_BUILD_VERSION = '0.0.3';
+// Latest locally signed Android release build.
+const MOBILE_BUILD_TIME = '2026-10-11T14:57:04.229Z';
 
 function formatMobileBuildTime(value: string): string {
   const date = new Date(value);
@@ -178,7 +179,7 @@ function PlayStoreCard() {
           </div>
         )}
         <p className="text-center text-xs text-on-surface-variant">
-          Die aktuelle App-Version wurde am {formatMobileBuildTime(MOBILE_BUILD_TIME)} erstellt.
+          Version {MOBILE_BUILD_VERSION} · erstellt am {formatMobileBuildTime(MOBILE_BUILD_TIME)}.
         </p>
         <a
           href={PLAY_STORE_URL}
