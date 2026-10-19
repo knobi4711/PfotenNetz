@@ -1,4 +1,5 @@
 export const messageKeys = {
   all: ['messages'] as const,
   booking: (bookingId: string) => ['messages', 'booking', bookingId] as const,
+  contact: (contactRequestId: string) => ['messages', 'contact', contactRequestId] as const,
 } as const;

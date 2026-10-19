@@ -13,12 +13,21 @@ import {
   type BookingType,
   type NearbyHelper,
 } from '@pfotennetz/supabase';
-import { BOOKING_TYPE_LABELS, searchOpenStreetMap, type GeocodingResult } from '@pfotennetz/shared';
+import {
+  BOOKING_TYPE_LABELS,
+  reverseGeocodeOpenStreetMap,
+  searchOpenStreetMap,
+  type GeocodingResult,
+} from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useEffect, useRef } from 'react';
 import { WebHeader } from '../../components/WebHeader';
-import { getCurrentBrowserLocation } from '../../lib/location';
+import {
+  formatBrowserAccuracy,
+  getCurrentBrowserLocation,
+  type BrowserLocation,
+} from '../../lib/location';
 
 const RADII = [1.5, 3, 5, 10] as const;
 const SPECIES = [
@@ -35,6 +44,8 @@ type MapHelper = Pick<
   NearbyHelper,
   'helper_id' | 'display_name' | 'latitude' | 'longitude' | 'distance_km'
 >;
+
+type LocationCandidate = BrowserLocation & { displayName: string };
 
 type LeafletMap = {
   setView: (center: [number, number], zoom: number) => LeafletMap;
@@ -218,6 +229,7 @@ export default function ExplorePage() {
   const [radiusKm, setRadiusKm] = useState<(typeof RADII)[number]>(3);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationCandidate, setLocationCandidate] = useState<LocationCandidate | null>(null);
   const [placeQuery, setPlaceQuery] = useState('');
   const [placeResults, setPlaceResults] = useState<GeocodingResult[]>([]);
   const [placeSearchPending, setPlaceSearchPending] = useState(false);
@@ -242,9 +254,15 @@ export default function ExplorePage() {
   const handleLocate = () => {
     setLocationError(null);
     void getCurrentBrowserLocation()
-      .then((point) => {
-        setCenter(point);
-        setSelectedId(null);
+      .then(async (point) => {
+        let displayName = `Koordinaten ${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}`;
+        try {
+          const address = await reverseGeocodeOpenStreetMap(point.latitude, point.longitude);
+          displayName = address.displayName;
+        } catch {
+          // The coordinates can still be confirmed if reverse geocoding is temporarily unavailable.
+        }
+        setLocationCandidate({ ...point, displayName });
       })
       .catch((error: unknown) =>
         setLocationError(
@@ -253,8 +271,16 @@ export default function ExplorePage() {
       );
   };
 
+  const confirmBrowserLocation = () => {
+    if (!locationCandidate) return;
+    setCenter({ latitude: locationCandidate.latitude, longitude: locationCandidate.longitude });
+    setSelectedId(null);
+    setLocationCandidate(null);
+  };
+
   const handlePlaceSearch = () => {
     setLocationError(null);
+    setLocationCandidate(null);
     setPlaceSearchPending(true);
     void searchOpenStreetMap(placeQuery)
       .then((results) => {
@@ -298,6 +324,31 @@ export default function ExplorePage() {
             </button>
           ))}
         </div>
+        {locationCandidate ? (
+          <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <p className="text-sm font-bold">Bitte erkannten Standort prüfen</p>
+            <p className="mt-2 text-sm text-on-surface-variant">
+              Der Browser meldet: <strong>{locationCandidate.displayName}</strong>. Angegebene
+              Genauigkeit: {formatBrowserAccuracy(locationCandidate.accuracy)}.
+            </p>
+            <p className="mt-2 text-sm text-on-surface-variant">
+              Die Browser-Ortung kann trotz Freigabe falsch liegen. Übernimm den Standort nur, wenn
+              der angezeigte Ort stimmt.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" className="btn-primary" onClick={confirmBrowserLocation}>
+                Standort bestätigen
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-outline-variant px-4 py-2 text-sm font-bold"
+                onClick={() => setLocationCandidate(null)}
+              >
+                Verwerfen und Ort suchen
+              </button>
+            </div>
+          </div>
+        ) : null}
         <div className="mb-6 rounded-2xl bg-surface-container-low p-4">
           <label className="mb-2 block text-sm font-bold" htmlFor="place-search">
             Ort oder PLZ manuell wählen

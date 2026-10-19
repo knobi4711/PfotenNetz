@@ -128,20 +128,49 @@ describe('booking mutations', () => {
 
   it('rateHelper calls seeker_rate_helper with rating and review', async () => {
     const { client, rpcCalls } = createMutationMock();
-    await rateHelper(client, 'booking-1', 5, 'great walk');
+    await rateHelper(client, {
+      bookingId: 'booking-1',
+      friendliness: 5,
+      reliability: 4,
+      animalCare: 5,
+      communication: 4,
+      review: 'great walk',
+    });
     expect(rpcCalls).toEqual([
       {
         fn: 'seeker_rate_helper',
-        args: { p_booking_id: 'booking-1', p_rating: 5, p_review: 'great walk' },
+        args: {
+          p_booking_id: 'booking-1',
+          p_friendliness: 5,
+          p_reliability: 4,
+          p_animal_care: 5,
+          p_communication: 4,
+          p_review: 'great walk',
+        },
       },
     ]);
   });
 
   it('rateSeeker calls helper_rate_seeker without review when omitted', async () => {
     const { client, rpcCalls } = createMutationMock();
-    await rateSeeker(client, 'booking-1', 4);
+    await rateSeeker(client, {
+      bookingId: 'booking-1',
+      friendliness: 4,
+      reliability: 4,
+      animalCare: 3,
+      communication: 5,
+    });
     expect(rpcCalls).toEqual([
-      { fn: 'helper_rate_seeker', args: { p_booking_id: 'booking-1', p_rating: 4 } },
+      {
+        fn: 'helper_rate_seeker',
+        args: {
+          p_booking_id: 'booking-1',
+          p_friendliness: 4,
+          p_reliability: 4,
+          p_animal_care: 3,
+          p_communication: 5,
+        },
+      },
     ]);
   });
 
@@ -159,8 +188,15 @@ describe('booking mutations', () => {
       endAt: '2026-10-01T12:00:00.000Z',
       currency: 'KIEZ_HOURS',
     });
-    await rateHelper(client, 'b', 5);
-    await rateSeeker(client, 'b', 5);
+    const rating = {
+      bookingId: 'b',
+      friendliness: 5,
+      reliability: 5,
+      animalCare: 5,
+      communication: 5,
+    };
+    await rateHelper(client, rating);
+    await rateSeeker(client, rating);
     expect(rpcCalls.some((call) => call.fn === 'timebank_adjust')).toBe(false);
     expect(fromTables).toEqual([]);
   });

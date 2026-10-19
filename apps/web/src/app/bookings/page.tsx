@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import {
   groupBookingsByRequest,
+  useArchivedBookings,
   useBookings,
   useCurrentUser,
   type BookingRequestGroup,
@@ -9,6 +11,7 @@ import {
 import { bookingTypeLabel } from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { WebHeader } from '../../components/WebHeader';
+import { formatPetDisplayName } from '../../lib/pets';
 
 const STATUS: Record<string, string> = {
   requested: 'Angefragt',
@@ -21,15 +24,17 @@ const STATUS: Record<string, string> = {
 function BookingCard({
   request,
   currentUserId,
+  archived = false,
 }: {
   request: BookingRequestGroup;
   currentUserId: string | null;
+  archived?: boolean;
 }) {
   const router = useRouter();
   const booking = request.primary;
   const isHelper = booking.helper_id === currentUserId;
   const isOwnRequest = booking.seeker_id === currentUserId;
-  const petNames = request.bookings.map((item) => item.pet?.name ?? 'Tier');
+  const petNames = request.bookings.map((item) => formatPetDisplayName(item.pet));
   return (
     <button
       type="button"
@@ -73,14 +78,25 @@ function BookingCard({
         </span>
       </div>
       <p className="mt-4 text-sm font-bold text-primary">Details öffnen →</p>
+      {archived ? (
+        <p className="mt-2 text-xs text-on-surface-variant">
+          {booking.status === 'cancelled' ? 'Storniert' : 'Abgeschlossen'} am{' '}
+          {new Date(booking.closed_at ?? booking.cancelled_at ?? booking.updated_at).toLocaleString(
+            'de-DE'
+          )}
+        </p>
+      ) : null}
     </button>
   );
 }
 
 export default function BookingsPage() {
   const router = useRouter();
-  const bookings = useBookings();
+  const [view, setView] = useState<'active' | 'archive'>('active');
+  const activeBookings = useBookings();
+  const archivedBookings = useArchivedBookings();
   const user = useCurrentUser();
+  const bookings = view === 'active' ? activeBookings : archivedBookings;
   const data = bookings.data ?? [];
   const requests = groupBookingsByRequest(data);
   return (
@@ -110,6 +126,33 @@ export default function BookingsPage() {
             </button>
           </div>
         </div>
+        <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Buchungsansicht">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'active'}
+            className={view === 'active' ? 'btn-primary' : 'btn-secondary'}
+            onClick={() => setView('active')}
+          >
+            Aktiv
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'archive'}
+            className={view === 'archive' ? 'btn-primary' : 'btn-secondary'}
+            onClick={() => setView('archive')}
+          >
+            Archiv
+          </button>
+        </div>
+        {view === 'archive' ? (
+          <p className="mb-6 rounded-xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
+            Betreuungsanfragen werden nach ihrem Ende aus der aktiven Ansicht hierher verschoben –
+            unabhängig davon, ob ein:e Helfer:in gefunden wurde. Abgeschlossene und stornierte
+            Buchungen bleiben ebenfalls im Archiv nachvollziehbar.
+          </p>
+        ) : null}
         {bookings.isPending ? (
           <p className="py-12 text-center text-on-surface-variant">Buchungen werden geladen …</p>
         ) : bookings.isError ? (
@@ -119,9 +162,13 @@ export default function BookingsPage() {
         ) : data.length === 0 ? (
           <div className="card p-10 text-center">
             <p className="text-4xl">🐾</p>
-            <h2 className="mt-4 text-xl font-extrabold">Noch keine Buchungen</h2>
+            <h2 className="mt-4 text-xl font-extrabold">
+              {view === 'archive' ? 'Archiv ist noch leer' : 'Noch keine Buchungen'}
+            </h2>
             <p className="mt-2 text-on-surface-variant">
-              Finde jetzt Unterstützung in deiner Nachbarschaft.
+              {view === 'archive'
+                ? 'Abgelaufene, abgeschlossene und stornierte Buchungen erscheinen hier.'
+                : 'Finde jetzt Unterstützung in deiner Nachbarschaft.'}
             </p>
           </div>
         ) : (
@@ -131,6 +178,7 @@ export default function BookingsPage() {
                 key={request.id}
                 request={request}
                 currentUserId={user.data?.id ?? null}
+                archived={view === 'archive'}
               />
             ))}
           </div>

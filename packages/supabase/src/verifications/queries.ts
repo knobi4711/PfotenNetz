@@ -74,7 +74,9 @@ export async function reviewHelperVerification(
   const { data, error } = await client.rpc('admin_review_helper_verification', {
     p_verification_id: input.verificationId,
     p_status: input.status,
-    p_rejection_reason: input.rejectionReason ?? null,
+    ...(input.rejectionReason === undefined || input.rejectionReason === null
+      ? {}
+      : { p_rejection_reason: input.rejectionReason }),
   });
   if (error) throw error;
   return data;

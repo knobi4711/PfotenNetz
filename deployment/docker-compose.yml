@@ -11,6 +11,7 @@ services:
       # paths expected by the generated Next.js server.
       - ./next-static:/app/apps/web/.next/static:ro
       - ./web-public:/app/apps/web/public:ro
+      - next-cache:/app/apps/web/.next/cache
     environment:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
@@ -22,3 +23,6 @@ networks:
   caddy_proxy:
     external: true
     name: caddy_proxy
+
+volumes:
+  next-cache:

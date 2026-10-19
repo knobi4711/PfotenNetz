@@ -43,7 +43,9 @@ docker compose ps
 
 Der Container hört intern auf Port 3000 und veröffentlicht keinen Host-Port. Paperless auf Port 8000 bleibt unverändert.
 `docker-compose.yml` bindet `next-static` und `web-public` unter den von Next.js erwarteten
-Pfaden ein, damit Stylesheets, JavaScript und das Logo ausgeliefert werden.
+Pfaden ein, damit Stylesheets, JavaScript und das Logo ausgeliefert werden. Der benannte
+Docker-Volume `next-cache` bleibt für Next.js-Bildoptimierung und Laufzeit-Cache beschreibbar,
+obwohl der übrige Standalone-Container read-only eingebunden ist.
 
 ## Caddy aktualisieren
 

@@ -66,9 +66,15 @@ export async function fetchNearbyHelpers(
     p_longitude: input.longitude,
     p_radius_km: input.radiusKm,
     p_limit: input.limit ?? 20,
-    ...(input.bookingType !== undefined ? { p_booking_type: input.bookingType } : {}),
-    ...(input.petSpecies !== undefined ? { p_pet_species: input.petSpecies } : {}),
-    ...(input.dayOfWeek !== undefined ? { p_day_of_week: input.dayOfWeek } : {}),
+    ...(input.bookingType !== undefined && input.bookingType !== null
+      ? { p_booking_type: input.bookingType }
+      : {}),
+    ...(input.petSpecies !== undefined && input.petSpecies !== null
+      ? { p_pet_species: input.petSpecies }
+      : {}),
+    ...(input.dayOfWeek !== undefined && input.dayOfWeek !== null
+      ? { p_day_of_week: input.dayOfWeek }
+      : {}),
   });
 
   if (error) throw error;

@@ -67,7 +67,7 @@ export default function UserReportsAdminPage() {
                   </p>
                 </div>
                 <span className="rounded-full bg-surface-container px-3 py-1 text-xs font-bold">
-                  {STATUS_LABELS[report.status]}
+                  {STATUS_LABELS[report.status as keyof typeof STATUS_LABELS] ?? report.status}
                 </span>
               </div>
               <p className="mt-4 font-bold">{USER_REPORT_REASON_LABELS[report.reason]}</p>

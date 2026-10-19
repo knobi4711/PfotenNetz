@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -16,6 +16,7 @@ import {
   useRejectBooking,
   useStartBooking,
   useUpdateBookingRequest,
+  type BookingRatingInput,
   type Database,
 } from '@pfotennetz/supabase';
 import { formatCurrency, formatDate, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
@@ -83,39 +84,123 @@ function WorkflowTimeline({ status }: { status: BookingStatus }) {
   );
 }
 
-function RateRow({
+type RatingFields = Omit<BookingRatingInput, 'bookingId' | 'review'>;
+type RatingKey = keyof RatingFields;
+
+const RATING_CRITERIA: ReadonlyArray<{ key: RatingKey; label: string }> = [
+  { key: 'friendliness', label: 'Freundlichkeit' },
+  { key: 'reliability', label: 'Zuverlässigkeit / Pünktlichkeit' },
+  { key: 'animalCare', label: 'Umgang mit den Tieren' },
+  { key: 'communication', label: 'Kommunikation' },
+];
+
+const EMPTY_RATING: RatingFields = {
+  friendliness: 0,
+  reliability: 0,
+  animalCare: 0,
+  communication: 0,
+};
+
+function RatingForm({
   title,
-  onRate,
+  onSubmit,
   pending,
 }: {
   title: string;
-  onRate: (rating: number) => void;
+  onSubmit: (rating: RatingFields & { review?: string }) => void;
   pending: boolean;
 }) {
   const c = usePalette();
-  const ratings = [1, 2, 3, 4, 5];
+  const [values, setValues] = useState<RatingFields>(EMPTY_RATING);
+  const [review, setReview] = useState('');
+  const complete = RATING_CRITERIA.every(({ key }) => values[key] > 0);
   return (
-    <View style={styles.rateRow}>
+    <View style={styles.ratingForm}>
       <Text style={[styles.rateTitle, { color: c.onSurface }]}>{title}</Text>
-      <View style={styles.rateButtons}>
-        {ratings.map((rating) => (
-          <Pressable
-            key={rating}
-            accessibilityRole="button"
-            accessibilityLabel={`${rating} von 5 Sternen`}
-            disabled={pending}
-            onPress={() => {
-              onRate(rating);
-            }}
-            style={[
-              styles.rateButton,
-              { backgroundColor: c.surfaceContainerHigh, opacity: pending ? 0.6 : 1 },
-            ]}
-          >
-            <Text style={[styles.rateButtonText, { color: c.onSurface }]}>{rating}</Text>
-          </Pressable>
-        ))}
-      </View>
+      {RATING_CRITERIA.map(({ key, label }) => (
+        <View key={key} style={styles.criterionRow}>
+          <Text style={[styles.criterionLabel, { color: c.onSurface }]}>{label}</Text>
+          <View style={styles.rateButtons}>
+            {[1, 2, 3, 4, 5].map((rating) => {
+              const selected = values[key] === rating;
+              return (
+                <Pressable
+                  key={rating}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${label}: ${rating} von 5`}
+                  accessibilityState={{ selected }}
+                  disabled={pending}
+                  onPress={() => {
+                    setValues((current) => ({ ...current, [key]: rating }));
+                  }}
+                  style={[
+                    styles.rateButton,
+                    {
+                      backgroundColor: selected ? c.primary : c.surfaceContainerHigh,
+                      opacity: pending ? 0.6 : 1,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.rateButtonText, { color: selected ? c.onPrimary : c.onSurface }]}
+                  >
+                    {rating}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ))}
+      <TextInput
+        accessibilityLabel="Kurzer Bewertungstext"
+        editable={!pending}
+        maxLength={500}
+        multiline
+        numberOfLines={3}
+        onChangeText={setReview}
+        placeholder="Optional: Was lief besonders gut?"
+        placeholderTextColor={c.onSurfaceVariant}
+        style={[styles.reviewInput, { color: c.onSurface, borderColor: c.outlineVariant }]}
+        value={review}
+      />
+      <ActionButton
+        title="Bewertung absenden"
+        pending={pending}
+        disabled={!complete || pending}
+        onPress={() => {
+          const trimmedReview = review.trim();
+          onSubmit(trimmedReview.length > 0 ? { ...values, review: trimmedReview } : values);
+        }}
+      />
+    </View>
+  );
+}
+
+function RatingSummary({
+  values,
+  overall,
+  review,
+}: {
+  values: Partial<Record<RatingKey, number | null>>;
+  overall: number | null;
+  review: string | null;
+}) {
+  const c = usePalette();
+  const hasCriteria = RATING_CRITERIA.every(({ key }) => typeof values[key] === 'number');
+  return (
+    <View style={styles.ratingSummary}>
+      <Text style={[styles.summaryOverall, { color: c.onSurface }]}>
+        Gesamt: {overall ?? '–'} / 5
+      </Text>
+      {hasCriteria
+        ? RATING_CRITERIA.map(({ key, label }) => (
+            <InfoRow key={key} label={label} value={`${values[key]} von 5`} />
+          ))
+        : null}
+      {review ? (
+        <Text style={[styles.reviewText, { color: c.onSurfaceVariant }]}>{review}</Text>
+      ) : null}
     </View>
   );
 }
@@ -176,14 +261,14 @@ export default function BookingDetailScreen() {
     booking.seeker_id !== currentUserId &&
     profileQuery.data?.role === 'helper';
 
-  const handleRateHelper = (rating: number) => {
+  const handleRateHelper = (rating: RatingFields & { review?: string }) => {
     if (bookingId === undefined) return;
-    rateHelper.mutate({ bookingId, rating }, { onSuccess: () => setRatingDone(true) });
+    rateHelper.mutate({ bookingId, ...rating }, { onSuccess: () => setRatingDone(true) });
   };
 
-  const handleRateSeeker = (rating: number) => {
+  const handleRateSeeker = (rating: RatingFields & { review?: string }) => {
     if (bookingId === undefined) return;
-    rateSeeker.mutate({ bookingId, rating }, { onSuccess: () => setRatingDone(true) });
+    rateSeeker.mutate({ bookingId, ...rating }, { onSuccess: () => setRatingDone(true) });
   };
 
   return (
@@ -273,6 +358,26 @@ export default function BookingDetailScreen() {
               ) : null}
               <InfoRow label="Suchende:r" value={booking.seekerProfile?.display_name ?? '–'} />
               <InfoRow label="Helfende:r" value={booking.helperProfile?.display_name ?? '–'} />
+              {booking.status === 'completed' || booking.status === 'cancelled' ? (
+                <>
+                  <InfoRow
+                    label={booking.status === 'cancelled' ? 'Storniert am' : 'Abgeschlossen am'}
+                    value={formatDate(
+                      booking.closed_at ?? booking.cancelled_at ?? booking.updated_at,
+                      {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }
+                    )}
+                  />
+                  {booking.status === 'cancelled' && booking.cancellation_reason ? (
+                    <InfoRow label="Stornierungsgrund" value={booking.cancellation_reason} />
+                  ) : null}
+                </>
+              ) : null}
               <InfoRow
                 label="Start"
                 value={formatDate(booking.start_at, {
@@ -462,24 +567,42 @@ export default function BookingDetailScreen() {
                 <SectionTitle>Bewertung</SectionTitle>
                 {isSeeker ? (
                   booking.rating_helper === null ? (
-                    <RateRow
+                    <RatingForm
                       title="Wie war die Hilfe?"
-                      onRate={handleRateHelper}
+                      onSubmit={handleRateHelper}
                       pending={rateHelper.isPending}
                     />
                   ) : (
-                    <InfoRow label="Deine Bewertung" value={`${booking.rating_helper} von 5`} />
+                    <RatingSummary
+                      overall={booking.rating_helper}
+                      review={booking.review_helper}
+                      values={{
+                        friendliness: booking.rating_helper_friendliness,
+                        reliability: booking.rating_helper_reliability,
+                        animalCare: booking.rating_helper_animal_care,
+                        communication: booking.rating_helper_communication,
+                      }}
+                    />
                   )
                 ) : null}
                 {isHelper ? (
                   booking.rating_seeker === null ? (
-                    <RateRow
+                    <RatingForm
                       title="Wie war die Zusammenarbeit?"
-                      onRate={handleRateSeeker}
+                      onSubmit={handleRateSeeker}
                       pending={rateSeeker.isPending}
                     />
                   ) : (
-                    <InfoRow label="Deine Bewertung" value={`${booking.rating_seeker} von 5`} />
+                    <RatingSummary
+                      overall={booking.rating_seeker}
+                      review={booking.review_seeker}
+                      values={{
+                        friendliness: booking.rating_seeker_friendliness,
+                        reliability: booking.rating_seeker_reliability,
+                        animalCare: booking.rating_seeker_animal_care,
+                        communication: booking.rating_seeker_communication,
+                      }}
+                    />
                   )
                 ) : null}
                 {!isSeeker && !isHelper ? (
@@ -538,13 +661,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   timelineLabelCurrent: { fontFamily: appFonts.extrabold },
-  rateRow: { marginTop: 4 },
+  ratingForm: { marginTop: 4, gap: 12 },
   rateTitle: {
     fontFamily: appFonts.semibold,
     fontSize: 13,
     lineHeight: 18,
-    marginBottom: 8,
   },
+  criterionRow: { gap: 6 },
+  criterionLabel: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 18 },
   rateButtons: { flexDirection: 'row', gap: 8 },
   petPhotoPreview: { alignItems: 'center', marginBottom: 16 },
   petPhoto: { width: 120, height: 120, borderRadius: 20 },
@@ -565,4 +689,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rateButtonText: { fontFamily: appFonts.bold, fontSize: 15, lineHeight: 20 },
+  reviewInput: {
+    minHeight: 76,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    textAlignVertical: 'top',
+    fontFamily: appFonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  ratingSummary: { gap: 8 },
+  summaryOverall: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
+  reviewText: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 19, fontStyle: 'italic' },
 });

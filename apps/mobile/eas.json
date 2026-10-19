@@ -26,18 +26,5 @@
         "buildType": "app-bundle"
       }
     }
-  },
-  "submit": {
-    "preview": {
-      "android": {
-        "track": "internal"
-      }
-    },
-    "production": {
-      "android": {
-        "serviceAccountKeyPath": "./.secrets/google-play-service-account.json",
-        "track": "internal"
-      }
-    }
   }
 }

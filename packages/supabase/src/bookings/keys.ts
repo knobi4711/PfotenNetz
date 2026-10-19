@@ -5,7 +5,8 @@ export const bookingKeys = {
   /** Prefix for all booking queries (covers present and future booking lists). */
   all: ['bookings'] as const,
   /** The caller's bookings (RLS scopes to participations), newest first. */
-  list: () => ['bookings', 'list'] as const,
+  list: (scope: 'active' | 'archive' = 'active') =>
+    scope === 'active' ? (['bookings', 'list'] as const) : (['bookings', 'list', scope] as const),
   /** Single booking detail, including relations. */
   detail: (bookingId: string) => ['booking', bookingId] as const,
 } as const;

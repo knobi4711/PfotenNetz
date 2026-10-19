@@ -3,6 +3,7 @@ import type { Database } from '../types/database';
 
 export type Message = Database['public']['Tables']['messages']['Row'];
 export type MessageWithMedia = Message & { mediaUrl: string | null };
+export type ContactMessage = Database['public']['Tables']['contact_messages']['Row'];
 
 async function requireUserId(client: SupabaseClient<Database>): Promise<string> {
   const {
@@ -10,6 +11,39 @@ async function requireUserId(client: SupabaseClient<Database>): Promise<string> 
   } = await client.auth.getUser();
   if (user === null) throw new Error('Not authenticated');
   return user.id;
+}
+
+export async function fetchContactMessages(
+  client: SupabaseClient<Database>,
+  contactRequestId: string
+): Promise<ContactMessage[]> {
+  const { data, error } = await client
+    .from('contact_messages')
+    .select('*')
+    .eq('contact_request_id', contactRequestId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function sendContactMessage(
+  client: SupabaseClient<Database>,
+  contactRequestId: string,
+  content: string
+): Promise<ContactMessage> {
+  const trimmed = content.trim();
+  if (trimmed.length === 0) throw new Error('Bitte gib eine Nachricht ein.');
+  if (trimmed.length > 2000)
+    throw new Error('Nachrichten dürfen höchstens 2.000 Zeichen enthalten.');
+
+  const senderId = await requireUserId(client);
+  const { data, error } = await client
+    .from('contact_messages')
+    .insert({ contact_request_id: contactRequestId, sender_id: senderId, content: trimmed })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 export async function fetchBookingMessages(

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
-import { fetchBookingsForUser } from './queries';
+import { fetchBookingsForUser, filterBookingsByScope, type BookingWithRelations } from './queries';
 
 interface OrderCall {
   column: string;
@@ -58,5 +58,52 @@ describe('fetchBookingsForUser', () => {
     const { client } = createListMock([]);
 
     await expect(fetchBookingsForUser(client)).resolves.toEqual([]);
+  });
+
+  it('archives ended requests regardless of helper assignment', () => {
+    const now = Date.parse('2026-10-12T12:00:00.000Z');
+    const openWithoutHelper = {
+      status: 'requested',
+      helper_id: null,
+      end_at: '2026-10-12T11:59:59.000Z',
+    } as unknown as BookingWithRelations;
+    const assignedRequest = {
+      status: 'confirmed',
+      helper_id: 'helper-1',
+      end_at: '2026-10-12T11:59:59.000Z',
+    } as unknown as BookingWithRelations;
+
+    expect(filterBookingsByScope([openWithoutHelper], 'archive', now)).toHaveLength(1);
+    expect(filterBookingsByScope([openWithoutHelper], 'active', now)).toHaveLength(0);
+    expect(filterBookingsByScope([assignedRequest], 'archive', now)).toHaveLength(1);
+    expect(filterBookingsByScope([assignedRequest], 'active', now)).toHaveLength(0);
+  });
+
+  it('moves completed and cancelled bookings to the archive after three days', () => {
+    const now = Date.parse('2026-10-12T12:00:00.000Z');
+    const archived = {
+      status: 'completed',
+      end_at: '2026-10-08T10:00:00.000Z',
+      closed_at: '2026-10-08T11:59:59.000Z',
+      updated_at: '2026-10-12T11:00:00.000Z',
+    } as unknown as BookingWithRelations;
+    const recent = {
+      status: 'completed',
+      end_at: '2026-10-13T12:00:00.000Z',
+      closed_at: '2026-10-09T12:00:01.000Z',
+      updated_at: '2026-10-12T11:00:00.000Z',
+    } as unknown as BookingWithRelations;
+    const cancelled = {
+      status: 'cancelled',
+      end_at: '2026-10-08T10:00:00.000Z',
+      closed_at: '2026-10-08T12:00:00.000Z',
+      cancelled_at: '2026-10-08T12:00:00.000Z',
+      updated_at: '2026-10-12T11:00:00.000Z',
+    } as unknown as BookingWithRelations;
+
+    expect(filterBookingsByScope([archived], 'archive', now)).toHaveLength(1);
+    expect(filterBookingsByScope([archived], 'active', now)).toHaveLength(0);
+    expect(filterBookingsByScope([recent], 'active', now)).toHaveLength(1);
+    expect(filterBookingsByScope([cancelled], 'archive', now)).toHaveLength(1);
   });
 });

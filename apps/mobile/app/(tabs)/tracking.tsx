@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import {
   notificationDeepLink,
   groupBookingsByRequest,
+  useArchivedBookings,
   useBookings,
   useCurrentUser,
   useMarkAllNotificationsRead,
@@ -96,6 +97,7 @@ function BookingRow({
 export default function TrackingScreen() {
   const c = usePalette();
   const bookingsQuery = useBookings();
+  const archivedBookingsQuery = useArchivedBookings();
   const userQuery = useCurrentUser();
   const notificationsQuery = useNotifications();
   const unreadQuery = useUnreadCount();
@@ -103,9 +105,12 @@ export default function TrackingScreen() {
   const markAllRead = useMarkAllNotificationsRead();
   const activeTracking = useActiveTrackingSessions();
   useTrackingSubscription();
+  const [view, setView] = useState<'active' | 'archive'>('active');
   const [filter, setFilter] = useState<'all' | 'toMe' | 'mine'>('all');
 
-  const bookings = bookingsQuery.data ?? [];
+  const displayedQuery = view === 'active' ? bookingsQuery : archivedBookingsQuery;
+  const activeBookings = bookingsQuery.data ?? [];
+  const bookings = displayedQuery.data ?? [];
   const currentUserId = userQuery.data?.id ?? null;
   const notifications = notificationsQuery.data ?? [];
   const unread = unreadQuery.data ?? 0;
@@ -142,6 +147,28 @@ export default function TrackingScreen() {
         />
 
         <ChipRow>
+          {(['active', 'archive'] as const).map((option) => (
+            <Chip
+              key={option}
+              label={option === 'active' ? 'Aktiv' : 'Archiv'}
+              selected={view === option}
+              onPress={() => {
+                setView(option);
+              }}
+            />
+          ))}
+        </ChipRow>
+        {view === 'archive' ? (
+          <Card>
+            <Text style={[styles.notifBody, { color: c.onSurfaceVariant }]}>
+              Betreuungsanfragen werden nach ihrem Ende archiviert – unabhängig davon, ob ein:e
+              Helfer:in gefunden wurde. Alle Beteiligten können die Details weiterhin
+              nachvollziehen.
+            </Text>
+          </Card>
+        ) : null}
+
+        <ChipRow>
           {(
             [
               { value: 'all', label: 'Alle' },
@@ -163,13 +190,13 @@ export default function TrackingScreen() {
           })}
         </ChipRow>
 
-        {bookingsQuery.isPending ? (
+        {displayedQuery.isPending ? (
           <LoadingView label="Buchungen werden geladen …" />
-        ) : bookingsQuery.isError ? (
+        ) : displayedQuery.isError ? (
           <ErrorBox
-            message={`Buchungen konnten nicht geladen werden: ${bookingsQuery.error.message}`}
+            message={`Buchungen konnten nicht geladen werden: ${displayedQuery.error.message}`}
             onRetry={() => {
-              void bookingsQuery.refetch();
+              void displayedQuery.refetch();
             }}
           />
         ) : bookings.length === 0 ? (
@@ -197,7 +224,7 @@ export default function TrackingScreen() {
               Aktive GPS-Sitzungen werden automatisch aktualisiert.
             </Text>
             {activeTracking.data.map((session) => {
-              const booking = bookings.find((item) => item.id === session.booking_id);
+              const booking = activeBookings.find((item) => item.id === session.booking_id);
               return (
                 <Pressable
                   key={session.id}

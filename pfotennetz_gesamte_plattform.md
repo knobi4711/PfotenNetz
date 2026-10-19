@@ -1,13 +1,13 @@
 # PfotenNetz — Gesamte Plattform-Architektur & Screen-Spezifikation
 
 **Projekt:** PfotenNetz — Mobile-First & Desktop Nachbarschafts-Plattform für Haustierbetreuung, P2P-Solidarität & hyperlokale Gefahrenwarnung  
-**Version:** 4.1.0 (Lokaler Android-Build, Play-Store-Signierung, Verfügbarkeits- und Profilpflege, 11.10.2026)
+**Version:** 4.3.0 (QR-Code-Beschriftung Web, lokaler Play-Store-Upload, 12.10.2026)
 **Design-System:** Warm Community Pet Care (`#e26d46` Terracotta, `#2e7d32` Salbeigrün/Waldgrün, `#fff8f5` Warm Linen)  
-**Status:** Mobile-Betreuungsplattform und zentrale Web-Flows produktiv auf `paperless`/`pfotennetz.app` veröffentlicht; Passwort-Reset, robuste Android-Biometrie, native/Web-Plattformtrennung, Nutzer:innen-Meldungen und Google-Play-konforme Account-Löschung ergänzt, rechtliche Freigabe und einzelne native Abnahmen sind noch offen
+**Status:** Mobile-Betreuungsplattform und zentrale Web-Flows produktiv auf `paperless`/`pfotennetz.app` veröffentlicht; Passwort-Reset, robuster Android-Build, privater Kennenlern-Chat, aktualisierte Web-QR-Code-Beschriftung, Android-Biometrie, native/Web-Plattformtrennung, Nutzer:innen-Meldungen und Google-Play-konforme Account-Löschung ergänzt, rechtliche Freigabe und einzelne native Abnahmen sind noch offen
 
 ---
 
-## 0. Aktueller Implementierungsstand (09.10.2026)
+## 0. Aktueller Implementierungsstand (12.10.2026)
 
 Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsächlich implementierte Stand ist:
 
@@ -27,6 +27,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Buchungsworkflow inklusive Statuswechseln, Zeitbank und Benachrichtigungen
 - Mehrtier-Betreuungsanträge: Im Web-Dropdown und in Mobile-Checkboxen lassen sich mehrere aktive Tiere oder „Alle Tiere“ auswählen; sie werden als ein gemeinsamer Antrag gruppiert, während separat gestartete Anträge unabhängig bleiben
 - Buchungs-Chat mit Nachrichtenliste und Realtime-Grundlage
+- Privater Kennenlern-Chat für offene und angenommene Kontaktanfragen; separate `contact_messages`-Tabelle, ursprüngliche Anfrage automatisch als erste Nachricht, Zugriff ausschließlich für die beiden Beteiligten
 - Gefahrenmeldung, Gefahrenradar, Foto-Upload, Zeit-/Dringlichkeitsfilter, Realtime-Aktualisierung und Moderationsansicht
 - Rich-Push-Kategorien mit internen Deep-Links für Gefahren- und Vermisst-Tier-Warnungen
 - Admin-Zugangspunkt „Administration“ im Profil/Header; sichere Gefahrenmoderation für Admins
@@ -38,6 +39,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Deutschlandweite Nutzung ohne Pilotregion- oder PLZ-Beschränkung; Web-Standortwahl per hochgenauer Browser-Geolokalisierung und manueller Ort-/PLZ-Suche
 - Dringende Betreuungsanfragen mit Betreuungsnotizen und serverseitiger Kennzeichnung
 - Unverbindliche Kontaktanfragen an verifizierte Helfer:innen vor einer Buchung
+- Nach Annahme einer Kontaktanfrage direkter Übergang von Mobile und Web zu „Betreuung anfragen“
 - Meldung von Fake-Profilen, Spam, Belästigung und sonstigen Verstößen direkt aus Helferprofilen
 - Serverseitig geschützte Nutzer:innen-Meldungen mit Duplikatschutz und Admin-Moderationsstatus
 - Sicherheitsbestätigung vor der ersten Betreuung mit Empfehlung eines persönlichen Probetreffens
@@ -55,6 +57,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - EAS-Profile für Development-Builds, interne Preview-Verteilung und Production-Builds mit automatischer Versionsnummer
 - Lokales Expo-Prebuild mit nativer Android-Projektstruktur und Gradle-Build ohne EAS-Warteschlange
 - Lokale Android-Release-Signierung mit separatem PfotenNetz-Upload-Key für Google-Play-AABs
+- Verbindlicher Release-Standard: Android-APK/AAB lokal über die vorhandene Expo-/Android-/Gradle-Toolchain bauen und das AAB direkt per Google-Play-API hochladen; EAS Cloud wird für den Release nicht verwendet
 
 ### Umgesetzt – Web-App
 
@@ -67,6 +70,8 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - `/bookings`: Buchungsübersicht
 - `/booking/[id]`: Buchungsdetail mit Statusaktionen und Chat-Einstieg
 - `/chat/[bookingId]`: Web-Chat mit Text-, Foto- und Medienanzeige
+- `/chat/contact/[contactRequestId]`: privater Kennenlern-Chat zwischen Suchenden und Helfer:innen
+- Dashboard-QR-Code zur mobilen App mit der Beschriftung „PfotenNetz App · Version 0.0.8“; der QR-Code und der direkte Play-Store-Link verwenden dasselbe Ziel
 - `/profile`: Profil und Zeitbank-Verlauf
 - `/profile`: vollständige Bearbeitung von Anzeigename, Telefon, PLZ, Kurzvorstellung, Suchradius und Benachrichtigungen
 - `/profile`: PLZ ist auf Web und Mobile ein Pflichtfeld und wird vor dem Speichern serverseitig validiert
@@ -87,7 +92,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - `/hazard/moderation`: Admin-Moderation aktiver Gefahrenmeldungen
 - Root-`.env`-Laden für den Web-Build im Monorepo
 - Next.js-Produktionsbuild als Standalone-Ausgabe mit vorbereitetem Docker-Container hinter Caddy auf `pfotennetz.app`
-- Deployment-Dokumentation, Docker-Compose-Datei und Caddy-Konfiguration unter `deployment/`; Paperless bleibt auf Port 8000 unverändert
+- Deployment-Dokumentation, Docker-Compose-Datei und Caddy-Konfiguration unter `deployment/`; der read-only Standalone-Container erhält einen beschreibbaren Next.js-Cache für Bildoptimierung, Paperless bleibt auf Port 8000 unverändert
 - Direkter Produktionsdeploy per SSH auf den Mini-PC `paperless`; Web-Container `pfotennetz-web` hinter Caddy auf `https://pfotennetz.app`
 
 ### Qualitätsstand
@@ -101,12 +106,63 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Repository-Lint: erfolgreich
 - Web-E2E: **18/18 erfolgreich**, inklusive Passwort-Reset-Route, authentifizierten Tier-, Buchungs-, Chat-, Medien- und Kontaktanfrage-Flüssen, Offline-Notfallkarten-Smoke-Test sowie Community-Moderation und Web-Notfallkartenroute
 - Web-Build: erfolgreich
-- Lokale Android-Toolchain: Android Studio/SDK, Java 21, Expo-Prebuild und Gradle-Wrapper eingerichtet; lokales AAB wird aktuell erstmals gebaut
+- Web-QR-Code-Beschriftung: auf „PfotenNetz App · Version 0.0.8“ aktualisiert; Web-Typecheck, Lint und Tests erfolgreich
+- Web-Produktivdeploy: neuer Stand per SSH auf `paperless` übertragen, Container/Caddy validiert und `https://pfotennetz.app` anschließend mit HTTP 200 geprüft
+- Web-Asset-Checks: Next.js-CSS mit HTTP 200 und Logo mit HTTP 200 ausgeliefert; der anfängliche ungestylte Fallback durch den fehlenden beschreibbaren Cache ist behoben
+- Lokale Android-Toolchain: Android Studio/SDK, Java 21, Expo-Prebuild und Gradle-Wrapper eingerichtet; lokale APK-/AAB-Erzeugung ist der verbindliche Standard
+- Lokaler Android-Release-Build am 12.10.2026 verifiziert: `app:assembleRelease` erfolgreich (`BUILD SUCCESSFUL in 4m 48s`), signierte APK unter `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`
 - Expo-Android-Bundle: erfolgreich erzeugt
 - Web-Deployment-Vorbereitung: Next.js-Standalone-Build, interner Container-Port 3000 sowie Caddy-Reverse-Proxy-Konfiguration dokumentiert
-- Android-Development-Build: erfolgreich erzeugt, installiert und mit einem nativen Login-/Dashboard-Smoke-Test auf dem verbundenen Gerät geprüft; aktueller EAS-Build `92fc3272-1f8b-42a8-9c16-a82c584e9afc`
+- Android-Development-Build: erfolgreich erzeugt, installiert und mit einem nativen Login-/Dashboard-Smoke-Test auf dem verbundenen Gerät geprüft; EAS Cloud bleibt wegen des ausgeschöpften Free-Tier-Kontingents optional
 - Android-Login-Smoke: leerer lokaler Zustand ohne Fingerprint-Angebot und ohne blockierenden Ladezustand geprüft
-- Remote-Migrationen bis `070_multi_pet_price_anchor.sql` angewendet; `069` ergänzt die Gruppierung mehrerer Tiere pro Antrag und gruppenweite Statuswechsel, `070` verankert die Gesamtvergütung am ersten Gruppen-Eintrag
+- Remote-Migrationen bis `072_fix_contact_notification_delivery.sql` sowie `20261012120000_contact_request_private_chat.sql` und `20261012121500_seed_contact_chat_message.sql` produktiv angewendet; der private Kontaktchat besitzt eine eigene Tabelle und RLS-Zugriffskontrolle
+
+### Verbindlicher Android-Build-Ablauf
+
+Der Android-Build wird dauerhaft **lokal** erzeugt. EAS Cloud wird nicht automatisch
+verwendet und darf nur bewusst als optionale Ausnahme gestartet werden. Grund ist das
+begrenzte kostenlose EAS-Monatskontingent; ein fehlgeschlagener oder nicht verfügbarer
+EAS-Build ist daher kein Grund, den Release-Prozess zu ändern.
+
+Voraussetzungen sind Android SDK/ADB, Java 21 und der native Expo-Prebuild unter
+`apps/mobile/android`. Die verbindlichen PowerShell-Befehle für Release-Artefakte sind:
+
+```powershell
+Set-Location apps/mobile/android
+./gradlew.bat app:assembleRelease   # installierbare APK
+./gradlew.bat app:bundleRelease     # Google-Play-AAB
+```
+
+Nach Änderungen an Expo-Konfiguration oder nativen Abhängigkeiten wird vorher aus
+`apps/mobile` der native Stand aktualisiert:
+
+```powershell
+Set-Location apps/mobile
+pnpm exec expo prebuild --platform android
+```
+
+Die lokale APK liegt anschließend unter
+`apps/mobile/android/app/build/outputs/apk/release/app-release.apk` und kann mit
+`adb install -r` auf einem Testgerät installiert werden. `build:android:dev` und
+`build:android:preview` bleiben für ältere Development-/Fallback-Abläufe vorhanden;
+für den Release wird kein EAS-Server verwendet.
+
+Das lokale AAB wird direkt zur Google-Play-Android-Publisher-API hochgeladen:
+
+```powershell
+Set-Location apps/mobile
+pnpm upload:android:local
+```
+
+Der lokale Service-Account `pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com`
+mit seinem passenden JSON-Schlüssel muss in der Play Console für `app.pfotennetz`
+freigeschaltet sein. Falls der Schlüssel an einem anderen Ort liegt, wird der Pfad
+über `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY_PATH` gesetzt. Der Upload verwendet den
+Internal-Track und überträgt weder das AAB noch Zugangsdaten an Expo.
+
+Der Build wurde erfolgreich verifiziert. Dabei wurden lediglich CMake-Warnungen zu
+langen Windows-Pfaden sowie Gradle-Hinweise zu künftig entfernten Features ausgegeben;
+beide haben den Release-Build nicht verhindert.
 
 ### Noch nicht vollständig umgesetzt
 
@@ -122,7 +178,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Native Passkeys bleiben ein PoC; der Development Build ist vorhanden, eine vollständige Geräteabnahme steht noch aus
 - Rechtstexte sind technische Entwürfe und benötigen Betreiberangaben sowie Rechtsprüfung
 - Web-Parität ist noch nicht vollständig: einige native Sonderfunktionen fehlen noch im Web
-- Kontaktanfragen können auf Mobile und Web erstellt, angenommen, abgelehnt oder storniert werden; Backend- und Web-Flows sind getestet, die produktive Push-/Antwort-/Chat-Abnahme auf echten Geräten bleibt noch offen
+- Kontaktanfragen können auf Mobile und Web erstellt, angenommen, abgelehnt oder storniert werden; der private Kennenlern-Chat ist auf Mobile und Web umgesetzt, Backend- und Web-Flows sind getestet, die produktive Push-/Antwort-/Chat-Abnahme auf echten Geräten bleibt noch offen
 - Urlaubspflege mit expliziten Betreuungsoptionen „bei der Halterin/dem Halter zu Hause“ (Besuche oder temporärer Helper-Einzug) oder „beim Helper zu Hause“ (zeitweiser Tieraufenthalt) auf Web und Mobile; der gewählte Ort wird in der Buchung gespeichert und nur den Beteiligten angezeigt
 - Nachbarschafts-Tauschbörse auf Web und Mobile: Tierfutter, Zubehör und Utensilien zu verschenken, zu tauschen, zu verkaufen oder zu suchen; Suche nach Freitext, Kategorie und Angebotsart, sichere Interessenanfrage ohne Veröffentlichung privater Kontaktdaten
 

@@ -6,7 +6,11 @@ import {
   useCreateTrackingSession,
   useFinishTrackingSession,
 } from '@pfotennetz/supabase';
-import { hasUsableBrowserAccuracy } from '../lib/location';
+import {
+  describeBrowserAccuracyError,
+  describeBrowserLocationError,
+  hasUsableBrowserAccuracy,
+} from '../lib/location';
 import { useRef, useState } from 'react';
 
 type Point = { latitude: number; longitude: number; accuracy: number; timestamp: number };
@@ -52,7 +56,13 @@ export function WebTrackingRecorder({ bookingId }: { bookingId: string }) {
   const start = async () => {
     setError(null);
     if (!navigator.geolocation)
-      return setError('Dieser Browser unterstützt keine Standortaufzeichnung.');
+      return setError(
+        'Dieser Browser stellt keine Standortfunktion bereit. Verwende einen aktuellen Browser wie Chrome, Edge, Firefox oder Safari.'
+      );
+    if (typeof window !== 'undefined' && window.isSecureContext === false)
+      return setError(
+        'Die Standortaufzeichnung ist auf dieser unsicheren Verbindung nicht möglich. Öffne PfotenNetz über https:// (nicht über http://) und versuche es erneut.'
+      );
     try {
       const session = await create.mutateAsync(bookingId);
       sessionId.current = session.id;
@@ -61,9 +71,7 @@ export function WebTrackingRecorder({ bookingId }: { bookingId: string }) {
       watch.current = navigator.geolocation.watchPosition(
         (position) => {
           if (!hasUsableBrowserAccuracy(position.coords.accuracy)) {
-            setError(
-              'Der Browser liefert aktuell nur einen ungenauen Standort. Bitte aktiviere die Standortdienste von Windows.'
-            );
+            setError(describeBrowserAccuracyError(position.coords.accuracy).message);
             return;
           }
           const point: Point = {
@@ -84,7 +92,7 @@ export function WebTrackingRecorder({ bookingId }: { bookingId: string }) {
               )
           );
         },
-        () => setError('Standortfreigabe wurde nicht erteilt.'),
+        (locationError) => setError(describeBrowserLocationError(locationError, 15).message),
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
       );
       setActive(true);

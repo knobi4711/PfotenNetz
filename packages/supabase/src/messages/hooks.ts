@@ -2,11 +2,37 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '../client/createClient';
 import { messageKeys } from './keys';
 import {
+  fetchContactMessages,
   fetchBookingMessages,
+  sendContactMessage,
   sendBookingMessage,
   uploadBookingMessageImage,
   uploadBookingMessageVoice,
 } from './queries';
+
+export function useContactMessages(contactRequestId: string | undefined) {
+  const client = getSupabaseClient();
+  return useQuery({
+    queryKey: messageKeys.contact(contactRequestId ?? 'unknown'),
+    queryFn: () => {
+      if (contactRequestId === undefined) throw new Error('contactRequestId is required');
+      return fetchContactMessages(client, contactRequestId);
+    },
+    enabled: contactRequestId !== undefined,
+  });
+}
+
+export function useSendContactMessage() {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { contactRequestId: string; content: string }) =>
+      sendContactMessage(client, input.contactRequestId, input.content),
+    onSuccess: (_message, input) => {
+      void queryClient.invalidateQueries({ queryKey: messageKeys.contact(input.contactRequestId) });
+    },
+  });
+}
 
 export function useBookingMessages(bookingId: string | undefined) {
   const client = getSupabaseClient();

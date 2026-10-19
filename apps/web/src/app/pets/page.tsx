@@ -15,6 +15,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { WebHeader } from '../../components/WebHeader';
+import { petSpeciesEmoji } from '../../lib/pets';
 import { useState, type ChangeEvent } from 'react';
 
 function stringList(value: unknown): string[] {
@@ -408,12 +409,8 @@ export default function PetsPage() {
                       unoptimized
                       className="h-full w-full object-cover"
                     />
-                  ) : pet.species === 'cat' ? (
-                    '🐱'
-                  ) : pet.species === 'dog' ? (
-                    '🐶'
                   ) : (
-                    '🐾'
+                    petSpeciesEmoji(pet.species)
                   )}
                 </div>
                 <div className="p-6">

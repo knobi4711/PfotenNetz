@@ -3,6 +3,41 @@ import type { Database } from '../types/database';
 
 export type Booking = Database['public']['Tables']['bookings']['Row'];
 
+export type BookingListScope = 'active' | 'archive' | 'all';
+export const BOOKING_ARCHIVE_AFTER_DAYS = 3;
+const BOOKING_ARCHIVE_AFTER_MS = BOOKING_ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000;
+
+function closedAtForBooking(booking: Booking): string | null {
+  if (booking.status === 'cancelled') {
+    return booking.closed_at ?? booking.cancelled_at ?? booking.updated_at;
+  }
+  if (booking.status === 'completed') {
+    // updated_at is a compatibility fallback for rows created before 075.
+    return booking.closed_at ?? booking.updated_at;
+  }
+  return null;
+}
+
+export function isBookingArchived(booking: Booking, now = Date.now()): boolean {
+  // A request is no longer active once its care period has ended. This must
+  // not depend on whether a helper was assigned or on the terminal status.
+  if (new Date(booking.end_at).getTime() <= now) return true;
+
+  const closedAt = closedAtForBooking(booking);
+  return closedAt !== null && new Date(closedAt).getTime() <= now - BOOKING_ARCHIVE_AFTER_MS;
+}
+
+export function filterBookingsByScope(
+  bookings: BookingWithRelations[],
+  scope: BookingListScope,
+  now = Date.now()
+): BookingWithRelations[] {
+  if (scope === 'all') return bookings;
+  return bookings.filter((booking) =>
+    scope === 'archive' ? isBookingArchived(booking, now) : !isBookingArchived(booking, now)
+  );
+}
+
 export interface BookingPet {
   id: string;
   name: string;
@@ -117,7 +152,8 @@ async function addPetPhotoUrl(
  * Throws on error.
  */
 export async function fetchBookingsForUser(
-  client: SupabaseClient<Database>
+  client: SupabaseClient<Database>,
+  scope: BookingListScope = 'all'
 ): Promise<BookingWithRelations[]> {
   const { data, error } = await client
     .from('bookings')
@@ -125,9 +161,10 @@ export async function fetchBookingsForUser(
     .order('start_at', { ascending: false });
 
   if (error) throw error;
-  return Promise.all(
+  const bookings = await Promise.all(
     (data ?? []).map((booking) =>
       addPetPhotoUrl(client, booking as unknown as BookingWithRelations)
     )
   );
+  return filterBookingsByScope(bookings, scope);
 }

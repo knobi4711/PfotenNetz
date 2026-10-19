@@ -3,6 +3,22 @@ import type { Database } from '../types/database';
 
 export type ContactRequest = Database['public']['Tables']['contact_requests']['Row'];
 
+export interface ContactRequestProfile {
+  id: string;
+  display_name: string;
+}
+
+export interface ContactRequestWithProfiles extends ContactRequest {
+  requesterProfile: ContactRequestProfile | null;
+  helperProfile: ContactRequestProfile | null;
+}
+
+const CONTACT_REQUEST_SELECT = [
+  '*',
+  'requesterProfile:profiles!contact_requests_requester_id_fkey(id,display_name)',
+  'helperProfile:profiles!contact_requests_helper_id_fkey(id,display_name)',
+].join(',');
+
 async function requireUserId(client: SupabaseClient<Database>): Promise<string> {
   const { data, error } = await client.auth.getUser();
   if (error) throw error;
@@ -52,15 +68,15 @@ export async function createContactRequest(
 
 export async function fetchOwnContactRequests(
   client: SupabaseClient<Database>
-): Promise<ContactRequest[]> {
+): Promise<ContactRequestWithProfiles[]> {
   const userId = await requireUserId(client);
   const { data, error } = await client
     .from('contact_requests')
-    .select('*')
+    .select(CONTACT_REQUEST_SELECT)
     .or(`requester_id.eq.${userId},helper_id.eq.${userId}`)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data;
+  return (data ?? []) as unknown as ContactRequestWithProfiles[];
 }
 
 export async function respondContactRequest(

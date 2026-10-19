@@ -7,13 +7,13 @@ import type { Booking } from './queries';
 // Nothing here calls timebank_adjust(), UPDATEs bookings directly, or touches
 // timebank_accounts / timebank_transactions. Settlement stays server-side.
 
-function unwrapBooking<TBooking extends Booking>(result: {
+function unwrapBooking<TBooking extends Database['public']['Tables']['bookings']['Row']>(result: {
   data: TBooking | null;
   error: PostgrestError | null;
 }): Booking {
   if (result.error) throw result.error;
   if (result.data === null) throw new Error('Booking RPC returned no booking');
-  return result.data;
+  return result.data as Booking;
 }
 
 /** Helper accepts a requested booking (requested -> confirmed). */
@@ -118,30 +118,49 @@ export async function updateBookingRequest(
   );
 }
 
-/** Seeker rates the helper after completion (rating 1-5, server-validated). */
-export async function rateHelper(
-  client: SupabaseClient<Database>,
-  bookingId: string,
-  rating: number,
-  review?: string
-): Promise<Booking> {
-  const args =
-    review === undefined
-      ? { p_booking_id: bookingId, p_rating: rating }
-      : { p_booking_id: bookingId, p_rating: rating, p_review: review };
-  return unwrapBooking(await client.rpc('seeker_rate_helper', args).single());
+export interface BookingRatingInput {
+  bookingId: string;
+  friendliness: number;
+  reliability: number;
+  animalCare: number;
+  communication: number;
+  review?: string;
 }
 
-/** Helper rates the seeker after completion (rating 1-5, server-validated). */
+/** Seeker rates the helper after completion; every criterion is 1-5. */
+export async function rateHelper(
+  client: SupabaseClient<Database>,
+  input: BookingRatingInput
+): Promise<Booking> {
+  return unwrapBooking(
+    await client
+      .rpc('seeker_rate_helper', {
+        p_booking_id: input.bookingId,
+        p_friendliness: input.friendliness,
+        p_reliability: input.reliability,
+        p_animal_care: input.animalCare,
+        p_communication: input.communication,
+        ...(input.review === undefined ? {} : { p_review: input.review }),
+      })
+      .single()
+  );
+}
+
+/** Helper rates the seeker after completion; every criterion is 1-5. */
 export async function rateSeeker(
   client: SupabaseClient<Database>,
-  bookingId: string,
-  rating: number,
-  review?: string
+  input: BookingRatingInput
 ): Promise<Booking> {
-  const args =
-    review === undefined
-      ? { p_booking_id: bookingId, p_rating: rating }
-      : { p_booking_id: bookingId, p_rating: rating, p_review: review };
-  return unwrapBooking(await client.rpc('helper_rate_seeker', args).single());
+  return unwrapBooking(
+    await client
+      .rpc('helper_rate_seeker', {
+        p_booking_id: input.bookingId,
+        p_friendliness: input.friendliness,
+        p_reliability: input.reliability,
+        p_animal_care: input.animalCare,
+        p_communication: input.communication,
+        ...(input.review === undefined ? {} : { p_review: input.review }),
+      })
+      .single()
+  );
 }

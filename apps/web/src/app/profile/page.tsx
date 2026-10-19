@@ -11,11 +11,25 @@ import {
   type KiezRadius,
   type NotificationPreferences,
 } from '@pfotennetz/supabase';
+import {
+  reverseGeocodeOpenStreetMap,
+  searchOpenStreetMap,
+  type GeocodingResult,
+} from '@pfotennetz/shared';
 import { WebHeader } from '../../components/WebHeader';
 import { AvailabilityManager } from '../../components/AvailabilityManager';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { getCurrentBrowserLocation } from '../../lib/location';
+import {
+  formatBrowserAccuracy,
+  getCurrentBrowserLocation,
+  type BrowserLocation,
+} from '../../lib/location';
+
+type LocationCandidate = BrowserLocation & {
+  displayName: string;
+  source: 'browser' | 'manual';
+};
 
 export default function ProfilePage() {
   const profile = useOwnProfile();
@@ -38,6 +52,10 @@ export default function ProfilePage() {
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationPending, setLocationPending] = useState(false);
+  const [locationCandidate, setLocationCandidate] = useState<LocationCandidate | null>(null);
+  const [locationQuery, setLocationQuery] = useState('');
+  const [locationResults, setLocationResults] = useState<GeocodingResult[]>([]);
+  const [locationSearchPending, setLocationSearchPending] = useState(false);
   const avatarUrl = value?.avatar_url
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${value.avatar_url}`
     : null;
@@ -61,17 +79,58 @@ export default function ProfilePage() {
     });
   }, [value]);
 
-  const saveHelperLocation = () => {
+  const locateHelperLocation = () => {
     setLocationMessage(null);
     setLocationError(null);
     setLocationPending(true);
     void getCurrentBrowserLocation()
-      .then((location) => updateLocation.mutateAsync(location))
-      .then(() =>
-        setLocationMessage(
-          'Standort sicher gespeichert. Er wird in der Suche nur gerundet angezeigt.'
+      .then(async (location) => {
+        let displayName = `Koordinaten ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
+        try {
+          const address = await reverseGeocodeOpenStreetMap(location.latitude, location.longitude);
+          displayName = address.displayName;
+        } catch {
+          // The coordinates can still be confirmed if reverse geocoding is temporarily unavailable.
+        }
+        setLocationCandidate({ ...location, displayName, source: 'browser' });
+      })
+      .catch((error: unknown) =>
+        setLocationError(
+          error instanceof Error ? error.message : 'Standort konnte nicht ermittelt werden.'
         )
       )
+      .finally(() => setLocationPending(false));
+  };
+
+  const searchHelperLocation = () => {
+    setLocationError(null);
+    setLocationSearchPending(true);
+    void searchOpenStreetMap(locationQuery)
+      .then((results) => {
+        setLocationResults(results);
+        if (results.length === 0) setLocationError('Kein passender Ort gefunden.');
+      })
+      .catch((error: unknown) =>
+        setLocationError(
+          error instanceof Error ? error.message : 'Ort konnte nicht gesucht werden.'
+        )
+      )
+      .finally(() => setLocationSearchPending(false));
+  };
+
+  const confirmHelperLocation = () => {
+    if (!locationCandidate) return;
+    setLocationMessage(null);
+    setLocationError(null);
+    setLocationPending(true);
+    void updateLocation
+      .mutateAsync(locationCandidate)
+      .then(() => {
+        setLocationCandidate(null);
+        setLocationMessage(
+          'Standort sicher gespeichert. Er wird in der Suche nur gerundet angezeigt.'
+        );
+      })
       .catch((error: unknown) =>
         setLocationError(
           error instanceof Error ? error.message : 'Standort konnte nicht gespeichert werden.'
@@ -238,15 +297,91 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     className="btn-primary mt-5"
-                    disabled={locationPending || updateLocation.isPending}
-                    onClick={saveHelperLocation}
+                    disabled={locationPending || updateLocation.isPending || locationSearchPending}
+                    onClick={locateHelperLocation}
                   >
-                    {locationPending || updateLocation.isPending
-                      ? 'Standort wird gespeichert …'
-                      : value.location_updated_at
-                        ? 'Standort aktualisieren'
-                        : 'Standort speichern'}
+                    {locationPending ? 'Standort wird ermittelt …' : 'Standort ermitteln'}
                   </button>
+                  {locationCandidate ? (
+                    <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
+                      <p className="text-sm font-bold text-on-surface">Bitte Standort prüfen</p>
+                      <p className="mt-2 text-sm text-on-surface-variant">
+                        {locationCandidate.source === 'browser'
+                          ? `Der Browser meldet: ${locationCandidate.displayName}. Angegebene Genauigkeit: ${formatBrowserAccuracy(locationCandidate.accuracy)}.`
+                          : `Manuell ausgewählt: ${locationCandidate.displayName}.`}
+                      </p>
+                      {locationCandidate.source === 'browser' ? (
+                        <p className="mt-2 text-sm text-on-surface-variant">
+                          Speichere diesen Standort nur, wenn der angezeigte Ort wirklich stimmt.
+                          Eine Browser-Ortung kann trotz Freigabe falsch liegen.
+                        </p>
+                      ) : null}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          disabled={locationPending || updateLocation.isPending}
+                          onClick={confirmHelperLocation}
+                        >
+                          Standort bestätigen und speichern
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-full border border-outline-variant px-4 py-2 text-sm font-bold"
+                          disabled={locationPending || updateLocation.isPending}
+                          onClick={() => setLocationCandidate(null)}
+                        >
+                          Verwerfen
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="mt-5 border-t border-outline-variant/40 pt-4">
+                    <p className="text-sm font-bold text-on-surface">Ort manuell auswählen</p>
+                    <p className="mt-1 text-sm text-on-surface-variant">
+                      Wenn der Browser den falschen Ort meldet, kannst du hier Stadt oder PLZ
+                      eingeben.
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        aria-label="Ort oder PLZ für den Helper-Standort"
+                        className="min-w-0 flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
+                        placeholder="z. B. Leipzig oder 04109"
+                        value={locationQuery}
+                        onChange={(event) => setLocationQuery(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') searchHelperLocation();
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        disabled={locationSearchPending || locationQuery.trim().length < 3}
+                        onClick={searchHelperLocation}
+                      >
+                        {locationSearchPending ? 'Suche …' : 'Ort suchen'}
+                      </button>
+                    </div>
+                    {locationResults.length > 0 ? (
+                      <div className="mt-3 space-y-2">
+                        {locationResults.map((result) => (
+                          <button
+                            key={`${result.latitude}-${result.longitude}`}
+                            type="button"
+                            className="block w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-left text-sm hover:bg-surface-container"
+                            onClick={() => {
+                              setLocationCandidate({ ...result, source: 'manual' });
+                              setLocationResults([]);
+                              setLocationQuery(result.displayName);
+                              setLocationError(null);
+                            }}
+                          >
+                            {result.displayName}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                   {locationMessage ? (
                     <p role="status" className="mt-3 text-sm font-semibold text-green-700">
                       {locationMessage}

@@ -3,7 +3,7 @@
 import { signOut, useOwnProfile, useTimebankAccount } from '@pfotennetz/supabase';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { NotificationBell } from './NotificationBell';
@@ -20,11 +20,11 @@ export function WebHeader({
   const profile = useOwnProfile();
   const account = useTimebankAccount();
   const pathname = usePathname();
+  const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const navigation = [
-    ['Dashboard', '/'],
     ['Nachbarschaftskarte', '/explore'],
     ['Gefahrenradar', '/hazard/radar'],
     ['Betreuung & Tracking', '/tracking'],
@@ -58,16 +58,17 @@ export function WebHeader({
               ← {backLabel ?? 'Zurück'}
             </Link>
           ) : null}
-          <nav className="hidden items-center gap-2 lg:flex" aria-label="Hauptnavigation">
+          <nav
+            className="hidden items-center gap-1 whitespace-nowrap lg:flex"
+            aria-label="Hauptnavigation"
+          >
             {navigation.map(([label, href]) => {
               const active =
                 label === 'Community'
                   ? pathname.startsWith('/community') || pathname.startsWith('/marketplace')
                   : label === 'Mein Profil'
                     ? pathname.startsWith('/profile') || pathname.startsWith('/pets')
-                    : href === '/'
-                      ? pathname === '/'
-                      : pathname.startsWith(href);
+                    : pathname.startsWith(href);
               if (label === 'Community') {
                 return (
                   <div key={href} className="relative">
@@ -76,9 +77,9 @@ export function WebHeader({
                       aria-expanded={communityOpen}
                       aria-haspopup="menu"
                       onClick={() => setCommunityOpen((open) => !open)}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                      className={`rounded-full px-3 py-2 text-sm font-semibold whitespace-nowrap ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
                     >
-                      Community <span aria-hidden="true">⌄</span>
+                      Community
                     </button>
                     {communityOpen ? (
                       <div
@@ -114,9 +115,9 @@ export function WebHeader({
                       aria-expanded={profileOpen}
                       aria-haspopup="menu"
                       onClick={() => setProfileOpen((open) => !open)}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                      className={`rounded-full px-3 py-2 text-sm font-semibold whitespace-nowrap ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
                     >
-                      Mein Profil <span aria-hidden="true">⌄</span>
+                      Mein Profil
                     </button>
                     {profileOpen ? (
                       <div
@@ -149,16 +150,16 @@ export function WebHeader({
                   key={href}
                   href={href}
                   aria-current={active ? 'page' : undefined}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                  className={`rounded-full px-3 py-2 text-sm font-semibold whitespace-nowrap ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
                 >
                   {label}
                 </Link>
               );
             })}
           </nav>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 whitespace-nowrap">
             {profile.data?.role === 'admin' ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Link href="/admin/verifications" className="text-sm font-bold text-primary">
                   Administration
                 </Link>
@@ -176,7 +177,12 @@ export function WebHeader({
               disabled={signingOut}
               onClick={() => {
                 setSigningOut(true);
-                void signOut().finally(() => setSigningOut(false));
+                void signOut()
+                  .catch(() => undefined)
+                  .finally(() => {
+                    setSigningOut(false);
+                    router.replace('/');
+                  });
               }}
               className="rounded-full border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container disabled:opacity-50"
             >

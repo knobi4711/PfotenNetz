@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  signOut,
   groupBookingsByRequest,
   useAuth,
   useBookings,
@@ -20,8 +19,9 @@ import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
 import { bookingTypeLabel } from '@pfotennetz/shared';
 import { PasskeyPanel } from './PasskeyPanel';
-import { NotificationBell } from './NotificationBell';
+import { WebHeader } from './WebHeader';
 import { getCurrentBrowserLocation } from '../lib/location';
+import { formatPetDisplayName, petSpeciesEmoji } from '../lib/pets';
 
 function statusLabel(status: string): string {
   const labels: Record<string, string> = {
@@ -32,6 +32,13 @@ function statusLabel(status: string): string {
     cancelled: 'Storniert',
   };
   return labels[status] ?? status;
+}
+
+function currentGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Guten Morgen';
+  if (hour < 18) return 'Guten Tag';
+  return 'Guten Abend';
 }
 
 function PawWeatherCard() {
@@ -102,28 +109,7 @@ function PawWeatherCard() {
 }
 
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4700161905065273613';
-const MOBILE_BUILD_VERSION = '0.0.3';
-// Latest locally signed Android release build.
-const MOBILE_BUILD_TIME = '2026-10-11T14:57:04.229Z';
-
-function formatMobileBuildTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'nicht verfügbar';
-
-  const dateLabel = new Intl.DateTimeFormat('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    timeZone: 'Europe/Berlin',
-  }).format(date);
-  const timeLabel = new Intl.DateTimeFormat('de-DE', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Berlin',
-  }).format(date);
-
-  return `${dateLabel} um ${timeLabel} Uhr`;
-}
+const MOBILE_BUILD_VERSION = '0.0.8';
 
 function PlayStoreCard() {
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -179,7 +165,7 @@ function PlayStoreCard() {
           </div>
         )}
         <p className="text-center text-xs text-on-surface-variant">
-          Version {MOBILE_BUILD_VERSION} · erstellt am {formatMobileBuildTime(MOBILE_BUILD_TIME)}.
+          PfotenNetz App · Version {MOBILE_BUILD_VERSION}
         </p>
         <a
           href={PLAY_STORE_URL}
@@ -197,9 +183,6 @@ function PlayStoreCard() {
 export function Dashboard() {
   const auth = useAuth();
   const router = useRouter();
-  const [signingOut, setSigningOut] = useState(false);
-  const [communityOpen, setCommunityOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const profile = useOwnProfile();
   const pets = useOwnPets();
   const bookings = useBookings();
@@ -208,6 +191,14 @@ export function Dashboard() {
   const contactRequests = useOwnContactRequests();
   const respondContactRequest = useRespondContactRequest();
   const cancelContactRequest = useCancelContactRequest();
+  const [greeting, setGreeting] = useState('Guten Tag');
+
+  useEffect(() => {
+    const updateGreeting = () => setGreeting(currentGreeting());
+    updateGreeting();
+    const interval = window.setInterval(updateGreeting, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   if (auth.status !== 'authenticated') {
     return (
@@ -229,145 +220,11 @@ export function Dashboard() {
   }
 
   const displayName = profile.data?.display_name ?? 'Nachbarin oder Nachbar';
-  const visibleBookings = groupBookingsByRequest(bookings.data ?? [])
-    .filter((request) => request.primary.status !== 'cancelled')
-    .slice(0, 4);
-
-  const handleSignOut = () => {
-    setSigningOut(true);
-    void signOut().finally(() => setSigningOut(false));
-  };
+  const visibleBookings = groupBookingsByRequest(bookings.data ?? []).slice(0, 4);
 
   return (
     <div className="min-h-screen bg-surface">
-      <header className="sticky top-0 z-10 border-b border-outline-variant/30 bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6 px-6 py-4 lg:px-10">
-          <a
-            href="/"
-            className="flex shrink-0 items-center gap-3 whitespace-nowrap"
-            aria-label="PfotenNetz Startseite"
-          >
-            <Image
-              src="/pfotennetz-logo.png"
-              alt=""
-              width={44}
-              height={44}
-              className="h-11 w-11 rounded-xl object-cover"
-              priority
-            />
-            <span className="text-xl font-extrabold text-on-surface">PfotenNetz</span>
-          </a>
-          <nav className="hidden items-center gap-2 lg:flex" aria-label="Hauptnavigation">
-            {[
-              'Dashboard',
-              'Nachbarschaftskarte',
-              'Gefahrenradar',
-              'Betreuung & Tracking',
-              'Community',
-              'Mein Profil',
-            ].map((item, index) =>
-              item === 'Community' ? (
-                <div key={item} className="relative">
-                  <button
-                    type="button"
-                    aria-expanded={communityOpen}
-                    aria-haspopup="menu"
-                    className="rounded-full px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container"
-                    onClick={() => setCommunityOpen((open) => !open)}
-                  >
-                    Community <span aria-hidden="true">⌄</span>
-                  </button>
-                  {communityOpen ? (
-                    <div
-                      role="menu"
-                      className="absolute left-0 top-full z-20 mt-2 min-w-56 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]"
-                    >
-                      <Link
-                        href="/community"
-                        role="menuitem"
-                        onClick={() => setCommunityOpen(false)}
-                        className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
-                      >
-                        Community &amp; Treffen
-                      </Link>
-                      <Link
-                        href="/marketplace"
-                        role="menuitem"
-                        onClick={() => setCommunityOpen(false)}
-                        className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
-                      >
-                        Tauschbörse für Tierbedarf
-                      </Link>
-                    </div>
-                  ) : null}
-                </div>
-              ) : item === 'Mein Profil' ? (
-                <div key={item} className="relative">
-                  <button
-                    type="button"
-                    aria-expanded={profileOpen}
-                    aria-haspopup="menu"
-                    className="rounded-full px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container"
-                    onClick={() => setProfileOpen((open) => !open)}
-                  >
-                    Mein Profil <span aria-hidden="true">⌄</span>
-                  </button>
-                  {profileOpen ? (
-                    <div
-                      role="menu"
-                      className="absolute right-0 top-full z-20 mt-2 min-w-56 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]"
-                    >
-                      <Link
-                        href="/profile"
-                        role="menuitem"
-                        onClick={() => setProfileOpen(false)}
-                        className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
-                      >
-                        Profileinstellungen
-                      </Link>
-                      <Link
-                        href="/pets"
-                        role="menuitem"
-                        onClick={() => setProfileOpen(false)}
-                        className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
-                      >
-                        Meine Tiere
-                      </Link>
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <button
-                  key={item}
-                  type="button"
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${index === 0 ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
-                  onClick={() => {
-                    if (item === 'Nachbarschaftskarte') router.push('/explore');
-                    if (item === 'Gefahrenradar') router.push('/hazard/radar');
-                    if (item === 'Betreuung & Tracking') router.push('/tracking');
-                  }}
-                >
-                  {item}
-                </button>
-              )
-            )}
-          </nav>
-          <div className="flex items-center gap-3">
-            <span className="hidden rounded-full bg-secondary-container px-4 py-2 text-sm font-bold text-on-secondary-container md:inline-flex">
-              {Number(account.data?.balance_hours ?? 0).toLocaleString('de-DE')} Std. Zeitbank
-            </span>
-            <NotificationBell />
-            <button
-              type="button"
-              disabled={signingOut}
-              onClick={handleSignOut}
-              className="rounded-full border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container disabled:opacity-50"
-            >
-              Abmelden
-            </button>
-          </div>
-        </div>
-      </header>
+      <WebHeader />
 
       <main className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10 lg:py-12">
         <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -376,7 +233,7 @@ export function Dashboard() {
               Nachbarschafts-Feed
             </p>
             <h1 className="text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
-              Guten Morgen, {displayName}.
+              {greeting}, {displayName}.
             </h1>
             <p className="mt-3 text-lg text-on-surface-variant">
               Alles Wichtige für deine Tiere und deine Nachbarschaft auf einen Blick.
@@ -439,10 +296,8 @@ export function Dashboard() {
                             unoptimized
                             className="h-full w-full object-cover"
                           />
-                        ) : pet.species === 'cat' ? (
-                          '🐱'
                         ) : (
-                          '🐶'
+                          petSpeciesEmoji(pet.species)
                         )}
                       </div>
                       <div>
@@ -482,15 +337,41 @@ export function Dashboard() {
                           : request.status === 'declined'
                             ? 'Abgelehnt'
                             : 'Zurückgezogen';
+                    const participantName = incoming
+                      ? request.requesterProfile?.display_name
+                      : request.helperProfile?.display_name;
                     return (
                       <div
                         key={request.id}
                         className="rounded-xl border border-outline-variant/40 p-4"
                       >
                         <p className="font-bold">
-                          {incoming ? 'Neue Anfrage' : 'Deine Anfrage'} · {status}
+                          {incoming ? 'Anfrage von' : 'Deine Anfrage an'}{' '}
+                          {participantName ?? (incoming ? 'Nachbar:in' : 'Helfer:in')} · {status}
                         </p>
                         <p className="mt-1 text-sm text-on-surface-variant">{request.message}</p>
+                        {request.status === 'pending' || request.status === 'accepted' ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              onClick={() => router.push(`/chat/contact/${request.id}`)}
+                            >
+                              Privaten Chat öffnen
+                            </button>
+                            {request.status === 'accepted' && !incoming ? (
+                              <button
+                                type="button"
+                                className="btn-primary"
+                                onClick={() =>
+                                  router.push(`/booking/new?helperId=${request.helper_id}`)
+                                }
+                              >
+                                Betreuung anfragen
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
                         {request.status === 'pending' ? (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {incoming ? (
@@ -584,7 +465,7 @@ export function Dashboard() {
                       <span>
                         <span className="block font-bold">
                           {request.bookings
-                            .map((booking) => booking.pet?.name ?? 'Tier')
+                            .map((booking) => formatPetDisplayName(booking.pet))
                             .join(', ')}
                         </span>
                         <span className="text-sm text-on-surface-variant">

@@ -14,6 +14,7 @@ import {
   fetchBookingGroup,
   fetchBookingsForUser,
   type Booking,
+  type BookingListScope,
   type BookingWithRelations,
 } from './queries';
 import {
@@ -25,6 +26,7 @@ import {
   rejectBooking,
   startBooking,
   updateBookingRequest,
+  type BookingRatingInput,
   type UpdateBookingRequestInput,
 } from './mutations';
 import { createBooking, type CreateBookingInput } from './creation';
@@ -82,12 +84,19 @@ export function useBookingGroup(
 }
 
 /** The caller's bookings (RLS scopes to participations), newest first. */
-export function useBookings(): UseQueryResult<BookingWithRelations[], Error> {
+export function useBookings(
+  scope: Exclude<BookingListScope, 'all'> = 'active'
+): UseQueryResult<BookingWithRelations[], Error> {
   const client = getSupabaseClient();
   return useQuery({
-    queryKey: bookingKeys.list(),
-    queryFn: () => fetchBookingsForUser(client),
+    queryKey: bookingKeys.list(scope),
+    queryFn: () => fetchBookingsForUser(client, scope),
   });
+}
+
+/** Bookings whose care period has ended, plus older terminal bookings. */
+export function useArchivedBookings(): UseQueryResult<BookingWithRelations[], Error> {
+  return useBookings('archive');
 }
 
 /** Accept a requested booking as the assigned helper. */
@@ -165,19 +174,14 @@ export function useUpdateBookingRequest(): UseMutationResult<
   });
 }
 
-export interface RateInput {
-  bookingId: string;
-  rating: number;
-  review?: string;
-}
+export type RateInput = BookingRatingInput;
 
 /** Seeker rates the helper after completion. */
 export function useRateHelper(): UseMutationResult<Booking, Error, RateInput> {
   const client = getSupabaseClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: RateInput) =>
-      rateHelper(client, input.bookingId, input.rating, input.review),
+    mutationFn: (input: RateInput) => rateHelper(client, input),
     onSuccess: (booking) => {
       invalidateBookingQueries(queryClient, booking.id);
       invalidateGroupQuery(queryClient, booking);
@@ -190,8 +194,7 @@ export function useRateSeeker(): UseMutationResult<Booking, Error, RateInput> {
   const client = getSupabaseClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: RateInput) =>
-      rateSeeker(client, input.bookingId, input.rating, input.review),
+    mutationFn: (input: RateInput) => rateSeeker(client, input),
     onSuccess: (booking) => {
       invalidateBookingQueries(queryClient, booking.id);
       invalidateGroupQuery(queryClient, booking);

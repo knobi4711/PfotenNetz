@@ -15,6 +15,7 @@ import {
   signOut,
   useOwnProfile,
   useOwnContactRequests,
+  type ContactRequestWithProfiles,
   useCancelContactRequest,
   useRespondContactRequest,
   useTimebankAccount,
@@ -24,7 +25,6 @@ import {
   type NotificationPreferences,
   type KiezRadius,
   type TimebankTransaction,
-  type ContactRequest,
 } from '@pfotennetz/supabase';
 import { formatDate, formatTimebankHours, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
 import { timebankTxDescription, timebankTxTypeLabels } from '../../lib/booking';
@@ -117,7 +117,7 @@ function ContactRequestRow({
   onCancel,
   pending,
 }: {
-  request: ContactRequest;
+  request: ContactRequestWithProfiles;
   ownId: string;
   onRespond: (requestId: string, status: 'accepted' | 'declined') => void;
   onCancel: (requestId: string) => void;
@@ -135,7 +135,9 @@ function ContactRequestRow({
   return (
     <View style={styles.contactRequestRow}>
       <Text style={[styles.contactRequestTitle, { color: c.onSurface }]}>
-        {isIncoming ? 'Kennenlernanfrage erhalten' : 'Kennenlernanfrage gesendet'}
+        {isIncoming
+          ? `Anfrage von ${request.requesterProfile?.display_name ?? 'Nachbar:in'}`
+          : `Deine Anfrage an ${request.helperProfile?.display_name ?? 'Helfer:in'}`}
       </Text>
       <Text style={[styles.contactRequestMessage, { color: c.onSurfaceVariant }]}>
         {request.message}
@@ -143,28 +145,52 @@ function ContactRequestRow({
       <Text style={[styles.contactRequestStatus, { color: c.secondary }]}>
         {statusLabel} · {formatDate(request.created_at)}
       </Text>
-      {request.status === 'pending' ? (
+      {request.status === 'pending' || request.status === 'accepted' ? (
         <View style={styles.contactRequestActions}>
+          <ActionButton
+            title="Privater Chat"
+            variant="secondary"
+            disabled={pending}
+            onPress={() =>
+              router.push({
+                pathname: '/chat/contact/[contactRequestId]',
+                params: { contactRequestId: request.id },
+              })
+            }
+          />
           {isIncoming ? (
-            <>
-              <ActionButton
-                title="Annehmen"
-                pending={pending}
-                onPress={() => onRespond(request.id, 'accepted')}
-              />
-              <ActionButton
-                title="Ablehnen"
-                variant="secondary"
-                disabled={pending}
-                onPress={() => onRespond(request.id, 'declined')}
-              />
-            </>
-          ) : (
+            request.status === 'pending' ? (
+              <>
+                <ActionButton
+                  title="Annehmen"
+                  pending={pending}
+                  onPress={() => onRespond(request.id, 'accepted')}
+                />
+                <ActionButton
+                  title="Ablehnen"
+                  variant="secondary"
+                  disabled={pending}
+                  onPress={() => onRespond(request.id, 'declined')}
+                />
+              </>
+            ) : null
+          ) : request.status === 'pending' ? (
             <ActionButton
               title="Zurückziehen"
               variant="secondary"
               pending={pending}
               onPress={() => onCancel(request.id)}
+            />
+          ) : (
+            <ActionButton
+              title="Betreuung anfragen"
+              pending={pending}
+              onPress={() =>
+                router.push({
+                  pathname: '/booking/new',
+                  params: { helperId: request.helper_id },
+                })
+              }
             />
           )}
         </View>
