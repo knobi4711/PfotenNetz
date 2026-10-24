@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
-const track = process.env.GOOGLE_PLAY_TRACK ?? 'internal';
+// PfotenNetz ships through the closed test track (`alpha`). The internal test
+// track is no longer used; GOOGLE_PLAY_TRACK can still override it when needed.
+const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';
