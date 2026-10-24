@@ -30,7 +30,10 @@ export const bookingWorkflowStepLabels: Record<string, string> = {
   awaiting_seeker: 'Helfer hat zugesagt',
   confirmed: 'Bestätigt',
   in_progress: 'Läuft',
-  completed: 'Abgeschlossen',
+  // The timeline columns are narrow; break the compound at its syllable
+  // boundary with a visible hyphen instead of letting Android split it
+  // anywhere ("Abgeschlosse|n").
+  completed: 'Abge-\nschlossen',
 };
 
 export const bookingTypeLabels: Record<BookingType, string> = {

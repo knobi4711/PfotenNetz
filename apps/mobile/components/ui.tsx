@@ -378,7 +378,10 @@ const styles = StyleSheet.create({
     fontFamily: appFonts.regular,
     fontSize: 13,
     lineHeight: 20,
-    flexShrink: 1,
+    // Labels keep their natural width (so "Betreuungsadresse" and
+    // "Sicherheitszone" stay on one line); long values wrap instead.
+    flexShrink: 0,
+    maxWidth: '52%',
   },
   rowValue: {
     fontFamily: appFonts.semibold,
