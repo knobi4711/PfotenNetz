@@ -61,7 +61,7 @@ site_url = "http://localhost:3000"
 additional_redirect_urls = [
   "http://localhost:8081",
   "exp://localhost:8081",
-  "pfotennetz://auth/callback"
+  "pfotennetz://callback"
 ]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
