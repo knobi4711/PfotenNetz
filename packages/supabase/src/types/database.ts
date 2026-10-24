@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_private_locations: {
+        Row: {
+          booking_id: string
+          exact_address: string | null
+          exact_location: unknown
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          exact_address?: string | null
+          exact_location?: unknown
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          exact_address?: string | null
+          exact_location?: unknown
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_private_locations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           booking_group_id: string | null
@@ -57,6 +86,7 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           timebank_credits_earned: number
           timebank_credits_spent: number
+          tracking_radius_m: number
           type: Database["public"]["Enums"]["booking_type"]
           updated_at: string
         }
@@ -102,6 +132,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"]
           timebank_credits_earned?: number
           timebank_credits_spent?: number
+          tracking_radius_m?: number
           type: Database["public"]["Enums"]["booking_type"]
           updated_at?: string
         }
@@ -147,6 +178,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"]
           timebank_credits_earned?: number
           timebank_credits_spent?: number
+          tracking_radius_m?: number
           type?: Database["public"]["Enums"]["booking_type"]
           updated_at?: string
         }
@@ -1215,6 +1247,39 @@ export type Database = {
           },
         ]
       }
+      private_profile_addresses: {
+        Row: {
+          exact_address: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          exact_address: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          exact_address?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "private_profile_addresses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "private_profile_addresses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -2230,6 +2295,7 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           timebank_credits_earned: number
           timebank_credits_spent: number
+          tracking_radius_m: number
           type: Database["public"]["Enums"]["booking_type"]
           updated_at: string
         }
@@ -2284,6 +2350,7 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           timebank_credits_earned: number
           timebank_credits_spent: number
+          tracking_radius_m: number
           type: Database["public"]["Enums"]["booking_type"]
           updated_at: string
         }
@@ -2293,6 +2360,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      helper_matches_open_booking: {
+        Args: { p_booking_id: string }
+        Returns: boolean
       }
       helper_rate_seeker:
         | {
@@ -2346,6 +2417,7 @@ export type Database = {
               status: Database["public"]["Enums"]["booking_status"]
               timebank_credits_earned: number
               timebank_credits_spent: number
+              tracking_radius_m: number
               type: Database["public"]["Enums"]["booking_type"]
               updated_at: string
             }
@@ -2400,6 +2472,7 @@ export type Database = {
               status: Database["public"]["Enums"]["booking_status"]
               timebank_credits_earned: number
               timebank_credits_spent: number
+              tracking_radius_m: number
               type: Database["public"]["Enums"]["booking_type"]
               updated_at: string
             }
@@ -2454,6 +2527,7 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           timebank_credits_earned: number
           timebank_credits_spent: number
+          tracking_radius_m: number
           type: Database["public"]["Enums"]["booking_type"]
           updated_at: string
         }
@@ -2508,6 +2582,7 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           timebank_credits_earned: number
           timebank_credits_spent: number
+          tracking_radius_m: number
           type: Database["public"]["Enums"]["booking_type"]
           updated_at: string
         }
@@ -2614,6 +2689,10 @@ export type Database = {
         }
       }
       revoke_emergency_card_link: { Args: { p_id: string }; Returns: undefined }
+      save_own_private_address: {
+        Args: { p_address: string; p_postal_code: string }
+        Returns: undefined
+      }
       seeker_cancel_booking: {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: {
@@ -2658,6 +2737,62 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           timebank_credits_earned: number
           timebank_credits_spent: number
+          tracking_radius_m: number
+          type: Database["public"]["Enums"]["booking_type"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      seeker_confirm_helper: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_group_id: string | null
+          booking_group_position: number
+          booking_number: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          care_location: string
+          care_notes: string | null
+          closed_at: string | null
+          created_at: string
+          currency: Database["public"]["Enums"]["currency"]
+          end_at: string
+          helper_id: string | null
+          id: string
+          is_urgent: boolean
+          key_handoff_details: Json | null
+          key_handoff_type:
+            | Database["public"]["Enums"]["key_handoff_type"]
+            | null
+          meeting_address: string | null
+          meeting_location: unknown
+          pet_id: string
+          price_eur_cents: number
+          price_kiez_hours: number
+          rating_helper: number | null
+          rating_helper_animal_care: number | null
+          rating_helper_communication: number | null
+          rating_helper_friendliness: number | null
+          rating_helper_reliability: number | null
+          rating_seeker: number | null
+          rating_seeker_animal_care: number | null
+          rating_seeker_communication: number | null
+          rating_seeker_friendliness: number | null
+          rating_seeker_reliability: number | null
+          review_helper: string | null
+          review_seeker: string | null
+          seeker_id: string
+          start_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          timebank_credits_earned: number
+          timebank_credits_spent: number
+          tracking_radius_m: number
           type: Database["public"]["Enums"]["booking_type"]
           updated_at: string
         }
@@ -2720,6 +2855,7 @@ export type Database = {
               status: Database["public"]["Enums"]["booking_status"]
               timebank_credits_earned: number
               timebank_credits_spent: number
+              tracking_radius_m: number
               type: Database["public"]["Enums"]["booking_type"]
               updated_at: string
             }
@@ -2774,6 +2910,7 @@ export type Database = {
               status: Database["public"]["Enums"]["booking_status"]
               timebank_credits_earned: number
               timebank_credits_spent: number
+              tracking_radius_m: number
               type: Database["public"]["Enums"]["booking_type"]
               updated_at: string
             }
@@ -2784,15 +2921,70 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      seeker_reject_helper: {
+        Args: { p_booking_id: string; p_reason?: string }
+        Returns: {
+          booking_group_id: string | null
+          booking_group_position: number
+          booking_number: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          care_location: string
+          care_notes: string | null
+          closed_at: string | null
+          created_at: string
+          currency: Database["public"]["Enums"]["currency"]
+          end_at: string
+          helper_id: string | null
+          id: string
+          is_urgent: boolean
+          key_handoff_details: Json | null
+          key_handoff_type:
+            | Database["public"]["Enums"]["key_handoff_type"]
+            | null
+          meeting_address: string | null
+          meeting_location: unknown
+          pet_id: string
+          price_eur_cents: number
+          price_kiez_hours: number
+          rating_helper: number | null
+          rating_helper_animal_care: number | null
+          rating_helper_communication: number | null
+          rating_helper_friendliness: number | null
+          rating_helper_reliability: number | null
+          rating_seeker: number | null
+          rating_seeker_animal_care: number | null
+          rating_seeker_communication: number | null
+          rating_seeker_friendliness: number | null
+          rating_seeker_reliability: number | null
+          review_helper: string | null
+          review_seeker: string | null
+          seeker_id: string
+          start_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          timebank_credits_earned: number
+          timebank_credits_spent: number
+          tracking_radius_m: number
+          type: Database["public"]["Enums"]["booking_type"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       seeker_update_booking_request: {
         Args: {
           p_booking_id: string
           p_care_location: string
-          p_care_notes: string | null
+          p_care_notes: string
           p_currency: Database["public"]["Enums"]["currency"]
           p_end_at: string
           p_is_urgent: boolean
-          p_meeting_address: string | null
+          p_meeting_address: string
           p_price_eur_cents: number
           p_price_kiez_hours: number
           p_start_at: string
@@ -2840,6 +3032,7 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           timebank_credits_earned: number
           timebank_credits_spent: number
+          tracking_radius_m: number
           type: Database["public"]["Enums"]["booking_type"]
           updated_at: string
         }
@@ -3498,7 +3691,8 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "disputed"
-      booking_type: "walk" | "feeding" | "vacation" | "daycare"
+        | "awaiting_seeker"
+      booking_type: "walk" | "feeding" | "vacation" | "daycare" | "ride"
       currency: "EUR" | "KIEZ_HOURS" | "PER_VISIT"
       event_type:
         | "group_walk"
@@ -3549,6 +3743,8 @@ export type Database = {
         | "system"
         | "contact_request"
         | "contact_response"
+        | "booking_helper_response"
+        | "booking_helper_rejected"
       timebank_tx_type: "earned" | "spent" | "bonus" | "adjustment" | "transfer"
       verification_status: "pending" | "approved" | "rejected" | "expired"
       verification_type:
@@ -3698,8 +3894,9 @@ export const Constants = {
         "completed",
         "cancelled",
         "disputed",
+        "awaiting_seeker",
       ],
-      booking_type: ["walk", "feeding", "vacation", "daycare"],
+      booking_type: ["walk", "feeding", "vacation", "daycare", "ride"],
       currency: ["EUR", "KIEZ_HOURS", "PER_VISIT"],
       event_type: [
         "group_walk",
@@ -3754,6 +3951,8 @@ export const Constants = {
         "system",
         "contact_request",
         "contact_response",
+        "booking_helper_response",
+        "booking_helper_rejected",
       ],
       timebank_tx_type: ["earned", "spent", "bonus", "adjustment", "transfer"],
       verification_status: ["pending", "approved", "rejected", "expired"],
