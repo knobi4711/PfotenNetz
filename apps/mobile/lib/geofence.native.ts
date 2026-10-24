@@ -41,7 +41,7 @@ TaskManager.defineTask(TRACKING_GEOFENCE_TASK, async ({ data, error }) => {
 export async function startTrackingGeofence(
   bookingId: string,
   center: { latitude: number; longitude: number },
-  radius = 500
+  radius = 1000
 ): Promise<void> {
   const permission = await Location.requestBackgroundPermissionsAsync();
   if (!permission.granted)

@@ -8,7 +8,7 @@ import { startBackgroundTracking, stopBackgroundTracking } from '../lib/tracking
 
 export function TrackingRecorder({
   bookingId,
-  radius = 500,
+  radius = 1000,
 }: {
   bookingId: string;
   radius?: number;

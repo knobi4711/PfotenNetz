@@ -5,6 +5,7 @@ import {
   createBooking,
   formatTrackingRadius,
   generateBookingNumber,
+  parseTrackingRadiusKm,
   validateBookingPetCompatibility,
   validateCreateBooking,
 } from './creation';
@@ -89,19 +90,33 @@ describe('booking creation', () => {
   });
 
   it('validates the safety zone radius', () => {
-    expect(validateCreateBooking({ ...validInput, trackingRadiusM: 500 })).toBeNull();
+    expect(validateCreateBooking({ ...validInput, trackingRadiusM: 1000 })).toBeNull();
     expect(validateCreateBooking({ ...validInput, trackingRadiusM: 100 })).toBeNull();
-    expect(validateCreateBooking({ ...validInput, trackingRadiusM: 5000 })).toBeNull();
+    expect(validateCreateBooking({ ...validInput, trackingRadiusM: 10000 })).toBeNull();
     expect(validateCreateBooking({ ...validInput, trackingRadiusM: 50 })).not.toBeNull();
-    expect(validateCreateBooking({ ...validInput, trackingRadiusM: 6000 })).not.toBeNull();
+    expect(validateCreateBooking({ ...validInput, trackingRadiusM: 10001 })).not.toBeNull();
     expect(validateCreateBooking({ ...validInput, trackingRadiusM: Number.NaN })).not.toBeNull();
   });
 
   it('formats safety zone radii in German units', () => {
-    expect(formatTrackingRadius(250)).toBe('250 m');
+    expect(formatTrackingRadius(100)).toBe('100 m');
     expect(formatTrackingRadius(500)).toBe('500 m');
-    expect(formatTrackingRadius(1000)).toBe('1,0 km');
-    expect(formatTrackingRadius(2000)).toBe('2,0 km');
+    expect(formatTrackingRadius(1000)).toBe('1 km');
+    expect(formatTrackingRadius(2000)).toBe('2 km');
+    expect(formatTrackingRadius(4000)).toBe('4 km');
+    expect(formatTrackingRadius(1500)).toBe('1,5 km');
+    expect(formatTrackingRadius(10000)).toBe('10 km');
+  });
+
+  it('parses a free-form radius in kilometers', () => {
+    expect(parseTrackingRadiusKm('1')).toBe(1000);
+    expect(parseTrackingRadiusKm('2,5')).toBe(2500);
+    expect(parseTrackingRadiusKm('3.5')).toBe(3500);
+    expect(parseTrackingRadiusKm(' 10 ')).toBe(10000);
+    expect(parseTrackingRadiusKm('0,05')).toBeNull();
+    expect(parseTrackingRadiusKm('11')).toBeNull();
+    expect(parseTrackingRadiusKm('')).toBeNull();
+    expect(parseTrackingRadiusKm('drei')).toBeNull();
   });
 
   it('allows walks only for dogs', () => {
@@ -135,7 +150,7 @@ describe('booking creation', () => {
     expect(values['pet_id']).toBe('pet-1');
     expect(values['currency']).toBe('KIEZ_HOURS');
     expect(values['price_kiez_hours']).toBe(2);
-    expect(values['tracking_radius_m']).toBe(500);
+    expect(values['tracking_radius_m']).toBe(1000);
     expect(values['booking_number']).toMatch(/^BK-\d{8}-[A-Z0-9]{4}$/);
   });
 
@@ -146,10 +161,10 @@ describe('booking creation', () => {
       booking: { id: 'booking-1', status: 'requested' },
     });
 
-    await createBooking(client, { ...validInput, trackingRadiusM: 1000 });
+    await createBooking(client, { ...validInput, trackingRadiusM: 4000 });
 
     const values = inserts[0]?.values as Record<string, unknown>;
-    expect(values['tracking_radius_m']).toBe(1000);
+    expect(values['tracking_radius_m']).toBe(4000);
   });
 
   it('refuses foreign pets before any insert', async () => {

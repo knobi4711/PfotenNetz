@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formatGermanDateTime, parseGermanDateTime } from './datetime';
+import {
+  completeTimeInput,
+  formatGermanDateTime,
+  formatTimeInput,
+  parseGermanDateTime,
+} from './datetime';
 
 describe('parseGermanDateTime', () => {
   it('parses a valid date and time', () => {
@@ -24,6 +29,48 @@ describe('parseGermanDateTime', () => {
     expect(parseGermanDateTime('32.01.2026', '10:00')).toBeNull();
     expect(parseGermanDateTime('01.13.2026', '10:00')).toBeNull();
     expect(parseGermanDateTime('01.10.2026', '24:00')).toBeNull();
+  });
+});
+
+describe('formatTimeInput', () => {
+  it('turns four typed digits into a time', () => {
+    expect(formatTimeInput('0930')).toBe('09:30');
+    expect(formatTimeInput('1234')).toBe('12:34');
+    expect(formatTimeInput('0000')).toBe('00:00');
+  });
+
+  it('keeps the caret behaviour predictable while typing', () => {
+    expect(formatTimeInput('')).toBe('');
+    expect(formatTimeInput('9')).toBe('9');
+    expect(formatTimeInput('09')).toBe('09');
+    expect(formatTimeInput('930')).toBe('930');
+    expect(formatTimeInput('12345')).toBe('12:34');
+  });
+
+  it('leaves manual input with a colon untouched', () => {
+    expect(formatTimeInput('9:30')).toBe('9:30');
+    expect(formatTimeInput('09:3')).toBe('09:3');
+    expect(formatTimeInput('12:345')).toBe('12:34');
+  });
+});
+
+describe('completeTimeInput', () => {
+  it('completes short input on blur', () => {
+    expect(completeTimeInput('930')).toBe('09:30');
+    expect(completeTimeInput('9:5')).toBe('09:05');
+    expect(completeTimeInput('0930')).toBe('09:30');
+    expect(completeTimeInput('12:')).toBe('12');
+  });
+
+  it('keeps invalid input for the form validation', () => {
+    expect(completeTimeInput('')).toBe('');
+    expect(completeTimeInput('24:00')).toBe('24:00');
+    expect(completeTimeInput('12')).toBe('12');
+  });
+
+  it('produces a value the booking form can parse', () => {
+    const typed = formatTimeInput('0930');
+    expect(parseGermanDateTime('01.10.2026', completeTimeInput(typed))).not.toBeNull();
   });
 });
 

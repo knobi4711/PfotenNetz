@@ -11,16 +11,35 @@ export const BOOKING_TYPES: BookingType[] = ['walk', 'feeding', 'vacation', 'day
 /**
  * Radii (in meters) offered when configuring the per-booking safety zone.
  * The helper's device monitors this radius around the tracking start point.
+ * Longer walks and rides need more room than the earlier 250/500 m presets.
  */
-export const TRACKING_RADIUS_OPTIONS = [250, 500, 1000, 2000] as const;
-export const DEFAULT_TRACKING_RADIUS_M = 500;
+export const TRACKING_RADIUS_OPTIONS = [1000, 2000, 4000] as const;
+export const DEFAULT_TRACKING_RADIUS_M = 1000;
 export const MIN_TRACKING_RADIUS_M = 100;
-export const MAX_TRACKING_RADIUS_M = 5000;
+export const MAX_TRACKING_RADIUS_M = 10000;
 
-/** Short German label for a safety-zone radius, e.g. `500 m` or `1,0 km`. */
+/** Short German label for a safety-zone radius, e.g. `500 m`, `2 km` or `1,5 km`. */
 export function formatTrackingRadius(meters: number): string {
   if (meters < 1000) return `${meters} m`;
-  return `${(meters / 1000).toFixed(1).replace('.', ',')} km`;
+  const kilometers = meters / 1000;
+  const text = Number.isInteger(kilometers)
+    ? String(kilometers)
+    : kilometers.toFixed(1).replace('.', ',');
+  return `${text} km`;
+}
+
+/**
+ * Parses a free-form radius in kilometers (`"3,5"` or `"3.5"`).
+ * Returns the rounded value in meters or `null` when it is out of range.
+ */
+export function parseTrackingRadiusKm(value: string): number | null {
+  const normalized = value.trim().replace(',', '.');
+  if (normalized === '') return null;
+  const kilometers = Number(normalized);
+  if (!Number.isFinite(kilometers)) return null;
+  const meters = Math.round(kilometers * 1000);
+  if (meters < MIN_TRACKING_RADIUS_M || meters > MAX_TRACKING_RADIUS_M) return null;
+  return meters;
 }
 
 export function validateBookingPetCompatibility(
@@ -120,7 +139,7 @@ export function validateCreateBooking(input: CreateBookingInput): string | null 
       input.trackingRadiusM < MIN_TRACKING_RADIUS_M ||
       input.trackingRadiusM > MAX_TRACKING_RADIUS_M
     ) {
-      return `Die Sicherheitszone muss zwischen ${MIN_TRACKING_RADIUS_M} und ${MAX_TRACKING_RADIUS_M} Metern liegen.`;
+      return `Die Sicherheitszone muss zwischen ${formatTrackingRadius(MIN_TRACKING_RADIUS_M)} und ${formatTrackingRadius(MAX_TRACKING_RADIUS_M)} liegen.`;
     }
   }
   return null;

@@ -6,6 +6,7 @@ import {
   TRACKING_RADIUS_OPTIONS,
   formatTrackingRadius,
   isBookingCoveredByAvailabilities,
+  parseTrackingRadiusKm,
   useBooking,
   useBookingGroup,
   useCreateBooking,
@@ -53,6 +54,7 @@ function NewBookingForm() {
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [trackingRadius, setTrackingRadius] = useState<number>(DEFAULT_TRACKING_RADIUS_M);
+  const [customRadius, setCustomRadius] = useState('');
   const [urgent, setUrgent] = useState(false);
   const [safety, setSafety] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -91,6 +93,10 @@ function NewBookingForm() {
     if (!start || !end || new Date(end).getTime() <= new Date(start).getTime())
       return setFormError('Bitte wähle einen gültigen Zeitraum.');
     if (!safety) return setFormError('Bitte bestätige die Sicherheitshinweise.');
+    const customTrackingRadius =
+      customRadius.trim() === '' ? null : parseTrackingRadiusKm(customRadius);
+    if (!isEditMode && customRadius.trim() !== '' && customTrackingRadius === null)
+      return setFormError('Bitte gib eine Sicherheitszone zwischen 100 m und 10 km an.');
     const amount = Number(price.replace(',', '.'));
     if (
       (currency === 'EUR' || currency === 'PER_VISIT') &&
@@ -143,7 +149,7 @@ function NewBookingForm() {
         isUrgent: urgent,
         careNotes: notes.trim() || null,
         careLocation,
-        trackingRadiusM: trackingRadius,
+        trackingRadiusM: customTrackingRadius ?? trackingRadius,
       },
       { onSuccess: (booking) => router.replace(`/booking/${booking.id}`) }
     );
@@ -425,13 +431,38 @@ function NewBookingForm() {
                   <button
                     key={option}
                     type="button"
-                    className={`chip ${trackingRadius === option ? 'chip-selected' : ''}`}
-                    onClick={() => setTrackingRadius(option)}
+                    className={`chip ${
+                      customRadius.trim() === '' && trackingRadius === option ? 'chip-selected' : ''
+                    }`}
+                    onClick={() => {
+                      setTrackingRadius(option);
+                      setCustomRadius('');
+                    }}
                   >
                     {formatTrackingRadius(option)}
                   </button>
                 ))}
               </div>
+              <label className="mt-5 block text-sm font-bold">
+                Eigene Weite (km)
+                <input
+                  className="input mt-1"
+                  inputMode="decimal"
+                  maxLength={5}
+                  placeholder="z. B. 3,5"
+                  value={customRadius}
+                  onChange={(event) => setCustomRadius(event.target.value)}
+                />
+              </label>
+              <p className="mt-2 text-sm text-on-surface-variant">
+                {customRadius.trim() === ''
+                  ? `Ausgewählt: ${formatTrackingRadius(trackingRadius)} (100 m bis 10 km möglich).`
+                  : parseTrackingRadiusKm(customRadius) !== null
+                    ? `Sicherheitszone: ${formatTrackingRadius(
+                        parseTrackingRadiusKm(customRadius) ?? trackingRadius
+                      )}.`
+                    : 'Bitte einen Wert zwischen 0,1 und 10 km eingeben.'}
+              </p>
             </section>
           ) : null}
           <section className="card p-7">

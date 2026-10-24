@@ -10,6 +10,7 @@ import {
   TRACKING_RADIUS_OPTIONS,
   formatTrackingRadius,
   isBookingCoveredByAvailabilities,
+  parseTrackingRadiusKm,
   useBooking,
   useBookingGroup,
   useCreateBooking,
@@ -22,7 +23,11 @@ import {
   type CareLocation,
 } from '@pfotennetz/supabase';
 import { bookingTypeLabels } from '../../lib/booking';
-import { parseGermanDateTime } from '../../lib/datetime';
+import {
+  parseGermanDateTime,
+  completeTimeInput as completeTimeEntry,
+  formatTimeInput as formatTimeEntry,
+} from '../../lib/datetime';
 import {
   ActionButton,
   Card,
@@ -96,6 +101,7 @@ export default function NewBookingScreen() {
   const [meetingAddress, setMeetingAddress] = useState('');
   const [careNotes, setCareNotes] = useState('');
   const [trackingRadius, setTrackingRadius] = useState<number>(DEFAULT_TRACKING_RADIUS_M);
+  const [customRadius, setCustomRadius] = useState('');
   const [isUrgent, setIsUrgent] = useState(false);
   const [safetyConfirmed, setSafetyConfirmed] = useState(false);
   const [formHint, setFormHint] = useState<string | null>(null);
@@ -155,6 +161,12 @@ export default function NewBookingScreen() {
     }
     if (!safetyConfirmed) {
       setFormHint('Bitte bestätige die Hinweise zu Kennenlernen, Haftung und Versicherungsschutz.');
+      return;
+    }
+    const customTrackingRadius =
+      customRadius.trim() === '' ? null : parseTrackingRadiusKm(customRadius);
+    if (!isEditMode && customRadius.trim() !== '' && customTrackingRadius === null) {
+      setFormHint('Bitte gib eine Sicherheitszone zwischen 100 m und 10 km an.');
       return;
     }
     const startAt = parseGermanDateTime(startDate, startTime);
@@ -233,7 +245,7 @@ export default function NewBookingScreen() {
         isUrgent,
         careNotes: careNotes.trim() || null,
         careLocation,
-        trackingRadiusM: trackingRadius,
+        trackingRadiusM: customTrackingRadius ?? trackingRadius,
       },
       {
         onSuccess: (booking) => {
@@ -464,6 +476,7 @@ export default function NewBookingScreen() {
                 onPress={() => setDatePicker(datePicker === 'start' ? null : 'start')}
                 style={[
                   styles.input,
+                  styles.centeredField,
                   {
                     backgroundColor: c.surfaceContainerLow,
                     borderColor: c.outlineVariant,
@@ -490,11 +503,15 @@ export default function NewBookingScreen() {
               <Text style={[styles.label, { color: c.onSurface }]}>Uhrzeit</Text>
               <TextInput
                 editable={!pending}
-                onChangeText={setStartTime}
+                keyboardType="number-pad"
+                maxLength={5}
+                onBlur={() => setStartTime((current) => completeTimeEntry(current))}
+                onChangeText={(text) => setStartTime(formatTimeEntry(text))}
                 placeholder="HH:MM"
                 placeholderTextColor={c.outline}
                 style={[
                   styles.input,
+                  styles.centeredText,
                   {
                     backgroundColor: c.surfaceContainerLow,
                     borderColor: c.outlineVariant,
@@ -515,6 +532,7 @@ export default function NewBookingScreen() {
                 onPress={() => setDatePicker(datePicker === 'end' ? null : 'end')}
                 style={[
                   styles.input,
+                  styles.centeredField,
                   {
                     backgroundColor: c.surfaceContainerLow,
                     borderColor: c.outlineVariant,
@@ -539,11 +557,15 @@ export default function NewBookingScreen() {
               <Text style={[styles.label, { color: c.onSurface }]}>Uhrzeit</Text>
               <TextInput
                 editable={!pending}
-                onChangeText={setEndTime}
+                keyboardType="number-pad"
+                maxLength={5}
+                onBlur={() => setEndTime((current) => completeTimeEntry(current))}
+                onChangeText={(text) => setEndTime(formatTimeEntry(text))}
                 placeholder="HH:MM"
                 placeholderTextColor={c.outline}
                 style={[
                   styles.input,
+                  styles.centeredText,
                   {
                     backgroundColor: c.surfaceContainerLow,
                     borderColor: c.outlineVariant,
@@ -672,7 +694,7 @@ export default function NewBookingScreen() {
             </Text>
             <View style={[styles.chipRow, styles.chipRowSpaced]}>
               {TRACKING_RADIUS_OPTIONS.map((option) => {
-                const selected = option === trackingRadius;
+                const selected = customRadius.trim() === '' && option === trackingRadius;
                 return (
                   <Pressable
                     key={option}
@@ -681,6 +703,7 @@ export default function NewBookingScreen() {
                     disabled={pending}
                     onPress={() => {
                       setTrackingRadius(option);
+                      setCustomRadius('');
                     }}
                     style={[
                       styles.chip,
@@ -699,6 +722,32 @@ export default function NewBookingScreen() {
                 );
               })}
             </View>
+            <Text style={[styles.label, { color: c.onSurface }]}>Eigene Weite (km)</Text>
+            <TextInput
+              editable={!pending}
+              keyboardType="decimal-pad"
+              maxLength={5}
+              onChangeText={setCustomRadius}
+              placeholder="z. B. 3,5"
+              placeholderTextColor={c.outline}
+              style={[
+                styles.input,
+                styles.centeredText,
+                {
+                  backgroundColor: c.surfaceContainerLow,
+                  borderColor: c.outlineVariant,
+                  color: c.onSurface,
+                },
+              ]}
+              value={customRadius}
+            />
+            <Text style={[styles.hint, { color: c.onSurfaceVariant }]}>
+              {customRadius.trim() === ''
+                ? `Ausgewählt: ${formatTrackingRadius(trackingRadius)} (100 m bis 10 km möglich).`
+                : parseTrackingRadiusKm(customRadius) !== null
+                  ? `Sicherheitszone: ${formatTrackingRadius(parseTrackingRadiusKm(customRadius) ?? trackingRadius)}.`
+                  : 'Bitte einen Wert zwischen 0,1 und 10 km eingeben.'}
+            </Text>
           </Card>
         ) : null}
 
@@ -777,7 +826,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     paddingTop: 1,
+    textAlign: 'center',
   },
+  /** Centers the value inside a field that behaves like a button (date picker). */
+  centeredField: { justifyContent: 'center' },
+  centeredText: { textAlign: 'center' },
   multiline: { minHeight: 96, paddingTop: 14, textAlignVertical: 'top' },
   noticeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 12 },
   checkbox: { fontSize: 22, lineHeight: 24 },
