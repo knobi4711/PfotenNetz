@@ -3,34 +3,26 @@
     "name": "PfotenNetz",
     "slug": "pfotennetz",
     "scheme": "pfotennetz",
-    "version": "0.0.9",
+    "version": "0.1.12",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/pfotennetz-logo.png",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.pfotennetz",
       "deploymentTarget": "16.4",
-      "associatedDomains": [
-        "webcredentials:pfotennetz.app"
-      ],
+      "associatedDomains": ["webcredentials:pfotennetz.app"],
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "PfotenNetz benötigt Ihren Standort für die Karten-Suche und Live-Tracking.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "PfotenNetz benötigt Ihren Standort für Hintergrund-Tracking bei aktiven Gassi-Runden.",
         "NSFaceIDUsageDescription": "PfotenNetz verwendet Face ID für sichere Anmeldung.",
-        "UIBackgroundModes": [
-          "location",
-          "fetch",
-          "remote-notification"
-        ]
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"]
       }
     },
     "android": {
       "package": "app.pfotennetz",
-      "versionCode": 9,
+      "versionCode": 22,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -41,10 +33,7 @@
               "host": "pfotennetz.app"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ],
       "permissions": [
