@@ -24,9 +24,19 @@ export const phoneSchema = z
 
 export const petNameSchema = z.string().min(1).max(50);
 export const petBreedSchema = z.string().max(50).optional().nullable();
-export const petSpeciesSchema = z.enum(['dog', 'cat', 'rabbit', 'guinea_pig', 'bird', 'other']);
+export const petSpeciesSchema = z.enum([
+  'dog',
+  'cat',
+  'rabbit',
+  'guinea_pig',
+  'bird',
+  'horse',
+  'amphibian',
+  'fish',
+  'other',
+]);
 
-export const bookingTypeSchema = z.enum(['walk', 'feeding', 'vacation', 'daycare']);
+export const bookingTypeSchema = z.enum(['walk', 'feeding', 'vacation', 'daycare', 'ride']);
 export const careLocationSchema = z.enum([
   'at_owner_home',
   'at_owner_home_live_in',
