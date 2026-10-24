@@ -36,6 +36,10 @@ function clientWithStubs(stubs: {
         Promise.resolve({ data: { user: stubs.userId === null ? null : { id: stubs.userId } } }),
     },
     from: (table: string) => builder(table),
+    rpc: (fn: string, args: Record<string, unknown>) => {
+      calls.push({ table: `rpc:${fn}`, values: args });
+      return Promise.resolve({ error: null });
+    },
   } as unknown as SupabaseClient<Database>;
   return { client, calls };
 }
@@ -50,7 +54,7 @@ describe('profile queries', () => {
 
     const result = await fetchOwnProfile(client);
 
-    expect(result).toEqual({ id: 'user-1' });
+    expect(result).toEqual({ id: 'user-1', private_address: null });
     expect(calls.filter((call) => call.table === 'profiles').length).toBeGreaterThan(0);
   });
 
@@ -76,6 +80,7 @@ describe('profile queries', () => {
       displayName: 'Anna',
       phone: null,
       postalCode: '10115',
+      privateAddress: 'Musterstraße 1, 10115 Berlin',
       kiezRadiusKm: 1.5,
     });
 
@@ -89,12 +94,32 @@ describe('profile queries', () => {
     });
   });
 
+  it('saves the exact home address through its private server RPC', async () => {
+    const { client, calls } = clientWithStubs({
+      userId: 'user-1',
+      queryResult: { data: null, error: null },
+      updateResult: { data: { id: 'user-1' }, error: null },
+    });
+    await updateOwnProfile(client, {
+      displayName: 'Anna',
+      phone: null,
+      postalCode: '10115',
+      privateAddress: 'Musterstraße 1, 10115 Berlin',
+      kiezRadiusKm: 1.5,
+    });
+    expect(calls.find((call) => call.table === 'rpc:save_own_private_address')?.values).toEqual({
+      p_address: 'Musterstraße 1, 10115 Berlin',
+      p_postal_code: '10115',
+    });
+  });
+
   it('validates the display name before updating', async () => {
     expect(
       validateUpdateOwnProfile({
         displayName: 'A',
         phone: null,
         postalCode: '10115',
+        privateAddress: 'Musterstraße 1, 10115 Berlin',
         kiezRadiusKm: 1.5,
       })
     ).not.toBeNull();
@@ -103,6 +128,7 @@ describe('profile queries', () => {
         displayName: 'Anna',
         phone: null,
         postalCode: '10115',
+        privateAddress: 'Musterstraße 1, 10115 Berlin',
         kiezRadiusKm: 1.5,
       })
     ).toBeNull();
@@ -114,6 +140,7 @@ describe('profile queries', () => {
         displayName: 'Anna',
         phone: null,
         postalCode: '',
+        privateAddress: 'Musterstraße 1, 10115 Berlin',
         kiezRadiusKm: 1.5,
       })
     ).toBe('Bitte gib eine gültige fünfstellige Postleitzahl ein.');
@@ -122,9 +149,22 @@ describe('profile queries', () => {
         displayName: 'Anna',
         phone: null,
         postalCode: '10115',
+        privateAddress: 'Musterstraße 1, 10115 Berlin',
         kiezRadiusKm: 1.5,
       })
     ).toBeNull();
+  });
+
+  it('requires a private street address', () => {
+    expect(
+      validateUpdateOwnProfile({
+        displayName: 'Anna',
+        phone: null,
+        postalCode: '10115',
+        privateAddress: '',
+        kiezRadiusKm: 1.5,
+      })
+    ).toBe('Bitte gib eine vollständige Adresse mit 5 bis 300 Zeichen ein.');
   });
 
   it('stores notification preferences without allowing server-managed fields', async () => {
@@ -138,6 +178,7 @@ describe('profile queries', () => {
       displayName: 'Anna',
       phone: null,
       postalCode: '10115',
+      privateAddress: 'Musterstraße 1, 10115 Berlin',
       kiezRadiusKm: 1.5,
       notificationPrefs: { hazards: true, bookings: false, community: true },
     });

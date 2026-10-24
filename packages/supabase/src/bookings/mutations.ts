@@ -76,6 +76,32 @@ export async function cancelBooking(
   return unwrapBooking(await client.rpc('seeker_cancel_booking', args).single());
 }
 
+/** Seeker confirms the helper who accepted an open request. */
+export async function confirmBookingHelper(
+  client: SupabaseClient<Database>,
+  bookingId: string
+): Promise<Booking> {
+  return unwrapBooking(
+    await client.rpc('seeker_confirm_helper', { p_booking_id: bookingId }).single()
+  );
+}
+
+/** Seeker declines the helper; the request is reopened for matching helpers. */
+export async function rejectBookingHelper(
+  client: SupabaseClient<Database>,
+  bookingId: string,
+  reason?: string
+): Promise<Booking> {
+  return unwrapBooking(
+    await client
+      .rpc('seeker_reject_helper', {
+        p_booking_id: bookingId,
+        ...(reason === undefined ? {} : { p_reason: reason }),
+      })
+      .single()
+  );
+}
+
 export interface UpdateBookingRequestInput {
   bookingId: string;
   type: Database['public']['Enums']['booking_type'];
@@ -106,12 +132,12 @@ export async function updateBookingRequest(
         p_type: input.type,
         p_start_at: input.startAt,
         p_end_at: input.endAt,
-        p_meeting_address: input.meetingAddress ?? null,
+        p_meeting_address: input.meetingAddress ?? '',
         p_currency: input.currency,
         p_price_eur_cents: priceEurCents,
         p_price_kiez_hours: priceKiezHours,
         p_is_urgent: input.isUrgent ?? false,
-        p_care_notes: input.careNotes ?? null,
+        p_care_notes: input.careNotes ?? '',
         p_care_location: input.careLocation ?? 'at_owner_home',
       })
       .single()

@@ -6,7 +6,35 @@ export type BookingType = Database['public']['Enums']['booking_type'];
 export type BookingCurrency = Database['public']['Enums']['currency'];
 export type CareLocation = Database['public']['Tables']['bookings']['Row']['care_location'];
 
-export const BOOKING_TYPES: BookingType[] = ['walk', 'feeding', 'vacation', 'daycare'];
+export const BOOKING_TYPES: BookingType[] = ['walk', 'feeding', 'vacation', 'daycare', 'ride'];
+
+/**
+ * Radii (in meters) offered when configuring the per-booking safety zone.
+ * The helper's device monitors this radius around the tracking start point.
+ */
+export const TRACKING_RADIUS_OPTIONS = [250, 500, 1000, 2000] as const;
+export const DEFAULT_TRACKING_RADIUS_M = 500;
+export const MIN_TRACKING_RADIUS_M = 100;
+export const MAX_TRACKING_RADIUS_M = 5000;
+
+/** Short German label for a safety-zone radius, e.g. `500 m` or `1,0 km`. */
+export function formatTrackingRadius(meters: number): string {
+  if (meters < 1000) return `${meters} m`;
+  return `${(meters / 1000).toFixed(1).replace('.', ',')} km`;
+}
+
+export function validateBookingPetCompatibility(
+  type: BookingType,
+  species: readonly string[]
+): string | null {
+  if (type === 'walk' && species.some((value) => value !== 'dog')) {
+    return 'Gassirunden sind nur für Hunde möglich. Wähle für andere Tiere Fütterung oder Betreuung.';
+  }
+  if (type === 'ride' && species.some((value) => value !== 'horse')) {
+    return 'Ausreiten ist nur mit Pferden möglich.';
+  }
+  return null;
+}
 
 export interface CreateBookingInput {
   type: BookingType;
@@ -29,6 +57,11 @@ export interface CreateBookingInput {
   careNotes?: string | null | undefined;
   /** Where longer-term care takes place: owner's home or helper's home. */
   careLocation?: CareLocation | undefined;
+  /**
+   * Radius of the local safety zone in meters (default 500). The helper's app
+   * alerts when the tracking device leaves this radius.
+   */
+  trackingRadiusM?: number | undefined;
 }
 
 async function requireUserId(client: SupabaseClient<Database>): Promise<string> {
@@ -81,6 +114,15 @@ export function validateCreateBooking(input: CreateBookingInput): string | null 
   if (input.careNotes !== undefined && input.careNotes !== null && input.careNotes.length > 2000) {
     return 'Die Betreuungsnotiz darf höchstens 2.000 Zeichen enthalten.';
   }
+  if (input.trackingRadiusM !== undefined) {
+    if (
+      !Number.isFinite(input.trackingRadiusM) ||
+      input.trackingRadiusM < MIN_TRACKING_RADIUS_M ||
+      input.trackingRadiusM > MAX_TRACKING_RADIUS_M
+    ) {
+      return `Die Sicherheitszone muss zwischen ${MIN_TRACKING_RADIUS_M} und ${MAX_TRACKING_RADIUS_M} Metern liegen.`;
+    }
+  }
   return null;
 }
 
@@ -108,6 +150,7 @@ export async function createBooking(
     owner_id: string;
     is_active: boolean;
     is_deceased: boolean;
+    species: string;
   }> = [];
 
   if (petIds.length === 1) {
@@ -115,7 +158,7 @@ export async function createBooking(
     if (petId === undefined) throw new Error('Bitte wähle mindestens ein Tier aus.');
     const { data: pet, error: petError } = await client
       .from('pets')
-      .select('id,owner_id,is_active,is_deceased')
+      .select('id,owner_id,is_active,is_deceased,species')
       .eq('id', petId)
       .maybeSingle();
     if (petError) throw petError;
@@ -123,7 +166,7 @@ export async function createBooking(
   } else {
     const { data: selectedPets, error: petError } = await client
       .from('pets')
-      .select('id,owner_id,is_active,is_deceased')
+      .select('id,owner_id,is_active,is_deceased,species')
       .in('id', petIds);
     if (petError) throw petError;
     pets = selectedPets ?? [];
@@ -136,6 +179,21 @@ export async function createBooking(
     if (pet.is_deceased === true)
       throw new Error('Für verstorbene Tiere sind keine neuen Aufträge möglich.');
     if (pet.is_active !== true) throw new Error('Mindestens eines der Tiere ist pausiert.');
+  }
+  const compatibilityError = validateBookingPetCompatibility(
+    input.type,
+    pets.map((pet) => pet.species)
+  );
+  if (compatibilityError !== null) throw new Error(compatibilityError);
+
+  const { data: privateAddress, error: addressError } = await client
+    .from('private_profile_addresses')
+    .select('profile_id')
+    .eq('profile_id', seekerId)
+    .maybeSingle();
+  if (addressError) throw addressError;
+  if (privateAddress === null) {
+    throw new Error('Bitte hinterlege zuerst deine private Wohnadresse im Profil.');
   }
 
   const address = input.meetingAddress?.trim();
@@ -173,6 +231,7 @@ export async function createBooking(
     // only position zero, so it is not charged once per animal.
     price_eur_cents: priceEurCents,
     price_kiez_hours: priceKiezHours,
+    tracking_radius_m: Math.round(input.trackingRadiusM ?? DEFAULT_TRACKING_RADIUS_M),
   }));
 
   if (rows.length === 1) {

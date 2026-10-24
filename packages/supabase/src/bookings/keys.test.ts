@@ -14,6 +14,12 @@ describe('bookingKeys', () => {
   it('builds the booking detail key as [booking, bookingId]', () => {
     expect(bookingKeys.detail('booking-1')).toEqual(['booking', 'booking-1']);
   });
+
+  it('exposes a detail prefix that covers detail and grouped queries', () => {
+    expect(bookingKeys.details).toEqual(['booking']);
+    expect(bookingKeys.detail('booking-1').slice(0, 1)).toEqual([...bookingKeys.details]);
+    expect(bookingKeys.detail('group:group-1').slice(0, 1)).toEqual([...bookingKeys.details]);
+  });
 });
 
 describe('timebankKeys', () => {

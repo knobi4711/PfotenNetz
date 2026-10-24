@@ -41,6 +41,19 @@ describe('availability validation', () => {
       })
     ).toBeNull();
   });
+
+  it('only allows riding availability when horses are accepted', () => {
+    const base = {
+      dayOfWeek: 1,
+      startTime: '09:00',
+      endTime: '11:00',
+      bookingTypes: ['ride'] as ('walk' | 'feeding' | 'vacation' | 'daycare' | 'ride')[],
+      maxDistanceKm: 5,
+    };
+
+    expect(validateAvailabilityInput({ ...base, petSpecies: ['horse'] })).toBeNull();
+    expect(validateAvailabilityInput({ ...base, petSpecies: ['dog'] })).toContain('nur für Pferde');
+  });
 });
 
 describe('availability coverage', () => {

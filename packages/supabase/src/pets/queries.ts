@@ -3,7 +3,9 @@ import type { Database } from '../types/database';
 
 export type Pet = Database['public']['Tables']['pets']['Row'];
 
-export const PET_SPECIES_OPTIONS = ['dog', 'cat', 'rabbit', 'guinea_pig', 'bird', 'other'] as const;
+export const PET_SPECIES_OPTIONS = [
+  'dog', 'cat', 'rabbit', 'guinea_pig', 'bird', 'horse', 'amphibian', 'fish', 'other',
+] as const;
 export type PetSpecies = (typeof PET_SPECIES_OPTIONS)[number];
 
 export const PET_SPECIES_LABELS: Record<PetSpecies, string> = {
@@ -12,6 +14,9 @@ export const PET_SPECIES_LABELS: Record<PetSpecies, string> = {
   rabbit: 'Kaninchen',
   guinea_pig: 'Meerschweinchen',
   bird: 'Vogel',
+  horse: 'Pferd',
+  amphibian: 'Amphibie',
+  fish: 'Fisch',
   other: 'Sonstiges',
 };
 

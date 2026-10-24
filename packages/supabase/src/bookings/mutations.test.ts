@@ -5,9 +5,11 @@ import {
   acceptBooking,
   cancelBooking,
   completeBooking,
+  confirmBookingHelper,
   rateHelper,
   rateSeeker,
   rejectBooking,
+  rejectBookingHelper,
   startBooking,
   updateBookingRequest,
 } from './mutations';
@@ -89,6 +91,16 @@ describe('booking mutations', () => {
         fn: 'seeker_cancel_booking',
         args: { p_booking_id: 'booking-1', p_reason: 'changed plans' },
       },
+    ]);
+  });
+
+  it('lets the seeker confirm or decline an interested helper', async () => {
+    const { client, rpcCalls } = createMutationMock();
+    await confirmBookingHelper(client, 'booking-1');
+    await rejectBookingHelper(client, 'booking-1');
+    expect(rpcCalls).toEqual([
+      { fn: 'seeker_confirm_helper', args: { p_booking_id: 'booking-1' } },
+      { fn: 'seeker_reject_helper', args: { p_booking_id: 'booking-1' } },
     ]);
   });
 

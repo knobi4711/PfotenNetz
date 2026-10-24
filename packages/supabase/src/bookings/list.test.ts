@@ -10,6 +10,9 @@ interface OrderCall {
 
 interface ListChainMock {
   select: (columns: string) => ListChainMock;
+  eq: (column: string, value: string) => ListChainMock;
+  in: (column: string, values: string[]) => ListChainMock;
+  maybeSingle: () => Promise<{ data: unknown; error: null }>;
   order: (column: string, options?: { ascending?: boolean }) => ListChainMock;
   then: (onfulfilled: (value: { data: unknown; error: null }) => unknown) => Promise<unknown>;
 }
@@ -19,6 +22,9 @@ function createListMock(rows: Record<string, unknown>[]) {
   const orderCalls: OrderCall[] = [];
   const builder: ListChainMock = {
     select: (_columns: string) => builder,
+    eq: (_column: string, _value: string) => builder,
+    in: (_column: string, _values: string[]) => builder,
+    maybeSingle: () => Promise.resolve({ data: null, error: null }),
     order: (column: string, options?: { ascending?: boolean }) => {
       orderCalls.push({ column, ascending: options?.ascending ?? true });
       return builder;
@@ -49,8 +55,15 @@ describe('fetchBookingsForUser', () => {
 
     const bookings = await fetchBookingsForUser(client);
 
-    expect(bookings).toEqual(rows);
-    expect(fromTables).toEqual(['bookings']);
+    expect(bookings).toHaveLength(2);
+    expect(bookings[0]).toMatchObject({ id: 'booking-2', meeting_address: null });
+    expect(fromTables).toEqual([
+      'bookings',
+      'booking_private_locations',
+      'private_profile_addresses',
+      'booking_private_locations',
+      'private_profile_addresses',
+    ]);
     expect(orderCalls).toEqual([{ column: 'start_at', ascending: false }]);
   });
 

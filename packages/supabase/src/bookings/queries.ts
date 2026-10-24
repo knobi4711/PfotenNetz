@@ -54,6 +54,7 @@ export interface BookingWithRelations extends Booking {
   pet: BookingPet | null;
   seekerProfile: BookingProfile | null;
   helperProfile: BookingProfile | null;
+  participantAddress?: string | null;
 }
 
 export interface BookingRequestGroup {
@@ -136,13 +137,45 @@ async function addPetPhotoUrl(
   client: SupabaseClient<Database>,
   booking: BookingWithRelations
 ): Promise<BookingWithRelations> {
-  if (booking.pet?.avatar_url === null || booking.pet?.avatar_url === undefined) return booking;
-  const signed = await client.storage
-    .from('pet-photos')
-    .createSignedUrl(booking.pet.avatar_url, 3600);
-  return signed.error === null
-    ? { ...booking, pet: { ...booking.pet, avatar_url: signed.data.signedUrl } }
-    : booking;
+  const participantIds = [booking.seeker_id, booking.helper_id].filter(
+    (id): id is string => id !== null
+  );
+  const [{ data: privateLocation }, { data: participantAddresses }, signed] = await Promise.all([
+    client
+      .from('booking_private_locations')
+      .select('exact_address')
+      .eq('booking_id', booking.id)
+      .maybeSingle(),
+    client
+      .from('private_profile_addresses')
+      .select('profile_id,exact_address')
+      .in('profile_id', participantIds),
+    booking.pet?.avatar_url
+      ? client.storage.from('pet-photos').createSignedUrl(booking.pet.avatar_url, 3600)
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  const pet =
+    booking.pet !== null && signed.data !== null && signed.error === null
+      ? { ...booking.pet, avatar_url: signed.data.signedUrl }
+      : booking.pet;
+  const careAddressProfileId =
+    booking.care_location === 'at_helper_home' ? booking.helper_id : booking.seeker_id;
+  const careAddress = participantAddresses?.find(
+    (address) => address.profile_id === careAddressProfileId
+  )?.exact_address;
+  const visibleCareAddress =
+    booking.care_location === 'at_helper_home'
+      ? (careAddress ?? privateLocation?.exact_address ?? null)
+      : (privateLocation?.exact_address ?? careAddress ?? null);
+  // The private-location SELECT is governed by its own RLS policy. Open-request
+  // helpers receive no row; owners and confirmed participants receive the exact
+  // address only when authorized by the database.
+  return {
+    ...booking,
+    meeting_address: visibleCareAddress,
+    participantAddress: careAddress ?? null,
+    pet,
+  };
 }
 
 /**
@@ -167,4 +200,20 @@ export async function fetchBookingsForUser(
     )
   );
   return filterBookingsByScope(bookings, scope);
+}
+
+/**
+ * Notifies booking list queries when another device creates or updates a
+ * booking. The caller still performs the authenticated fetch, so RLS remains
+ * the source of truth for which rows are visible.
+ */
+export function subscribeBookings(
+  client: SupabaseClient<Database>,
+  onChange: () => void
+): () => void {
+  const channel = client
+    .channel('bookings-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, onChange)
+    .subscribe();
+  return () => void client.removeChannel(channel);
 }

@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
 
-export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type Profile = Database['public']['Tables']['profiles']['Row'] & {
+  private_address?: string | null;
+};
 export type NotificationPreferences = {
   hazards: boolean;
   bookings: boolean;
@@ -15,6 +17,7 @@ export interface UpdateOwnProfileInput {
   displayName: string;
   phone: string | null;
   postalCode: string;
+  privateAddress: string;
   profileBio?: string | null;
   kiezRadiusKm: KiezRadius;
   notificationPrefs?: NotificationPreferences;
@@ -35,6 +38,9 @@ export function validateUpdateOwnProfile(input: UpdateOwnProfileInput): string |
   if (!/^\d{5}$/.test(input.postalCode?.trim() ?? '')) {
     return 'Bitte gib eine gültige fünfstellige Postleitzahl ein.';
   }
+  if (input.privateAddress.trim().length < 5 || input.privateAddress.trim().length > 300) {
+    return 'Bitte gib eine vollständige Adresse mit 5 bis 300 Zeichen ein.';
+  }
   if (input.phone !== null && input.phone !== '' && input.phone.trim().length < 3) {
     return 'Bitte gib eine gültige Telefonnummer ein oder lasse das Feld leer.';
   }
@@ -49,7 +55,14 @@ export async function fetchOwnProfile(client: SupabaseClient<Database>): Promise
   const { data, error } = await client.from('profiles').select('*').eq('id', userId).maybeSingle();
 
   if (error) throw error;
-  return data;
+  if (data === null) return null;
+  const { data: privateAddress, error: addressError } = await client
+    .from('private_profile_addresses')
+    .select('exact_address')
+    .eq('profile_id', userId)
+    .maybeSingle();
+  if (addressError) throw addressError;
+  return { ...data, private_address: privateAddress?.exact_address ?? null };
 }
 
 /** Permanently deletes the authenticated user's account through a server-side RPC. */
@@ -87,6 +100,11 @@ export async function updateOwnProfile(
     .single();
 
   if (error) throw error;
+  const { error: addressError } = await client.rpc('save_own_private_address', {
+    p_address: input.privateAddress.trim(),
+    p_postal_code: input.postalCode.trim(),
+  });
+  if (addressError) throw addressError;
   return data;
 }
 

@@ -7,13 +7,16 @@ export type Availability = Database['public']['Tables']['helper_availabilities']
 export const AVAILABILITY_DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 export type AvailabilityDay = (typeof AVAILABILITY_DAYS)[number];
 
-export const AVAILABILITY_BOOKING_TYPES: BookingType[] = ['walk', 'feeding', 'vacation', 'daycare'];
+export const AVAILABILITY_BOOKING_TYPES: BookingType[] = ['walk', 'feeding', 'vacation', 'daycare', 'ride'];
 export const AVAILABILITY_PET_SPECIES = [
   'dog',
   'cat',
   'rabbit',
   'guinea_pig',
   'bird',
+  'horse',
+  'amphibian',
+  'fish',
   'other',
 ] as const;
 
@@ -55,6 +58,9 @@ export function validateAvailabilityInput(input: UpsertAvailabilityInput): strin
   }
   if (input.petSpecies !== undefined && input.petSpecies.length === 0)
     return 'Bitte wähle mindestens eine Tierart.';
+  if (input.bookingTypes.includes('ride') && !input.petSpecies?.includes('horse')) {
+    return 'Ausreiten kann nur für Pferde angeboten werden.';
+  }
   for (const type of input.bookingTypes) {
     if (!AVAILABILITY_BOOKING_TYPES.includes(type)) {
       return `Unbekannte Betreuungsart: ${type}`;

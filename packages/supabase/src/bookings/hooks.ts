@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   useMutation,
   useQuery,
@@ -13,6 +14,7 @@ import {
   fetchBooking,
   fetchBookingGroup,
   fetchBookingsForUser,
+  subscribeBookings,
   type Booking,
   type BookingListScope,
   type BookingWithRelations,
@@ -21,9 +23,11 @@ import {
   acceptBooking,
   cancelBooking,
   completeBooking,
+  confirmBookingHelper,
   rateHelper,
   rateSeeker,
   rejectBooking,
+  rejectBookingHelper,
   startBooking,
   updateBookingRequest,
   type BookingRatingInput,
@@ -99,10 +103,44 @@ export function useArchivedBookings(): UseQueryResult<BookingWithRelations[], Er
   return useBookings('archive');
 }
 
+/** Realtime subscription: refreshes booking lists after changes on any device. */
+export function useBookingSubscription(enabled = true): void {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!enabled) return;
+    const unsubscribe = subscribeBookings(getSupabaseClient(), () => {
+      // Lists and detail screens have separate key roots. A helper accepting a
+      // request on another device must also refresh the seeker's open detail
+      // screen, otherwise the confirmation actions never appear.
+      void queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+      void queryClient.invalidateQueries({ queryKey: bookingKeys.details });
+    });
+    return unsubscribe;
+  }, [enabled, queryClient]);
+}
+
 /** Accept a requested booking as the assigned helper. */
 export function useAcceptBooking(): UseMutationResult<Booking, Error, string> {
   const client = getSupabaseClient();
   return useBookingMutationWithClient(client, acceptBooking);
+}
+
+/** Seeker confirms or declines the helper's response to an open request. */
+export function useConfirmBookingHelper(): UseMutationResult<Booking, Error, string> {
+  const client = getSupabaseClient();
+  return useBookingMutationWithClient(client, confirmBookingHelper);
+}
+
+export function useRejectBookingHelper(): UseMutationResult<Booking, Error, string> {
+  const client = getSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (bookingId: string) => rejectBookingHelper(client, bookingId),
+    onSuccess: (booking, bookingId) => {
+      invalidateBookingQueries(queryClient, bookingId);
+      invalidateGroupQuery(queryClient, booking);
+    },
+  });
 }
 
 function useBookingMutationWithClient(

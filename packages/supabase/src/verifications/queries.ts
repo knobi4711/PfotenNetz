@@ -39,6 +39,15 @@ export async function requestHelperStatus(
   client: SupabaseClient<Database>
 ): Promise<Verification[]> {
   const userId = await requireUserId(client);
+  const { data: privateAddress, error: addressError } = await client
+    .from('private_profile_addresses')
+    .select('profile_id')
+    .eq('profile_id', userId)
+    .maybeSingle();
+  if (addressError) throw addressError;
+  if (privateAddress === null) {
+    throw new Error('Bitte hinterlege zuerst deine private Wohnadresse im Profil.');
+  }
   const existing = await fetchOwnVerifications(client);
   const pendingTypes = new Set(
     existing.filter((v) => v.status === 'pending' || v.status === 'approved').map((v) => v.type)
