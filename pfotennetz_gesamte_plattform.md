@@ -1,9 +1,9 @@
 # PfotenNetz — Gesamte Plattform-Architektur & Screen-Spezifikation
 
 **Projekt:** PfotenNetz — Mobile-First & Desktop Nachbarschafts-Plattform für Haustierbetreuung, P2P-Solidarität & hyperlokale Gefahrenwarnung  
-**Version:** 4.3.0 (QR-Code-Beschriftung Web, lokaler Play-Store-Upload, 12.10.2026)
+**Version:** 4.3.1 (QR-Code-Beschriftung Web auf App-Version 0.0.9 aktualisiert, lokaler Play-Store-Upload, 19.10.2026)
 **Design-System:** Warm Community Pet Care (`#e26d46` Terracotta, `#2e7d32` Salbeigrün/Waldgrün, `#fff8f5` Warm Linen)  
-**Status:** Mobile-Betreuungsplattform und zentrale Web-Flows produktiv auf `paperless`/`pfotennetz.app` veröffentlicht; Passwort-Reset, robuster Android-Build, privater Kennenlern-Chat, aktualisierte Web-QR-Code-Beschriftung, Android-Biometrie, native/Web-Plattformtrennung, Nutzer:innen-Meldungen und Google-Play-konforme Account-Löschung ergänzt, rechtliche Freigabe und einzelne native Abnahmen sind noch offen
+**Status:** Mobile-Betreuungsplattform und zentrale Web-Flows produktiv auf `pfotennetz.app` veröffentlicht; Passwort-Reset, robuster Android-Build, privater Kennenlern-Chat, aktualisierte Web-QR-Code-Beschriftung, Android-Biometrie, native/Web-Plattformtrennung, Nutzer:innen-Meldungen und Google-Play-konforme Account-Löschung ergänzt, rechtliche Freigabe und einzelne native Abnahmen sind noch offen
 
 ---
 
@@ -71,7 +71,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - `/booking/[id]`: Buchungsdetail mit Statusaktionen und Chat-Einstieg
 - `/chat/[bookingId]`: Web-Chat mit Text-, Foto- und Medienanzeige
 - `/chat/contact/[contactRequestId]`: privater Kennenlern-Chat zwischen Suchenden und Helfer:innen
-- Dashboard-QR-Code zur mobilen App mit der Beschriftung „PfotenNetz App · Version 0.0.8“; der QR-Code und der direkte Play-Store-Link verwenden dasselbe Ziel
+- Dashboard-QR-Code zur mobilen App mit der Beschriftung „PfotenNetz App · Version 0.0.9“; der QR-Code und der direkte Play-Store-Link verwenden dasselbe Ziel (Download-Link Web: https://play.google.com/store/apps/details?id=app.pfotennetz&pli=1, führt zum geschlossenen Test)
 - `/profile`: Profil und Zeitbank-Verlauf
 - `/profile`: vollständige Bearbeitung von Anzeigename, Telefon, PLZ, Kurzvorstellung, Suchradius und Benachrichtigungen
 - `/profile`: PLZ ist auf Web und Mobile ein Pflichtfeld und wird vor dem Speichern serverseitig validiert
@@ -93,7 +93,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Root-`.env`-Laden für den Web-Build im Monorepo
 - Next.js-Produktionsbuild als Standalone-Ausgabe mit vorbereitetem Docker-Container hinter Caddy auf `pfotennetz.app`
 - Deployment-Dokumentation, Docker-Compose-Datei und Caddy-Konfiguration unter `deployment/`; der read-only Standalone-Container erhält einen beschreibbaren Next.js-Cache für Bildoptimierung, Paperless bleibt auf Port 8000 unverändert
-- Direkter Produktionsdeploy per SSH auf den Mini-PC `paperless`; Web-Container `pfotennetz-web` hinter Caddy auf `https://pfotennetz.app`
+- Direkter Produktionsdeploy per SSH auf den Mini-PC `192.168.188.42` (hier `hagen@192.168.188.42`); Web-Container `pfotennetz-web` hinter Caddy auf `https://pfotennetz.app`
 
 ### Qualitätsstand
 
@@ -106,8 +106,8 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Repository-Lint: erfolgreich
 - Web-E2E: **18/18 erfolgreich**, inklusive Passwort-Reset-Route, authentifizierten Tier-, Buchungs-, Chat-, Medien- und Kontaktanfrage-Flüssen, Offline-Notfallkarten-Smoke-Test sowie Community-Moderation und Web-Notfallkartenroute
 - Web-Build: erfolgreich
-- Web-QR-Code-Beschriftung: auf „PfotenNetz App · Version 0.0.8“ aktualisiert; Web-Typecheck, Lint und Tests erfolgreich
-- Web-Produktivdeploy: neuer Stand per SSH auf `paperless` übertragen, Container/Caddy validiert und `https://pfotennetz.app` anschließend mit HTTP 200 geprüft
+- Web-QR-Code-Beschriftung: auf „PfotenNetz App · Version 0.0.9“ aktualisiert; Web-Typecheck, Lint und Tests erfolgreich
+- Web-Produktivdeploy: neuer Stand per SSH auf `192.168.188.42` übertragen, Container/Caddy validiert und `https://pfotennetz.app` anschließend mit HTTP 200 geprüft
 - Web-Asset-Checks: Next.js-CSS mit HTTP 200 und Logo mit HTTP 200 ausgeliefert; der anfängliche ungestylte Fallback durch den fehlenden beschreibbaren Cache ist behoben
 - Lokale Android-Toolchain: Android Studio/SDK, Java 21, Expo-Prebuild und Gradle-Wrapper eingerichtet; lokale APK-/AAB-Erzeugung ist der verbindliche Standard
 - Lokaler Android-Release-Build am 12.10.2026 verifiziert: `app:assembleRelease` erfolgreich (`BUILD SUCCESSFUL in 4m 48s`), signierte APK unter `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`
@@ -157,8 +157,7 @@ pnpm upload:android:local
 Der lokale Service-Account `pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com`
 mit seinem passenden JSON-Schlüssel muss in der Play Console für `app.pfotennetz`
 freigeschaltet sein. Falls der Schlüssel an einem anderen Ort liegt, wird der Pfad
-über `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY_PATH` gesetzt. Der Upload verwendet den
-Internal-Track und überträgt weder das AAB noch Zugangsdaten an Expo.
+über `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY_PATH` gesetzt. Der AAB-Upload erfolgt zukünftig über den Google Play Store (https://play.google.com/store/apps/details?id=app.pfotennetz&pli=1, geschlossener Test) und überträgt weder das AAB noch Zugangsdaten an Expo.
 
 Der Build wurde erfolgreich verifiziert. Dabei wurden lediglich CMake-Warnungen zu
 langen Windows-Pfaden sowie Gradle-Hinweise zu künftig entfernten Features ausgegeben;
@@ -447,6 +446,15 @@ beide haben den Release-Build nicht verhindert.
   - Der Betreuungsort wird als serverseitig geprüfte Eigenschaft (`care_location`) gespeichert und in Web-/Mobile-Buchungsdetails angezeigt; der temporäre Einzug ist dabei eine ausdrückliche Opt-in-Auswahl.
   - Persönliches Kennenlernen, geschützter Chat sowie Hinweise zu Haftung und Versicherung vor der ersten Betreuung.
 
+#### Betreuungsanfragen — regionale Freigabe und Adressschutz (Mobile & Web)
+
+- Anbieter:innen und Helfer:innen müssen ihre konkrete Adresse als Pflichtangabe erfassen, um Anfragen zu veröffentlichen bzw. als Helfer:in freigeschaltet und gefunden zu werden. Sie dient der internen Standort- und Umkreisberechnung.
+- Offene Anfragen werden verifizierten Helfer:innen freigegeben, die für das Gebiet des Anbieters registriert sind oder deren gespeicherter Standort innerhalb des für die Anfrage geltenden Radius liegt.
+- Vor der Bestätigung sehen Helfer:innen nur eine räumlich vergröberte Lage und – sofern verfügbar – die Entfernung; weder die konkrete Adresse noch exakte Kartenkoordinaten werden offengelegt.
+- Der Anbieter sieht vor der Bestätigung ebenfalls keine exakte Helferadresse. Nach Annahme durch einen Helfer chatten beide Beteiligten; der Anbieter kann den Helfer anschließend bestätigen oder ablehnen.
+- Konkrete Adressen werden nur den Beteiligten einer bestätigten Betreuung zugänglich. Zugriff auf Adressen und genaue Koordinaten ist serverseitig zu beschränken; öffentliche Profil- und Suchdaten dürfen sie nicht enthalten.
+- Die genaue Adresse und der genaue Standort sind personenbezogene Daten und unterliegen Zweckbindung, Zugriffsschutz und den festgelegten Aufbewahrungsfristen.
+
 #### Screen 23: Nachbarschafts-Tauschbörse (Mobile & Web)
 
 - **Route:** `/marketplace`
@@ -607,3 +615,10 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 - Remote angewendet: `050_original-requirements.sql` bis `068_owner_home_helper_live_in.sql`
 - Letzter Remote-Commit: nicht Bestandteil dieses lokalen Standabgleichs
 - Bewusst nicht überschreiben: `packages/supabase/src/auth/index.ts`, `supabase/config.toml`
+
+### Supabase Data API Grants für Tabellen
+
+- Supabase ändert ab dem 30.10.2026 das Verhalten für neu angelegte Tabellen im Schema `public`: Data-API-Zugriff wird nicht mehr automatisch gewährt. Betroffen sind insbesondere neue Tabellen, Preview-Branches und lokale Neuaufbauten mit `supabase db reset`; bereits bestehende Tabellen im laufenden Projekt behalten ihre aktuellen Grants.
+- Die Migrationen enthalten bereits explizite Grants für einige Tabellen, aber nicht für alle angelegten Tabellen. Vor neuen Tabellenmigrationen und vor Neuaufbauten daher prüfen, dass jede über die Data API benötigte Tabelle explizite Tabellenrechte erhält.
+- Grants jeweils in derselben Migration wie das zugehörige `CREATE TABLE` eintragen. Rechte nach tatsächlichem Zugriff und den RLS-Policies vergeben; `anon` nur dann freigeben, wenn anonymer Zugriff vorgesehen ist. Das allgemeine Supabase-Beispiel (`anon`: `SELECT`; `authenticated`/`service_role`: CRUD) nicht ungeprüft pauschal auf alle Tabellen anwenden.
+- Für die bestehenden Tabellen des laufenden Produktivprojekts ist aufgrund dieser Änderung keine sofortige nachträgliche Grant-Migration nötig. Die Data-API-Exposition zusätzlich in den Supabase-Projekteinstellungen prüfen.

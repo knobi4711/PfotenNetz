@@ -75,20 +75,8 @@ Die Web-App soll später auf meinem eigenen Linux-Mini-PC laufen.
 - Linux Mint 21
 - Docker / Docker Compose vorhanden
 - Rechner läuft dauerhaft
-- Paperless-NGX läuft bereits auf demselben Rechner
-- Paperless darf nicht verändert oder beeinträchtigt werden
 
-## Bestehende Container
-
-- `paperless-webserver-1`
-- `paperless-db-1`
-- `paperless-redis-1`
-
-Paperless verwendet:
-
-`Port 8000`
-
-PfotenNetz soll **NICHT** Port 8000 verwenden.
+> Hinweis: Auf demselben Rechner läuft ein separates Paperless-NGX, das Port 8000 belegt. PfotenNetz soll Port 8000 nicht verwenden.
 
 ## Caddy
 

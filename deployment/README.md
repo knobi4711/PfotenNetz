@@ -24,12 +24,14 @@ mkdir -p next-standalone next-static web-public
 
 Vom Windows-Entwicklungsrechner aus dem Repository-Root:
 
+> Hinweis: Der bisherige Deploy-Host ist nicht mehr online. Die Zieladresse muss neu konfiguriert werden, bevor Dateien übertragen werden können.
+
 ```powershell
-scp -r .\deployment\docker-compose.yml hagen@paperless:/mnt/Daten/pfotennetz/
-scp -r .\deployment\Caddyfile.pfotennetz hagen@paperless:/mnt/Daten/pfotennetz/
-scp -r .\apps\web\.next\standalone\* hagen@paperless:/mnt/Daten/pfotennetz/next-standalone/
-scp -r .\apps\web\.next\static\* hagen@paperless:/mnt/Daten/pfotennetz/next-static/
-scp -r .\apps\web\public\* hagen@paperless:/mnt/Daten/pfotennetz/web-public/
+# scp -r .\deployment\docker-compose.yml <DEPLOY_HOST>:/<DEPLOY_PATH>/
+# scp -r .\deployment\Caddyfile.pfotennetz <DEPLOY_HOST>:/<DEPLOY_PATH>/
+# scp -r .\apps\web\.next\standalone\* <DEPLOY_HOST>:/<DEPLOY_PATH>/next-standalone/
+# scp -r .\apps\web\.next\static\* <DEPLOY_HOST>:/<DEPLOY_PATH>/next-static/
+# scp -r .\apps\web\public\* <DEPLOY_HOST>:/<DEPLOY_PATH>/web-public/
 ```
 
 ## Container starten
