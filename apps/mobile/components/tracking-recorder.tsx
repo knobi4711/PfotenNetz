@@ -6,7 +6,13 @@ import { distanceMeters } from '../lib/tracking';
 import { startTrackingGeofence, stopTrackingGeofence } from '../lib/geofence';
 import { startBackgroundTracking, stopBackgroundTracking } from '../lib/tracking-background';
 
-export function TrackingRecorder({ bookingId }: { bookingId: string }) {
+export function TrackingRecorder({
+  bookingId,
+  radius = 500,
+}: {
+  bookingId: string;
+  radius?: number;
+}) {
   const create = useCreateTrackingSession();
   const finish = useFinishTrackingSession();
   const subscription = useRef<Location.LocationSubscription | null>(null);
@@ -48,7 +54,7 @@ export function TrackingRecorder({ bookingId }: { bookingId: string }) {
         );
       }
       try {
-        await startTrackingGeofence(bookingId, initial.coords);
+        await startTrackingGeofence(bookingId, initial.coords, radius);
       } catch {
         setError(
           'Sicherheitszone konnte nicht aktiviert werden; Vordergrund-Tracking läuft weiter.'

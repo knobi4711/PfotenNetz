@@ -221,6 +221,7 @@ export default function ProfileScreen() {
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [postalCode, setPostalCode] = useState('');
+  const [privateAddress, setPrivateAddress] = useState('');
   const [profileBio, setProfileBio] = useState('');
   const [kiezRadiusKm, setKiezRadiusKm] = useState<KiezRadius>(1.5);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({
@@ -376,6 +377,7 @@ export default function ProfileScreen() {
     setDisplayName(profile?.display_name ?? '');
     setPhone(profile?.phone ?? '');
     setPostalCode(profile?.postal_code ?? '');
+    setPrivateAddress(profile?.private_address ?? '');
     setProfileBio(profile?.profile_bio ?? '');
     const current = Number(profile?.kiez_radius_km ?? 1.5);
     setKiezRadiusKm(
@@ -407,6 +409,7 @@ export default function ProfileScreen() {
         displayName: displayName.trim(),
         phone,
         postalCode,
+        privateAddress,
         profileBio,
         kiezRadiusKm,
         notificationPrefs,
@@ -539,6 +542,27 @@ export default function ProfileScreen() {
                 ]}
                 value={postalCode}
               />
+              <Text style={[styles.label, { color: c.onSurface }]}>Wohnadresse * (privat)</Text>
+              <TextInput
+                editable={!updateProfile.isPending}
+                autoComplete="street-address"
+                onChangeText={setPrivateAddress}
+                placeholder="Straße und Hausnummer"
+                placeholderTextColor={c.outline}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: c.surfaceContainerLow,
+                    borderColor: c.outlineVariant,
+                    color: c.onSurface,
+                  },
+                ]}
+                value={privateAddress}
+              />
+              <Text style={[styles.hint, { color: c.onSurfaceVariant }]}>
+                Deine genaue Adresse ist nicht öffentlich. Sie wird für die regionale Vermittlung
+                verwendet und nur bei bestätigter Betreuung mit der anderen Person geteilt.
+              </Text>
               <Text style={[styles.label, { color: c.onSurface }]}>Kurzvorstellung (optional)</Text>
               <TextInput
                 editable={!updateProfile.isPending}

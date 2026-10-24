@@ -17,6 +17,10 @@ function startTime(booking: BookingWithRelations): number {
   return new Date(booking.start_at).getTime();
 }
 
+function endTime(booking: BookingWithRelations): number {
+  return new Date(booking.end_at).getTime();
+}
+
 function byStartAsc(a: BookingWithRelations, b: BookingWithRelations): number {
   const diff = startTime(a) - startTime(b);
   if (diff !== 0) return diff;
@@ -27,16 +31,34 @@ function startsNowOrLater(booking: BookingWithRelations, nowMs: number): boolean
   return startTime(booking) >= nowMs;
 }
 
+/**
+ * True while the agreed care window is running (`start_at <= now < end_at`).
+ * Legacy rows without a usable `end_at` fall back to the start time.
+ */
+function runsNow(booking: BookingWithRelations, nowMs: number): boolean {
+  const start = startTime(booking);
+  const end = endTime(booking);
+  if (!Number.isFinite(start)) return false;
+  if (!Number.isFinite(end)) return start <= nowMs;
+  return start <= nowMs && end > nowMs;
+}
+
+/** True for future bookings and for windows that have not ended yet. */
+function isRelevantNow(booking: BookingWithRelations, nowMs: number): boolean {
+  return startsNowOrLater(booking, nowMs) || runsNow(booking, nowMs);
+}
+
 function toNowMs(now: Date | number): number {
   return now instanceof Date ? now.getTime() : now;
 }
 
 /**
  * Selects the single highlighted booking from already-loaded data.
- * Priority: in_progress ("Aktuelle Betreuung") > earliest confirmed
- * with start_at >= now ("Nächste Betreuung") > earliest requested with
- * start_at >= now ("Offene Anfrage"). Completed, cancelled, disputed
- * and past bookings are never highlighted. Never mutates the input.
+ * Priority: in_progress or a confirmed booking whose care window is running
+ * ("Aktuelle Betreuung") > earliest confirmed starting later
+ * ("Nächste Betreuung") > earliest request that has not ended
+ * ("Offene Anfrage"). Completed, cancelled, disputed and ended bookings are
+ * never highlighted. Never mutates the input.
  */
 export function selectHighlightedBooking(
   bookings: BookingWithRelations[],
@@ -45,7 +67,11 @@ export function selectHighlightedBooking(
   const nowMs = toNowMs(now);
   const grouped = groupBookingsByRequest(bookings).map((request) => request.primary);
 
-  const current = grouped.filter((b) => b.status === 'in_progress').sort(byStartAsc);
+  const current = grouped
+    .filter(
+      (b) => b.status === 'in_progress' || (b.status === 'confirmed' && runsNow(b, nowMs))
+    )
+    .sort(byStartAsc);
   const currentFirst = current[0];
   if (currentFirst !== undefined) return { booking: currentFirst, kind: 'current' };
 
@@ -56,7 +82,7 @@ export function selectHighlightedBooking(
   if (upcomingFirst !== undefined) return { booking: upcomingFirst, kind: 'upcoming' };
 
   const open = grouped
-    .filter((b) => b.status === 'requested' && startsNowOrLater(b, nowMs))
+    .filter((b) => b.status === 'requested' && isRelevantNow(b, nowMs))
     .sort(byStartAsc);
   const openFirst = open[0];
   if (openFirst !== undefined) return { booking: openFirst, kind: 'open' };
@@ -71,9 +97,9 @@ export interface PreviewOptions {
 
 /**
  * Small deterministic preview of relevant bookings: in_progress plus
- * requested/confirmed starting now or later, earliest first. The
- * highlighted booking is excluded. Completed, cancelled, disputed and
- * past requested/confirmed bookings never appear. Never mutates the input.
+ * requested/confirmed that start now or later or whose window is still
+ * running, earliest first. The highlighted booking is excluded. Completed,
+ * cancelled, disputed and ended bookings never appear. Never mutates the input.
  */
 export function selectBookingPreview(
   bookings: BookingWithRelations[],
@@ -89,7 +115,7 @@ export function selectBookingPreview(
       if (b.id === highlightedId) return false;
       if (b.status === 'in_progress') return true;
       if (b.status === 'requested' || b.status === 'confirmed') {
-        return startsNowOrLater(b, nowMs);
+        return isRelevantNow(b, nowMs);
       }
       return false;
     })

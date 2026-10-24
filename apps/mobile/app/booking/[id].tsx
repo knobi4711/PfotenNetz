@@ -1,9 +1,19 @@
 import { useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  Image,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
+  formatTrackingRadius,
   useAcceptBooking,
   useBooking,
   useBookingGroup,
@@ -13,6 +23,8 @@ import {
   useOwnProfile,
   useRateHelper,
   useRateSeeker,
+  useConfirmBookingHelper,
+  useRejectBookingHelper,
   useRejectBooking,
   useStartBooking,
   useUpdateBookingRequest,
@@ -217,6 +229,8 @@ export default function BookingDetailScreen() {
 
   const accept = useAcceptBooking();
   const reject = useRejectBooking();
+  const confirmHelper = useConfirmBookingHelper();
+  const rejectHelper = useRejectBookingHelper();
   const start = useStartBooking();
   const complete = useCompleteBooking();
   const cancel = useCancelBooking();
@@ -225,11 +239,23 @@ export default function BookingDetailScreen() {
   const rateSeeker = useRateSeeker();
 
   const [ratingDone, setRatingDone] = useState(false);
-  const [largePhotoVisible, setLargePhotoVisible] = useState(false);
+  const [largePhotoUrl, setLargePhotoUrl] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([bookingQuery.refetch(), bookingGroupQuery.refetch()]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const anyPending =
     accept.isPending ||
     reject.isPending ||
+    confirmHelper.isPending ||
+    rejectHelper.isPending ||
     start.isPending ||
     complete.isPending ||
     cancel.isPending ||
@@ -245,11 +271,16 @@ export default function BookingDetailScreen() {
     cancel.error ??
     updateRequest.error ??
     null;
+  const helperDecisionError = confirmHelper.error ?? rejectHelper.error ?? null;
+  const helperDisplayName = bookingQuery.data?.helperProfile?.display_name ?? null;
   const ratingError = rateHelper.error ?? rateSeeker.error ?? null;
 
   const booking = bookingQuery.data ?? null;
   const groupedBookings = bookingGroupQuery.data ?? (booking ? [booking] : []);
-  const groupedPetNames = groupedBookings.map((item) => item.pet?.name ?? 'Tier');
+  const groupedPets = groupedBookings.flatMap((item) =>
+    item.pet ? [{ bookingId: item.id, pet: item.pet }] : []
+  );
+  const groupedPetNames = groupedPets.map((item) => item.pet.name);
   const currentUserId = userQuery.data?.id ?? null;
   const isHelper =
     booking !== null && booking.helper_id !== null && booking.helper_id === currentUserId;
@@ -259,7 +290,7 @@ export default function BookingDetailScreen() {
     booking.status === 'requested' &&
     booking.helper_id === null &&
     booking.seeker_id !== currentUserId &&
-    profileQuery.data?.role === 'helper';
+    (profileQuery.data?.role === 'helper' || profileQuery.data?.role === 'admin');
 
   const handleRateHelper = (rating: RatingFields & { review?: string }) => {
     if (bookingId === undefined) return;
@@ -273,7 +304,17 @@ export default function BookingDetailScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void refresh()}
+            tintColor={c.primary}
+            colors={[c.primary]}
+          />
+        }
+      >
         <Pressable
           accessibilityRole="button"
           onPress={() => router.back()}
@@ -316,6 +357,34 @@ export default function BookingDetailScreen() {
               <StatusBadge status={booking.status} />
             </View>
 
+            {booking.status === 'awaiting_seeker' && isSeeker ? (
+              <Card accentColor={c.tertiary}>
+                <SectionTitle>Zusage bestätigen</SectionTitle>
+                <EmptyText>
+                  {helperDisplayName !== null
+                    ? `${helperDisplayName} hat die Anfrage angenommen.`
+                    : 'Ein Helfer hat die Anfrage angenommen.'}{' '}
+                  Erst mit deiner Bestätigung wird die Betreuung verbindlich.
+                </EmptyText>
+                <ActionButton
+                  title="Helfer bestätigen"
+                  pending={confirmHelper.isPending}
+                  disabled={anyPending}
+                  onPress={() => confirmHelper.mutate(booking.id)}
+                />
+                <ActionButton
+                  title="Helfer ablehnen"
+                  variant="secondary"
+                  pending={rejectHelper.isPending}
+                  disabled={anyPending}
+                  onPress={() => rejectHelper.mutate(booking.id)}
+                />
+                {helperDecisionError !== null ? (
+                  <ErrorBox message={helperDecisionError.message} />
+                ) : null}
+              </Card>
+            ) : null}
+
             <Card>
               <SectionTitle>Ablauf</SectionTitle>
               <WorkflowTimeline status={booking.status} />
@@ -330,16 +399,40 @@ export default function BookingDetailScreen() {
 
             <Card>
               <SectionTitle>Details</SectionTitle>
-              {booking.pet?.avatar_url ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Tierbild groß anzeigen"
-                  onPress={() => setLargePhotoVisible(true)}
-                  style={styles.petPhotoPreview}
-                >
-                  <Image source={{ uri: booking.pet.avatar_url }} style={styles.petPhoto} />
-                  <Text style={[styles.photoHint, { color: c.primary }]}>Bild vergrößern</Text>
-                </Pressable>
+              {groupedPets.length > 0 ? (
+                <View style={styles.petGallery}>
+                  {groupedPets.map(({ bookingId: petBookingId, pet }) => {
+                    const photoUrl = pet.avatar_url;
+                    return (
+                      <View key={petBookingId} style={styles.petGalleryItem}>
+                        {photoUrl !== null ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Tierbild von ${pet.name} groß anzeigen`}
+                            onPress={() => setLargePhotoUrl(photoUrl)}
+                            style={styles.petPhotoPreview}
+                          >
+                            <Image source={{ uri: photoUrl }} style={styles.petPhoto} />
+                          </Pressable>
+                        ) : null}
+                        <Text style={[styles.petGalleryName, { color: c.onSurface }]}>
+                          {pet.name}
+                        </Text>
+                        {photoUrl !== null ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Tierbild von ${pet.name} groß anzeigen`}
+                            onPress={() => setLargePhotoUrl(photoUrl)}
+                          >
+                            <Text style={[styles.photoHint, { color: c.primary }]}>
+                              Bild vergrößern
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
               ) : null}
               <InfoRow label="Typ" value={bookingTypeLabels[booking.type]} />
               <InfoRow
@@ -352,10 +445,10 @@ export default function BookingDetailScreen() {
                       : 'Bei der Halterin/dem Halter zu Hause (Besuche)'
                 }
               />
-              <InfoRow label="Tier" value={booking.pet?.name ?? '–'} />
-              {groupedBookings.length > 1 ? (
-                <InfoRow label="Tiere im Antrag" value={groupedPetNames.join(', ')} />
-              ) : null}
+              <InfoRow
+                label={groupedPetNames.length > 1 ? 'Tiere' : 'Tier'}
+                value={groupedPetNames.join(', ') || '–'}
+              />
               <InfoRow label="Suchende:r" value={booking.seekerProfile?.display_name ?? '–'} />
               <InfoRow label="Helfende:r" value={booking.helperProfile?.display_name ?? '–'} />
               {booking.status === 'completed' || booking.status === 'cancelled' ? (
@@ -396,7 +489,10 @@ export default function BookingDetailScreen() {
                   minute: '2-digit',
                 })}
               />
-              <InfoRow label="Treffpunkt" value={booking.meeting_address ?? '–'} />
+              <InfoRow
+                label="Betreuungsadresse"
+                value={booking.meeting_address ?? 'Wird nach deiner Bestätigung geteilt'}
+              />
               {buildDirectionsUrl(booking.meeting_address ?? '') !== null ? (
                 <ActionButton
                   title="Route zum Treffpunkt"
@@ -415,22 +511,31 @@ export default function BookingDetailScreen() {
                     : `${formatCurrency(booking.price_eur_cents)}${booking.currency === 'PER_VISIT' ? ' pro Besuch' : ''}`
                 }
               />
-              {booking.status === 'completed' ? (
-                <>
-                  <InfoRow
-                    label="Gutgeschrieben"
-                    value={formatTimebankHoursMagnitude(booking.timebank_credits_earned)}
-                  />
-                  <InfoRow
-                    label="Verbraucht"
-                    value={formatTimebankHoursMagnitude(booking.timebank_credits_spent)}
-                  />
-                </>
+              <InfoRow
+                label="Sicherheitszone"
+                value={`${formatTrackingRadius(booking.tracking_radius_m)} um den Tracking-Startpunkt`}
+              />
+              {booking.status === 'completed' &&
+              isHelper &&
+              Number(booking.timebank_credits_earned) > 0 ? (
+                <InfoRow
+                  label="Gutgeschrieben"
+                  value={formatTimebankHoursMagnitude(booking.timebank_credits_earned)}
+                />
+              ) : null}
+              {booking.status === 'completed' &&
+              isSeeker &&
+              Number(booking.timebank_credits_spent) > 0 ? (
+                <InfoRow
+                  label="Verbraucht"
+                  value={formatTimebankHoursMagnitude(booking.timebank_credits_spent)}
+                />
               ) : null}
             </Card>
 
             {booking.helper_id !== null &&
-            (booking.status === 'confirmed' ||
+            (booking.status === 'awaiting_seeker' ||
+              booking.status === 'confirmed' ||
               booking.status === 'in_progress' ||
               booking.status === 'completed') ? (
               <Card>
@@ -477,7 +582,8 @@ export default function BookingDetailScreen() {
               <Card>
                 <SectionTitle>Offene Anfrage</SectionTitle>
                 <EmptyText>
-                  Übernimm diese Betreuung, wenn Zeitraum und Aufgabe für dich passen.
+                  Die Anfrage liegt in deinem registrierten Gebiet oder im Suchradius des Anbieters.
+                  Die genaue Adresse wird erst nach Bestätigung geteilt.
                 </EmptyText>
                 <ActionButton
                   title="Anfrage annehmen"
@@ -523,10 +629,13 @@ export default function BookingDetailScreen() {
             ) : null}
 
             {booking.status === 'in_progress' && isHelper && bookingId ? (
-              <TrackingRecorder bookingId={bookingId} />
+              <TrackingRecorder bookingId={bookingId} radius={booking.tracking_radius_m} />
             ) : null}
 
-            {(booking.status === 'requested' || booking.status === 'confirmed') && isSeeker ? (
+            {(booking.status === 'requested' ||
+              booking.status === 'awaiting_seeker' ||
+              booking.status === 'confirmed') &&
+            isSeeker ? (
               <Card>
                 <SectionTitle>Stornierung</SectionTitle>
                 <ActionButton
@@ -617,18 +726,18 @@ export default function BookingDetailScreen() {
       </ScrollView>
       <Modal
         animationType="fade"
-        onRequestClose={() => setLargePhotoVisible(false)}
+        onRequestClose={() => setLargePhotoUrl(null)}
         transparent
-        visible={largePhotoVisible && booking?.pet?.avatar_url !== undefined}
+        visible={largePhotoUrl !== null}
       >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Großes Tierbild schließen"
-          onPress={() => setLargePhotoVisible(false)}
+          onPress={() => setLargePhotoUrl(null)}
           style={styles.photoModal}
         >
-          {booking?.pet?.avatar_url ? (
-            <Image source={{ uri: booking.pet.avatar_url }} style={styles.largePhoto} />
+          {largePhotoUrl !== null ? (
+            <Image source={{ uri: largePhotoUrl }} style={styles.largePhoto} />
           ) : null}
         </Pressable>
       </Modal>
@@ -670,9 +779,24 @@ const styles = StyleSheet.create({
   criterionRow: { gap: 6 },
   criterionLabel: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 18 },
   rateButtons: { flexDirection: 'row', gap: 8 },
-  petPhotoPreview: { alignItems: 'center', marginBottom: 16 },
+  petGallery: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 16,
+  },
+  petGalleryItem: { alignItems: 'center', maxWidth: 140 },
+  petGalleryName: {
+    fontFamily: appFonts.bold,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  petPhotoPreview: { alignItems: 'center' },
   petPhoto: { width: 120, height: 120, borderRadius: 20 },
-  photoHint: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 18, marginTop: 6 },
+  photoHint: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 18, marginTop: 2 },
   photoModal: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.86)',

@@ -29,6 +29,8 @@ export function statusColor(status: BookingStatus, palette: Palette): string {
   switch (status) {
     case 'requested':
       return palette.tertiary;
+    case 'awaiting_seeker':
+      return palette.tertiary;
     case 'confirmed':
       return palette.primary;
     case 'in_progress':
@@ -47,7 +49,7 @@ export function StatusBadge({ status }: { status: BookingStatus }) {
   const backgroundColor =
     status === 'in_progress' || status === 'completed'
       ? c.successContainer
-      : status === 'requested'
+      : status === 'requested' || status === 'awaiting_seeker'
         ? c.tertiaryFixed
         : status === 'disputed'
           ? c.errorContainer
@@ -57,7 +59,7 @@ export function StatusBadge({ status }: { status: BookingStatus }) {
   const textColor =
     status === 'in_progress' || status === 'completed'
       ? c.onSuccessContainer
-      : status === 'requested'
+      : status === 'requested' || status === 'awaiting_seeker'
         ? c.onTertiaryFixedVariant
         : status === 'disputed'
           ? c.onErrorContainer

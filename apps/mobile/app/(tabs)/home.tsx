@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -52,13 +52,21 @@ function HighlightCard({
   petNames?: string[] | undefined;
 }) {
   const c = usePalette();
+  const isLive = kind === 'current' && booking.status === 'in_progress';
+  const accent = isLive ? c.success : c.primary;
+  const eyebrow =
+    kind === 'current'
+      ? isLive
+        ? 'LIVE'
+        : 'AKTUELL'
+      : kind === 'upcoming'
+        ? 'NÄCHSTER TERMIN'
+        : 'OFFENE ANFRAGE';
   return (
-    <Card accentColor={kind === 'current' ? c.success : c.primary}>
+    <Card accentColor={accent}>
       <View style={styles.highlightHeading}>
         <View>
-          <Text style={[styles.eyebrow, { color: kind === 'current' ? c.success : c.primary }]}>
-            {kind === 'current' ? 'LIVE' : 'NÄCHSTER TERMIN'}
-          </Text>
+          <Text style={[styles.eyebrow, { color: accent }]}>{eyebrow}</Text>
           <SectionTitle>{highlightHeadings[kind]}</SectionTitle>
         </View>
         <StatusBadge status={booking.status} />
@@ -207,6 +215,7 @@ export default function HomeScreen() {
   const accountQuery = useTimebankAccount();
   const profileQuery = useOwnProfile();
   const unreadQuery = useUnreadCount();
+  const [refreshing, setRefreshing] = useState(false);
 
   const bookings = bookingsQuery.data ?? [];
   const requests = groupBookingsByRequest(bookings);
@@ -217,9 +226,33 @@ export default function HomeScreen() {
   const firstName = profileQuery.data?.display_name.trim().split(/\s+/)[0] ?? '';
   const avatarLabel = firstName.slice(0, 1).toUpperCase() || '🐾';
 
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        bookingsQuery.refetch(),
+        accountQuery.refetch(),
+        profileQuery.refetch(),
+        unreadQuery.refetch(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void refresh()}
+            tintColor={c.primary}
+            colors={[c.primary]}
+          />
+        }
+      >
         <AppHeader
           title={`${greeting()}${firstName.length > 0 ? `, ${firstName}` : ''}!`}
           subtitle="Was steht heute im PfotenNetz an?"

@@ -47,6 +47,9 @@ const PET_SPECIES_LABELS: Record<string, string> = {
   rabbit: 'Kaninchen',
   guinea_pig: 'Meerschweinchen',
   bird: 'Vogel',
+  horse: 'Pferd',
+  amphibian: 'Amphibie',
+  fish: 'Fisch',
   other: 'Andere',
 };
 
@@ -304,7 +307,9 @@ export function AvailabilityManager() {
 
       <Text style={[styles.label, { color: c.onSurface }]}>Betreuungsarten</Text>
       <View style={styles.chipRow}>
-        {AVAILABILITY_BOOKING_TYPES.map((type) => {
+        {AVAILABILITY_BOOKING_TYPES.filter(
+          (type) => type !== 'ride' || petSpecies.includes('horse')
+        ).map((type) => {
           const selected = types.includes(type);
           return (
             <Pressable
@@ -337,11 +342,15 @@ export function AvailabilityManager() {
               key={species}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              onPress={() =>
-                setPetSpecies((current) =>
-                  selected ? current.filter((item) => item !== species) : [...current, species]
-                )
-              }
+                onPress={() => {
+                  const nextSpecies = selected
+                    ? petSpecies.filter((item) => item !== species)
+                    : [...petSpecies, species];
+                  setPetSpecies(nextSpecies);
+                  if (!nextSpecies.includes('horse')) {
+                    setTypes((current) => current.filter((item) => item !== 'ride'));
+                  }
+                }}
               style={[
                 styles.chip,
                 { backgroundColor: selected ? c.secondary : c.surfaceContainerHigh },

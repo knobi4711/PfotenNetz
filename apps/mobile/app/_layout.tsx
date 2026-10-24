@@ -14,6 +14,7 @@ import { useFonts } from 'expo-font';
 import {
   getSupabaseClient,
   useAuth,
+  useBookingSubscription,
   useNotificationSubscription,
   useRegisterDevice,
 } from '@pfotennetz/supabase';
@@ -148,6 +149,7 @@ function AuthGate() {
   const redirectToLogin = auth.status === 'unauthenticated' && !inAuthGroup && !inPublicEmergency;
 
   usePushSetup(auth.status === 'authenticated');
+  useBookingSubscription(auth.status === 'authenticated');
   useNotificationSubscription(auth.status === 'authenticated');
 
   useEffect(() => {

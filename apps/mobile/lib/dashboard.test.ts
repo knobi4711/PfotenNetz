@@ -4,11 +4,17 @@ import { highlightHeadings, selectBookingPreview, selectHighlightedBooking } fro
 
 const NOW = new Date('2026-09-22T08:00:00.000Z');
 
-function booking(id: string, status: string, start_at: string): BookingWithRelations {
+function booking(
+  id: string,
+  status: string,
+  start_at: string,
+  end_at?: string
+): BookingWithRelations {
   return {
     id,
     status,
     start_at,
+    end_at: end_at ?? new Date(new Date(start_at).getTime() + 60 * 60 * 1000).toISOString(),
     booking_number: `BK-${id}`,
     type: 'walk',
     pet: { id: 'pet-1', name: 'Bella', species: 'dog' },
@@ -39,6 +45,30 @@ describe('selectHighlightedBooking', () => {
     expect(result?.booking.id).toBe('c1');
     expect(result?.kind).toBe('upcoming');
     expect(highlightHeadings[result?.kind ?? 'upcoming']).toBe('Nächste Betreuung');
+  });
+
+  it('treats a confirmed booking with a running care window as current', () => {
+    const list = [
+      booking(
+        'running',
+        'confirmed',
+        '2026-09-22T07:00:00.000Z',
+        '2026-09-22T12:00:00.000Z'
+      ),
+      booking('later', 'confirmed', '2026-09-23T10:00:00.000Z'),
+    ];
+    const result = selectHighlightedBooking(list, NOW);
+    expect(result?.booking.id).toBe('running');
+    expect(result?.kind).toBe('current');
+  });
+
+  it('treats a requested booking that already started but has not ended as open', () => {
+    const list = [
+      booking('open', 'requested', '2026-09-22T07:00:00.000Z', '2026-09-25T12:00:00.000Z'),
+    ];
+    const result = selectHighlightedBooking(list, NOW);
+    expect(result?.booking.id).toBe('open');
+    expect(result?.kind).toBe('open');
   });
 
   it('falls back to requested with the "Offene Anfrage" heading', () => {
@@ -103,6 +133,22 @@ describe('selectBookingPreview', () => {
     const preview = selectBookingPreview(list, { now: NOW });
     expect(highlighted?.booking.id).toBe('c1');
     expect(preview.map((b) => b.id)).toEqual(['c2']);
+  });
+
+  it('keeps a running confirmed booking in the preview', () => {
+    const list = [
+      booking('current', 'in_progress', '2026-09-22T07:00:00.000Z', '2026-09-22T12:00:00.000Z'),
+      booking('running', 'confirmed', '2026-09-22T07:30:00.000Z', '2026-09-22T13:00:00.000Z'),
+    ];
+    const preview = selectBookingPreview(list, { now: NOW });
+    expect(preview.map((b) => b.id)).toEqual(['running']);
+  });
+
+  it('excludes confirmed bookings whose care window already ended', () => {
+    const list = [
+      booking('ended', 'confirmed', '2026-09-20T07:00:00.000Z', '2026-09-21T07:00:00.000Z'),
+    ];
+    expect(selectBookingPreview(list, { now: NOW })).toEqual([]);
   });
 
   it('returns an empty preview for an empty list', () => {

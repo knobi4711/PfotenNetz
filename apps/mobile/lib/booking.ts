@@ -8,6 +8,7 @@ export type TimebankTxType = Database['public']['Enums']['timebank_tx_type'];
 
 export const bookingStatusLabels: Record<BookingStatus, string> = {
   requested: 'Angefragt',
+  awaiting_seeker: 'Wartet auf deine Entscheidung',
   confirmed: 'Bestätigt',
   in_progress: 'Läuft gerade',
   completed: 'Abgeschlossen',
@@ -18,6 +19,7 @@ export const bookingStatusLabels: Record<BookingStatus, string> = {
 /** The four-step happy-path workflow shown as a timeline. */
 export const bookingWorkflowSteps: BookingStatus[] = [
   'requested',
+  'awaiting_seeker',
   'confirmed',
   'in_progress',
   'completed',
@@ -25,6 +27,7 @@ export const bookingWorkflowSteps: BookingStatus[] = [
 
 export const bookingWorkflowStepLabels: Record<string, string> = {
   requested: 'Angefragt',
+  awaiting_seeker: 'Helfer hat zugesagt',
   confirmed: 'Bestätigt',
   in_progress: 'Läuft',
   completed: 'Abgeschlossen',
@@ -35,6 +38,7 @@ export const bookingTypeLabels: Record<BookingType, string> = {
   feeding: 'Fütterung',
   vacation: 'Urlaubsbetreuung',
   daycare: 'Tagesbetreuung',
+  ride: 'Ausreiten',
 };
 
 export const keyHandoffLabels: Record<string, string> = {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -107,6 +107,7 @@ export default function TrackingScreen() {
   useTrackingSubscription();
   const [view, setView] = useState<'active' | 'archive'>('active');
   const [filter, setFilter] = useState<'all' | 'toMe' | 'mine'>('all');
+  const [refreshing, setRefreshing] = useState(false);
 
   const displayedQuery = view === 'active' ? bookingsQuery : archivedBookingsQuery;
   const activeBookings = bookingsQuery.data ?? [];
@@ -121,6 +122,21 @@ export default function TrackingScreen() {
     return booking.seeker_id === currentUserId;
   });
 
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        bookingsQuery.refetch(),
+        archivedBookingsQuery.refetch(),
+        userQuery.refetch(),
+        notificationsQuery.refetch(),
+        unreadQuery.refetch(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const openNotification = (notification: Notification) => {
     if (notification.read_at === null) {
       markRead.mutate(notification.id);
@@ -133,7 +149,17 @@ export default function TrackingScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void refresh()}
+            tintColor={c.primary}
+            colors={[c.primary]}
+          />
+        }
+      >
         <AppHeader
           title="Anfragen & Betreuung"
           subtitle={unread > 0 ? `${unread} neue Mitteilungen warten auf dich.` : 'Alles im Blick.'}

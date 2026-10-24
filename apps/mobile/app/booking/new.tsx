@@ -6,6 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   BOOKING_TYPES,
+  DEFAULT_TRACKING_RADIUS_M,
+  TRACKING_RADIUS_OPTIONS,
+  formatTrackingRadius,
   isBookingCoveredByAvailabilities,
   useBooking,
   useBookingGroup,
@@ -13,6 +16,7 @@ import {
   useHelperDetail,
   useOwnPets,
   useUpdateBookingRequest,
+  validateBookingPetCompatibility,
   type BookingCurrency,
   type BookingType,
   type CareLocation,
@@ -91,6 +95,7 @@ export default function NewBookingScreen() {
   const [price, setPrice] = useState('');
   const [meetingAddress, setMeetingAddress] = useState('');
   const [careNotes, setCareNotes] = useState('');
+  const [trackingRadius, setTrackingRadius] = useState<number>(DEFAULT_TRACKING_RADIUS_M);
   const [isUrgent, setIsUrgent] = useState(false);
   const [safetyConfirmed, setSafetyConfirmed] = useState(false);
   const [formHint, setFormHint] = useState<string | null>(null);
@@ -114,6 +119,7 @@ export default function NewBookingScreen() {
     );
     setMeetingAddress(booking.meeting_address ?? '');
     setCareNotes(booking.care_notes ?? '');
+    setTrackingRadius(booking.tracking_radius_m ?? DEFAULT_TRACKING_RADIUS_M);
     setIsUrgent(booking.is_urgent);
     setSafetyConfirmed(true);
     initializedBooking.current = booking.id;
@@ -137,6 +143,14 @@ export default function NewBookingScreen() {
   const handleCreate = () => {
     if (petIds.length === 0) {
       setFormHint('Bitte wähle mindestens ein Tier aus.');
+      return;
+    }
+    const compatibilityError = validateBookingPetCompatibility(
+      bookingType,
+      pets.filter((pet) => petIds.includes(pet.id)).map((pet) => pet.species)
+    );
+    if (compatibilityError !== null) {
+      setFormHint(compatibilityError);
       return;
     }
     if (!safetyConfirmed) {
@@ -219,6 +233,7 @@ export default function NewBookingScreen() {
         isUrgent,
         careNotes: careNotes.trim() || null,
         careLocation,
+        trackingRadiusM: trackingRadius,
       },
       {
         onSuccess: (booking) => {
@@ -352,7 +367,14 @@ export default function NewBookingScreen() {
         <Card>
           <SectionTitle>Leistung</SectionTitle>
           <View style={styles.chipRow}>
-            {BOOKING_TYPES.map((type) => {
+            {BOOKING_TYPES.filter(
+              (type) =>
+                type !== 'ride' ||
+                (petIds.length > 0 &&
+                  pets
+                    .filter((pet) => petIds.includes(pet.id))
+                    .every((pet) => pet.species === 'horse'))
+            ).map((type) => {
               const selected = type === bookingType;
               return (
                 <Pressable
@@ -378,6 +400,17 @@ export default function NewBookingScreen() {
               );
             })}
           </View>
+          {bookingType === 'walk' &&
+          petIds.length > 0 &&
+          validateBookingPetCompatibility(
+            bookingType,
+            pets.filter((pet) => petIds.includes(pet.id)).map((pet) => pet.species)
+          ) !== null ? (
+            <Text style={[styles.helperMeta, { color: c.error }]}>
+              Gassirunden sind nur für Hunde möglich. Wähle für andere Tiere Fütterung oder
+              Betreuung.
+            </Text>
+          ) : null}
           {bookingType === 'vacation' || bookingType === 'daycare' ? (
             <>
               <Text style={[styles.label, { color: c.onSurface }]}>Betreuungsort</Text>
@@ -630,6 +663,45 @@ export default function NewBookingScreen() {
           </Pressable>
         </Card>
 
+        {!isEditMode ? (
+          <Card>
+            <SectionTitle>Sicherheitszone</SectionTitle>
+            <Text style={[styles.helperMeta, { color: c.onSurfaceVariant }]}>
+              Beim Live-Tracking meldet die App der Helferin oder dem Helfer, wenn sie oder er sich
+              weiter als diese Entfernung vom Startpunkt entfernt.
+            </Text>
+            <View style={[styles.chipRow, styles.chipRowSpaced]}>
+              {TRACKING_RADIUS_OPTIONS.map((option) => {
+                const selected = option === trackingRadius;
+                return (
+                  <Pressable
+                    key={option}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    disabled={pending}
+                    onPress={() => {
+                      setTrackingRadius(option);
+                    }}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor: selected ? c.primary : c.surfaceContainerHigh,
+                        opacity: pending ? 0.6 : 1,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.chipText, { color: selected ? c.onPrimary : c.onSurface }]}
+                    >
+                      {formatTrackingRadius(option)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Card>
+        ) : null}
+
         <Card>
           <SectionTitle>Sicherheit vor dem ersten Sitten</SectionTitle>
           <Text style={[styles.helperMeta, { color: c.onSurfaceVariant }]}>
@@ -712,6 +784,7 @@ const styles = StyleSheet.create({
   noticeText: { flex: 1, fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20 },
   hint: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, marginTop: 8 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  chipRowSpaced: { marginTop: 12 },
   chip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
   chipText: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18 },
   selectionList: { gap: 4, marginTop: 4 },

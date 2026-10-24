@@ -3,6 +3,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
+import { bookingTypeLabels } from '../../lib/booking';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import {
   BOOKING_TYPES,
@@ -34,6 +35,9 @@ const SPECIES = [
   ['rabbit', 'Kaninchen'],
   ['guinea_pig', 'Meerschweinchen'],
   ['bird', 'Vogel'],
+  ['horse', 'Pferd'],
+  ['amphibian', 'Amphibie'],
+  ['fish', 'Fisch'],
   ['other', 'Andere'],
 ] as const;
 const DAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] as const;
@@ -299,15 +303,7 @@ export default function ExploreScreen() {
             {BOOKING_TYPES.map((type) => (
               <Chip
                 key={type}
-                label={
-                  type === 'walk'
-                    ? 'Gassi'
-                    : type === 'feeding'
-                      ? 'Füttern'
-                      : type === 'vacation'
-                        ? 'Urlaub'
-                        : 'Tagesbetreuung'
-                }
+                label={bookingTypeLabels[type]}
                 selected={bookingType === type}
                 onPress={() => setBookingType(type)}
               />
