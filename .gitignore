@@ -35,6 +35,8 @@ apps/mobile/android/
 apps/mobile/ios/
 expo-env.d.ts
 *.orig.*
+*.apk
+*.aab
 *.jks
 *.p8
 *.p12
