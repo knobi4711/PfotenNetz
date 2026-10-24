@@ -14,22 +14,30 @@ import {
 import {
   reverseGeocodeOpenStreetMap,
   searchOpenStreetMap,
+  type GeocodingAddress,
   type GeocodingResult,
 } from '@pfotennetz/shared';
 import { WebHeader } from '../../components/WebHeader';
 import { AvailabilityManager } from '../../components/AvailabilityManager';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
-import {
-  formatBrowserAccuracy,
-  getCurrentBrowserLocation,
-  type BrowserLocation,
-} from '../../lib/location';
+import { getCurrentBrowserLocation, type BrowserLocation } from '../../lib/location';
+import { useEffect, useRef, useState } from 'react';
 
 type LocationCandidate = BrowserLocation & {
   displayName: string;
   source: 'browser' | 'manual';
+  address?: GeocodingAddress;
 };
+
+function buildProfileAddress(
+  address: GeocodingAddress | undefined
+): { street: string; postalCode: string; city: string } | null {
+  const street = address?.street?.trim() ?? '';
+  const postalCode = address?.postalCode?.trim() ?? '';
+  const city = address?.city?.trim() ?? '';
+  if (!street || !/^\d{5}$/.test(postalCode) || !city) return null;
+  return { street, postalCode, city };
+}
 
 export default function ProfilePage() {
   const profile = useOwnProfile();
@@ -47,6 +55,10 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [postalCode, setPostalCode] = useState('');
+  const [privateAddress, setPrivateAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [profileFormError, setProfileFormError] = useState<string | null>(null);
+  const [profileSavePending, setProfileSavePending] = useState(false);
   const [profileBio, setProfileBio] = useState('');
   const [radius, setRadius] = useState<KiezRadius>(1.5);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
@@ -56,6 +68,8 @@ export default function ProfilePage() {
   const [locationQuery, setLocationQuery] = useState('');
   const [locationResults, setLocationResults] = useState<GeocodingResult[]>([]);
   const [locationSearchPending, setLocationSearchPending] = useState(false);
+  const [locationAddressPending, setLocationAddressPending] = useState(false);
+  const locationAddressRequest = useRef(0);
   const avatarUrl = value?.avatar_url
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${value.avatar_url}`
     : null;
@@ -64,6 +78,15 @@ export default function ProfilePage() {
       setDisplayName(value.display_name);
       setPhone(value.phone ?? '');
       setPostalCode(value.postal_code ?? '');
+      const savedAddress = value.private_address ?? '';
+      const addressParts = savedAddress.match(/^(.*?),?\s+(\d{5})\s+(.+)$/);
+      if (addressParts) {
+        setPrivateAddress(addressParts[1]?.trim() ?? '');
+        setCity(addressParts[3]?.trim() ?? '');
+      } else {
+        setPrivateAddress(savedAddress);
+        setCity('');
+      }
       setProfileBio(value.profile_bio ?? '');
       const currentRadius = Number(value.kiez_radius_km);
       if ((KIEZ_RADIUS_OPTIONS as readonly number[]).includes(currentRadius)) {
@@ -79,20 +102,120 @@ export default function ProfilePage() {
     });
   }, [value]);
 
+  const saveProfile = async () => {
+    setProfileFormError(null);
+    setLocationMessage(null);
+    if (!/^\d{5}$/.test(postalCode.trim())) {
+      setProfileFormError('Bitte gib eine gültige fünfstellige Postleitzahl ein.');
+      return;
+    }
+    if (privateAddress.trim().length < 3 || city.trim().length < 2) {
+      setProfileFormError('Bitte gib Straße, Hausnummer und Ort vollständig ein.');
+      return;
+    }
+
+    const fullAddress = `${privateAddress.trim()}, ${postalCode.trim()} ${city.trim()}`;
+    setProfileSavePending(true);
+    try {
+      let locationResults = await searchOpenStreetMap(fullAddress);
+      if (locationResults.length === 0) {
+        locationResults = await searchOpenStreetMap(`${postalCode.trim()} ${city.trim()}`);
+      }
+      const location = locationResults[0];
+      if (!location) {
+        throw new Error(
+          'Die Adresse wurde gespeichert, aber auf der Karte nicht gefunden. Bitte PLZ und Ort prüfen.'
+        );
+      }
+
+      await updateProfile.mutateAsync({
+        displayName,
+        phone,
+        postalCode,
+        privateAddress: fullAddress,
+        profileBio,
+        kiezRadiusKm: radius,
+        notificationPrefs: preferences,
+      });
+      try {
+        await updateLocation.mutateAsync(location);
+      } catch {
+        throw new Error(
+          'Profiladresse gespeichert, Vermittlungsstandort konnte nicht aktualisiert werden. Bitte erneut speichern.'
+        );
+      }
+      setLocationMessage(
+        'Profiladresse und Vermittlungsstandort wurden gemeinsam aktualisiert. Der Standort wird in Suchergebnissen nur gerundet angezeigt.'
+      );
+    } catch (error) {
+      setProfileFormError(
+        error instanceof Error ? error.message : 'Profil konnte nicht gespeichert werden.'
+      );
+    } finally {
+      setProfileSavePending(false);
+    }
+  };
+
+  const clearLocationCandidate = () => {
+    locationAddressRequest.current += 1;
+    setLocationAddressPending(false);
+    setLocationCandidate(null);
+  };
+
+  /** Resolves a street address for a place selected from the manual search. */
+  const applyLocationCandidate = (candidate: LocationCandidate) => {
+    setLocationCandidate(candidate);
+    setLocationError(null);
+    if (buildProfileAddress(candidate.address)) return;
+
+    const requestId = ++locationAddressRequest.current;
+    setLocationAddressPending(true);
+    void reverseGeocodeOpenStreetMap(candidate.latitude, candidate.longitude)
+      .then((reverse) => {
+        if (requestId !== locationAddressRequest.current) return;
+        setLocationCandidate((current) => {
+          if (
+            !current ||
+            current.latitude !== candidate.latitude ||
+            current.longitude !== candidate.longitude
+          ) {
+            return current;
+          }
+          const address = reverse.address ?? current.address;
+          return address ? { ...current, address } : current;
+        });
+      })
+      .catch(() => {
+        // The selected place can still be saved without a resolved street address.
+      })
+      .finally(() => {
+        if (requestId === locationAddressRequest.current) setLocationAddressPending(false);
+      });
+  };
+
   const locateHelperLocation = () => {
+    locationAddressRequest.current += 1;
+    setLocationAddressPending(false);
     setLocationMessage(null);
     setLocationError(null);
     setLocationPending(true);
     void getCurrentBrowserLocation()
       .then(async (location) => {
-        let displayName = `Koordinaten ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
+        let candidateName = `Koordinaten ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
+        let address: GeocodingAddress | undefined;
         try {
-          const address = await reverseGeocodeOpenStreetMap(location.latitude, location.longitude);
-          displayName = address.displayName;
+          const result = await reverseGeocodeOpenStreetMap(location.latitude, location.longitude);
+          candidateName = result.displayName;
+          address = result.address;
         } catch {
           // The coordinates can still be confirmed if reverse geocoding is temporarily unavailable.
         }
-        setLocationCandidate({ ...location, displayName, source: 'browser' });
+        setLocationCandidate({
+          ...location,
+          displayName: candidateName,
+          ...(address ? { address } : {}),
+          source: 'browser',
+        });
       })
       .catch((error: unknown) =>
         setLocationError(
@@ -118,17 +241,63 @@ export default function ProfilePage() {
       .finally(() => setLocationSearchPending(false));
   };
 
+  const pendingProfileAddress = locationCandidate
+    ? buildProfileAddress(locationCandidate.address)
+    : null;
+
   const confirmHelperLocation = () => {
-    if (!locationCandidate) return;
+    if (!locationCandidate || locationAddressPending) return;
     setLocationMessage(null);
     setLocationError(null);
     setLocationPending(true);
+
+    const confirmedAddress = buildProfileAddress(locationCandidate.address);
+    // Restliche Profilfelder vor dem Standort-Update sichern, damit ein
+    // zwischenzeitliches Neuladen des Profils keine offenen Änderungen verwirft.
+    const profileDraft = {
+      displayName: displayName.trim() || value?.display_name || '',
+      phone: phone.trim() || null,
+      profileBio,
+      kiezRadiusKm: radius,
+      notificationPrefs: preferences,
+    };
+    if (confirmedAddress) {
+      setPrivateAddress(confirmedAddress.street);
+    }
+    if (locationCandidate.address?.postalCode) {
+      setPostalCode(locationCandidate.address.postalCode);
+    }
+    if (locationCandidate.address?.city) {
+      setCity(locationCandidate.address.city);
+    }
+
     void updateLocation
       .mutateAsync(locationCandidate)
-      .then(() => {
-        setLocationCandidate(null);
+      .then(async () => {
+        if (!confirmedAddress) {
+          clearLocationCandidate();
+          setLocationError(
+            'Der Vermittlungsstandort wurde gespeichert, aber die Profiladresse ist noch unvollständig. Bitte ergänze Straße, Hausnummer, PLZ und Ort links und speichere das Profil anschließend.'
+          );
+          return;
+        }
+
+        try {
+          await updateProfile.mutateAsync({
+            ...profileDraft,
+            postalCode: confirmedAddress.postalCode,
+            privateAddress: `${confirmedAddress.street}, ${confirmedAddress.postalCode} ${confirmedAddress.city}`,
+          });
+        } catch {
+          setLocationError(
+            'Der Vermittlungsstandort wurde gespeichert, aber die Profiladresse konnte nicht übernommen werden. Bitte prüfe die Adressfelder links und speichere das Profil erneut.'
+          );
+          return;
+        }
+
+        clearLocationCandidate();
         setLocationMessage(
-          'Standort sicher gespeichert. Er wird in der Suche nur gerundet angezeigt.'
+          'Standort und Adresse wurden übernommen. Die Profiladresse wird links angezeigt und in Suchergebnissen nur gerundet verwendet.'
         );
       })
       .catch((error: unknown) =>
@@ -236,6 +405,43 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
+                  <label className="font-bold text-on-surface-variant" htmlFor="profile-address">
+                    Straße und Hausnummer *
+                  </label>
+                  <input
+                    id="profile-address"
+                    type="text"
+                    autoComplete="address-line1"
+                    required
+                    maxLength={300}
+                    placeholder="z. B. Musterstraße 12"
+                    value={privateAddress}
+                    onChange={(event) => setPrivateAddress(event.target.value)}
+                    className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-on-surface-variant" htmlFor="profile-city">
+                    Ort *
+                  </label>
+                  <input
+                    id="profile-city"
+                    type="text"
+                    autoComplete="address-level2"
+                    required
+                    maxLength={120}
+                    value={city}
+                    onChange={(event) => setCity(event.target.value)}
+                    className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
+                  />
+                  <p className="mt-2 text-sm text-on-surface-variant">
+                    Die PLZ gibst du oben ein. Straße, Hausnummer und Ort sind ebenfalls
+                    erforderlich. Deine genaue Adresse ist nicht öffentlich. Sie wird für die
+                    regionale Vermittlung verwendet und nur bei bestätigter Betreuung mit der
+                    anderen Person geteilt.
+                  </p>
+                </div>
+                <div>
                   <label className="font-bold text-on-surface-variant" htmlFor="profile-bio">
                     Kurzvorstellung (optional)
                   </label>
@@ -265,39 +471,53 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   className="btn-primary"
-                  disabled={updateProfile.isPending}
-                  onClick={() =>
-                    updateProfile.mutate({
-                      displayName,
-                      phone,
-                      postalCode,
-                      profileBio,
-                      kiezRadiusKm: radius,
-                      notificationPrefs: preferences,
-                    })
+                  disabled={
+                    profileSavePending || updateProfile.isPending || updateLocation.isPending
                   }
+                  onClick={() => void saveProfile()}
                 >
-                  {updateProfile.isPending ? 'Wird gespeichert …' : 'Profil speichern'}
+                  {profileSavePending
+                    ? 'Profil und Standort werden gespeichert …'
+                    : 'Profil speichern'}
                 </button>
+                {profileFormError ? (
+                  <p role="alert" className="mt-2 text-sm text-error">
+                    {profileFormError}
+                  </p>
+                ) : null}
+                {locationMessage ? (
+                  <p role="status" className="mt-2 text-sm font-semibold text-green-700">
+                    {locationMessage}
+                  </p>
+                ) : null}
               </div>
             </section>
             <div className="space-y-6">
-              {value.role === 'helper' ? (
-                <section className="card p-7">
-                  <h2 className="text-xl font-extrabold text-on-surface">Helper-Standort</h2>
-                  <p className="mt-2 text-sm text-on-surface-variant">
-                    Damit du in der Nachbarschaftssuche erscheinst, muss dein Standort gespeichert
-                    sein. Andere Nutzer:innen sehen ihn nur auf etwa 100 Meter gerundet.
-                  </p>
-                  <p className="mt-4 text-sm font-semibold text-on-surface">
-                    {value.location_updated_at
-                      ? `Zuletzt gespeichert: ${new Date(value.location_updated_at).toLocaleDateString('de-DE')}`
-                      : 'Noch kein Standort gespeichert'}
+              <section className="card p-7">
+                <h2 className="text-xl font-extrabold text-on-surface">Vermittlungsstandort</h2>
+                <p className="mt-2 text-sm text-on-surface-variant">
+                  Wird automatisch aus deiner Profiladresse ermittelt. Alternativ kannst du hier
+                  deinen aktuellen Standort per GPS bestimmen oder einen abweichenden Ort auswählen.
+                  Die genaue Position bleibt privat und wird in der Suche nur gerundet angezeigt.
+                </p>
+                <p className="mt-4 text-sm font-semibold text-on-surface">
+                  {value.location_updated_at
+                    ? `Zuletzt aktualisiert: ${new Date(value.location_updated_at).toLocaleDateString('de-DE')}`
+                    : 'Wird beim Speichern des Profils mit der Adresse abgeglichen.'}
+                </p>
+                <p className="mt-2 text-sm text-on-surface-variant">
+                  {value.private_address
+                    ? `Hinterlegte Profiladresse: ${value.private_address}`
+                    : 'Noch keine Profiladresse hinterlegt. Bestimme deinen Standort oder trage die Adresse links ein.'}
+                </p>
+                <div className="mt-6 rounded-xl border border-outline-variant/40 p-4">
+                  <p className="text-sm font-bold text-on-surface">
+                    Aktuellen Standort per GPS bestimmen
                   </p>
                   <button
                     type="button"
-                    className="btn-primary mt-5"
-                    disabled={locationPending || updateLocation.isPending || locationSearchPending}
+                    className={`btn-secondary mt-3 w-full ${locationPending ? 'opacity-50' : ''}`}
+                    disabled={locationPending || updateLocation.isPending}
                     onClick={locateHelperLocation}
                   >
                     {locationPending ? 'Standort wird ermittelt …' : 'Standort ermitteln'}
@@ -307,9 +527,24 @@ export default function ProfilePage() {
                       <p className="text-sm font-bold text-on-surface">Bitte Standort prüfen</p>
                       <p className="mt-2 text-sm text-on-surface-variant">
                         {locationCandidate.source === 'browser'
-                          ? `Der Browser meldet: ${locationCandidate.displayName}. Angegebene Genauigkeit: ${formatBrowserAccuracy(locationCandidate.accuracy)}.`
+                          ? `Der Browser meldet: ${locationCandidate.displayName}.`
                           : `Manuell ausgewählt: ${locationCandidate.displayName}.`}
                       </p>
+                      {locationAddressPending ? (
+                        <p className="mt-2 text-sm text-on-surface-variant">
+                          Straßenadresse wird ermittelt …
+                        </p>
+                      ) : pendingProfileAddress ? (
+                        <p className="mt-2 text-sm text-on-surface">
+                          Wird als Profiladresse übernommen: {pendingProfileAddress.street},{' '}
+                          {pendingProfileAddress.postalCode} {pendingProfileAddress.city}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-sm text-on-surface-variant">
+                          Für diese Position wurde keine vollständige Straßenadresse ermittelt. Du
+                          kannst sie nach dem Bestätigen links ergänzen.
+                        </p>
+                      )}
                       {locationCandidate.source === 'browser' ? (
                         <p className="mt-2 text-sm text-on-surface-variant">
                           Speichere diesen Standort nur, wenn der angezeigte Ort wirklich stimmt.
@@ -320,7 +555,9 @@ export default function ProfilePage() {
                         <button
                           type="button"
                           className="btn-primary"
-                          disabled={locationPending || updateLocation.isPending}
+                          disabled={
+                            locationPending || locationAddressPending || updateLocation.isPending
+                          }
                           onClick={confirmHelperLocation}
                         >
                           Standort bestätigen und speichern
@@ -329,7 +566,7 @@ export default function ProfilePage() {
                           type="button"
                           className="rounded-full border border-outline-variant px-4 py-2 text-sm font-bold"
                           disabled={locationPending || updateLocation.isPending}
-                          onClick={() => setLocationCandidate(null)}
+                          onClick={clearLocationCandidate}
                         >
                           Verwerfen
                         </button>
@@ -344,7 +581,7 @@ export default function ProfilePage() {
                     </p>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <input
-                        aria-label="Ort oder PLZ für den Helper-Standort"
+                        aria-label="Ort oder PLZ für den privaten Vermittlungsstandort"
                         className="min-w-0 flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
                         placeholder="z. B. Leipzig oder 04109"
                         value={locationQuery}
@@ -370,10 +607,9 @@ export default function ProfilePage() {
                             type="button"
                             className="block w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-left text-sm hover:bg-surface-container"
                             onClick={() => {
-                              setLocationCandidate({ ...result, source: 'manual' });
+                              applyLocationCandidate({ ...result, source: 'manual' });
                               setLocationResults([]);
                               setLocationQuery(result.displayName);
-                              setLocationError(null);
                             }}
                           >
                             {result.displayName}
@@ -392,8 +628,12 @@ export default function ProfilePage() {
                       {locationError}
                     </p>
                   ) : null}
-                </section>
-              ) : null}
+                </div>
+                <p className="mt-3 text-sm text-on-surface-variant">
+                  Ein abweichender Treffpunkt, zum Beispiel ein Stall, kann bei der jeweiligen
+                  Betreuungsanfrage angegeben werden.
+                </p>
+              </section>
               <AvailabilityManager />
               <section className="card p-7">
                 <h2 className="text-xl font-extrabold text-on-surface">Benachrichtigungen</h2>
@@ -427,20 +667,14 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   className="btn-primary mt-5"
-                  disabled={updateProfile.isPending}
-                  onClick={() =>
-                    value &&
-                    updateProfile.mutate({
-                      displayName,
-                      phone,
-                      postalCode,
-                      profileBio,
-                      kiezRadiusKm: radius,
-                      notificationPrefs: preferences,
-                    })
+                  disabled={
+                    profileSavePending || updateProfile.isPending || updateLocation.isPending
                   }
+                  onClick={() => void saveProfile()}
                 >
-                  {updateProfile.isPending ? 'Wird gespeichert …' : 'Einstellungen speichern'}
+                  {profileSavePending
+                    ? 'Einstellungen werden gespeichert …'
+                    : 'Einstellungen speichern'}
                 </button>
                 {updateProfile.isError ? (
                   <p role="alert" className="mt-3 text-sm text-error">
@@ -461,7 +695,7 @@ export default function ProfilePage() {
                       Nachbarschafts-Guthaben für faire Betreuung.
                     </p>
                   </>
-                )}{' '}
+                )}
               </section>
               <section className="card p-7">
                 <h2 className="text-xl font-extrabold text-on-surface">Letzte Bewegungen</h2>
@@ -482,14 +716,11 @@ export default function ProfilePage() {
                             {new Date(transaction.created_at).toLocaleDateString('de-DE')}
                           </span>
                         </span>
-                        <strong
-                          className={
-                            Number(transaction.amount_hours) >= 0 ? 'text-secondary' : 'text-error'
-                          }
-                        >
-                          {Number(transaction.amount_hours) >= 0 ? '+' : ''}
-                          {Number(transaction.amount_hours).toLocaleString('de-DE')} Std.
-                        </strong>
+                        <span className="text-on-surface-variant">
+                          {transaction.amount_hours !== undefined
+                            ? `${transaction.amount_hours.toLocaleString('de-DE')} Std.`
+                            : '–'}
+                        </span>
                       </div>
                     ))}
                   </div>

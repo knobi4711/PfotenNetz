@@ -2,6 +2,9 @@
 
 import {
   BOOKING_TYPES,
+  DEFAULT_TRACKING_RADIUS_M,
+  TRACKING_RADIUS_OPTIONS,
+  formatTrackingRadius,
   isBookingCoveredByAvailabilities,
   useBooking,
   useBookingGroup,
@@ -9,6 +12,7 @@ import {
   useHelperDetail,
   useOwnPets,
   useUpdateBookingRequest,
+  validateBookingPetCompatibility,
   type BookingCurrency,
   type BookingType,
   type CareLocation,
@@ -48,6 +52,7 @@ function NewBookingForm() {
   const [price, setPrice] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
+  const [trackingRadius, setTrackingRadius] = useState<number>(DEFAULT_TRACKING_RADIUS_M);
   const [urgent, setUrgent] = useState(false);
   const [safety, setSafety] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -69,6 +74,7 @@ function NewBookingForm() {
     );
     setAddress(value.meeting_address ?? '');
     setNotes(value.care_notes ?? '');
+    setTrackingRadius(value.tracking_radius_m ?? DEFAULT_TRACKING_RADIUS_M);
     setUrgent(value.is_urgent);
     setSafety(true);
     initializedBooking.current = value.id;
@@ -77,6 +83,11 @@ function NewBookingForm() {
   const submit = () => {
     setFormError(null);
     if (petIds.length === 0) return setFormError('Bitte wähle mindestens ein Tier aus.');
+    const compatibilityError = validateBookingPetCompatibility(
+      type,
+      activePets.filter((pet) => petIds.includes(pet.id)).map((pet) => pet.species)
+    );
+    if (compatibilityError !== null) return setFormError(compatibilityError);
     if (!start || !end || new Date(end).getTime() <= new Date(start).getTime())
       return setFormError('Bitte wähle einen gültigen Zeitraum.');
     if (!safety) return setFormError('Bitte bestätige die Sicherheitshinweise.');
@@ -132,6 +143,7 @@ function NewBookingForm() {
         isUrgent: urgent,
         careNotes: notes.trim() || null,
         careLocation,
+        trackingRadiusM: trackingRadius,
       },
       { onSuccess: (booking) => router.replace(`/booking/${booking.id}`) }
     );
@@ -248,7 +260,14 @@ function NewBookingForm() {
             </div>
             <p className="mt-5 text-sm font-bold">Betreuungsart</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {BOOKING_TYPES.map((value) => (
+              {BOOKING_TYPES.filter(
+                (value) =>
+                  value !== 'ride' ||
+                  (petIds.length > 0 &&
+                    activePets
+                      .filter((pet) => petIds.includes(pet.id))
+                      .every((pet) => pet.species === 'horse'))
+              ).map((value) => (
                 <button
                   key={value}
                   type="button"
@@ -259,6 +278,17 @@ function NewBookingForm() {
                 </button>
               ))}
             </div>
+            {type === 'walk' &&
+            petIds.length > 0 &&
+            validateBookingPetCompatibility(
+              type,
+              activePets.filter((pet) => petIds.includes(pet.id)).map((pet) => pet.species)
+            ) !== null ? (
+              <p className="mt-3 rounded-xl bg-error-container p-3 text-sm text-on-error-container">
+                Gassirunden sind nur für Hunde möglich. Wähle für andere Tiere Fütterung oder
+                Betreuung.
+              </p>
+            ) : null}
             {type === 'vacation' || type === 'daycare' ? (
               <div className="mt-6 rounded-2xl bg-secondary-container/50 p-4">
                 <p className="text-sm font-bold">Wo soll dein Tier betreut werden?</p>
@@ -383,6 +413,27 @@ function NewBookingForm() {
               Dringender Betreuungsfall
             </label>
           </section>
+          {!isEditMode ? (
+            <section className="card p-7">
+              <h2 className="text-xl font-extrabold">Sicherheitszone</h2>
+              <p className="mt-2 text-sm leading-6 text-on-surface-variant">
+                Beim Live-Tracking meldet die App der Helferin oder dem Helfer, wenn sie oder er
+                sich weiter als diese Entfernung vom Startpunkt entfernt.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {TRACKING_RADIUS_OPTIONS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`chip ${trackingRadius === option ? 'chip-selected' : ''}`}
+                    onClick={() => setTrackingRadius(option)}
+                  >
+                    {formatTrackingRadius(option)}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
           <section className="card p-7">
             <h2 className="text-xl font-extrabold">Sicherheit vor der ersten Betreuung</h2>
             <p className="mt-2 text-sm leading-6 text-on-surface-variant">

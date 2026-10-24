@@ -12,6 +12,12 @@ export function petSpeciesEmoji(species: string): string {
       return '🐹';
     case 'bird':
       return '🐦';
+    case 'horse':
+      return '🐴';
+    case 'amphibian':
+      return '🐸';
+    case 'fish':
+      return '🐠';
     default:
       return '🐾';
   }

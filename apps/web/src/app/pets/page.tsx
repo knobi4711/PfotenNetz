@@ -374,7 +374,7 @@ export default function PetsPage() {
       <WebHeader backHref="/" backLabel="Dashboard" />
       <div className="mx-auto max-w-5xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">
-          Meine Schutzlinge
+          Meine Schützlinge
         </p>
         <h1 className="mt-2 text-4xl font-extrabold text-on-surface">Meine Haustiere</h1>
         <p className="mt-3 text-lg text-on-surface-variant">

@@ -36,6 +36,9 @@ const SPECIES = [
   ['rabbit', 'Kaninchen'],
   ['guinea_pig', 'Meerschweinchen'],
   ['bird', 'Vogel'],
+  ['horse', 'Pferd'],
+  ['amphibian', 'Amphibie'],
+  ['fish', 'Fisch'],
   ['other', 'Andere'],
 ] as const;
 const DAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] as const;

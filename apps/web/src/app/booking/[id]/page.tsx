@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import {
+  formatTrackingRadius,
   useAcceptBooking,
   useBooking,
   useBookingGroup,
@@ -11,6 +12,8 @@ import {
   useOwnProfile,
   useRateHelper,
   useRateSeeker,
+  useConfirmBookingHelper,
+  useRejectBookingHelper,
   useRejectBooking,
   useStartBooking,
   type BookingRatingInput,
@@ -22,6 +25,7 @@ import { WebTrackingRecorder } from '../../../components/WebTrackingRecorder';
 
 const STATUS: Record<string, string> = {
   requested: 'Angefragt',
+  awaiting_seeker: 'Wartet auf deine Entscheidung',
   confirmed: 'Bestätigt',
   in_progress: 'Läuft gerade',
   completed: 'Abgeschlossen',
@@ -159,6 +163,8 @@ export default function BookingDetailPage() {
   const profile = useOwnProfile();
   const accept = useAcceptBooking();
   const reject = useRejectBooking();
+  const confirmHelper = useConfirmBookingHelper();
+  const rejectHelper = useRejectBookingHelper();
   const start = useStartBooking();
   const complete = useCompleteBooking();
   const cancel = useCancelBooking();
@@ -168,17 +174,22 @@ export default function BookingDetailPage() {
   const value = booking.data;
   const bookingGroup = useBookingGroup(value?.booking_group_id);
   const groupedBookings = bookingGroup.data ?? (value ? [value] : []);
-  const groupedPetNames = groupedBookings.map((item) => item.pet?.name ?? 'Tier');
+  const groupedPets = groupedBookings.flatMap((item) =>
+    item.pet ? [{ bookingId: item.id, pet: item.pet }] : []
+  );
+  const groupedPetNames = groupedPets.map((item) => item.pet.name);
   const isHelper = value?.helper_id === user.data?.id;
   const isSeeker = value?.seeker_id === user.data?.id;
   const isOpenRequest =
     value?.status === 'requested' &&
     value.helper_id === null &&
     value.seeker_id !== user.data?.id &&
-    profile.data?.role === 'helper';
+    (profile.data?.role === 'helper' || profile.data?.role === 'admin');
   const pending =
     accept.isPending ||
     reject.isPending ||
+    confirmHelper.isPending ||
+    rejectHelper.isPending ||
     start.isPending ||
     complete.isPending ||
     cancel.isPending ||
@@ -227,6 +238,23 @@ export default function BookingDetailPage() {
             <div className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
               <section className="card p-7">
                 <h2 className="text-xl font-extrabold">Details</h2>
+                {groupedPets.length > 0 ? (
+                  <ul className="mt-5 flex flex-wrap gap-5">
+                    {groupedPets.map(({ bookingId: petBookingId, pet }) => (
+                      <li key={petBookingId} className="w-32 text-center">
+                        {pet.avatar_url ? (
+                          /* Signed pet-photo URL from the private bucket. */
+                          <img
+                            src={pet.avatar_url}
+                            alt={pet.name}
+                            className="h-32 w-32 rounded-2xl object-cover"
+                          />
+                        ) : null}
+                        <p className="mt-2 text-sm font-bold text-on-surface">{pet.name}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
                 <dl className="mt-5 space-y-4 text-sm">
                   <Row label="Art" value={bookingTypeLabel(value.type)} />
                   <Row
@@ -239,13 +267,21 @@ export default function BookingDetailPage() {
                           : 'Bei der Halterin/dem Halter zu Hause (Besuche)'
                     }
                   />
+                  <Row
+                    label={groupedPetNames.length > 1 ? 'Tiere' : 'Tier'}
+                    value={groupedPetNames.join(', ') || '–'}
+                  />
                   <Row label="Start" value={new Date(value.start_at).toLocaleString('de-DE')} />
                   <Row label="Ende" value={new Date(value.end_at).toLocaleString('de-DE')} />
-                  <Row label="Treffpunkt" value={value.meeting_address ?? 'Nicht angegeben'} />
+                  <Row
+                    label="Betreuungsadresse"
+                    value={value.meeting_address ?? 'Wird nach deiner Bestätigung geteilt'}
+                  />
                   <Row label="Dringend" value={value.is_urgent ? 'Ja' : 'Nein'} />
-                  {groupedBookings.length > 1 ? (
-                    <Row label="Tiere im Antrag" value={groupedPetNames.join(', ')} />
-                  ) : null}
+                  <Row
+                    label="Sicherheitszone"
+                    value={`${formatTrackingRadius(value.tracking_radius_m)} um den Tracking-Startpunkt`}
+                  />
                   <Row label="Betreuungsnotizen" value={value.care_notes ?? 'Keine'} />
                   <Row label="Suchende:r" value={value.seekerProfile?.display_name ?? '–'} />
                   <Row
@@ -289,13 +325,43 @@ export default function BookingDetailPage() {
                     </>
                   ) : null}
                   {value.status === 'requested' && isOpenRequest ? (
-                    <button
-                      className="btn-primary w-full"
-                      disabled={pending}
-                      onClick={() => accept.mutate(id)}
-                    >
-                      Anfrage annehmen
-                    </button>
+                    <>
+                      <p className="rounded-xl bg-secondary-container p-3 text-sm text-on-secondary-container">
+                        Die Anfrage liegt in deinem registrierten Gebiet oder im Suchradius des
+                        Anbieters. Die genaue Adresse wird erst nach Bestätigung geteilt.
+                      </p>
+                      <button
+                        className="btn-primary w-full"
+                        disabled={pending}
+                        onClick={() => accept.mutate(id)}
+                      >
+                        Anfrage annehmen
+                      </button>
+                    </>
+                  ) : null}
+                  {value.status === 'awaiting_seeker' && isSeeker ? (
+                    <>
+                      <p className="rounded-xl bg-secondary-container p-3 text-sm text-on-secondary-container">
+                        {value.helperProfile?.display_name
+                          ? `${value.helperProfile.display_name} hat die Anfrage angenommen.`
+                          : 'Ein Helfer hat die Anfrage angenommen.'}{' '}
+                        Erst mit deiner Bestätigung wird die Betreuung verbindlich.
+                      </p>
+                      <button
+                        className="btn-primary w-full"
+                        disabled={pending}
+                        onClick={() => confirmHelper.mutate(id)}
+                      >
+                        Helfer bestätigen
+                      </button>
+                      <button
+                        className="btn-secondary w-full"
+                        disabled={pending}
+                        onClick={() => rejectHelper.mutate(id)}
+                      >
+                        Helfer ablehnen
+                      </button>
+                    </>
                   ) : null}
                   {value.status === 'confirmed' && isHelper ? (
                     <button
@@ -324,7 +390,10 @@ export default function BookingDetailPage() {
                       Anfrage bearbeiten
                     </button>
                   ) : null}
-                  {isSeeker && (value.status === 'requested' || value.status === 'confirmed') ? (
+                  {isSeeker &&
+                  (value.status === 'requested' ||
+                    value.status === 'awaiting_seeker' ||
+                    value.status === 'confirmed') ? (
                     <button
                       className="btn-secondary w-full"
                       disabled={pending}
@@ -342,7 +411,9 @@ export default function BookingDetailPage() {
                     </button>
                   ) : null}
                 </div>
-                {[accept, reject, start, complete, cancel].find((mutation) => mutation.error) ? (
+                {[accept, reject, confirmHelper, rejectHelper, start, complete, cancel].find(
+                  (mutation) => mutation.error
+                ) ? (
                   <p role="alert" className="mt-4 text-sm text-error">
                     Aktion fehlgeschlagen. Bitte versuche es erneut.
                   </p>

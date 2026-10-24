@@ -18,6 +18,9 @@ const SPECIES: Record<string, string> = {
   rabbit: 'Kleintiere',
   guinea_pig: 'Meerschweinchen',
   bird: 'Vogel',
+  horse: 'Pferd',
+  amphibian: 'Amphibie',
+  fish: 'Fisch',
   other: 'Andere',
 };
 const BOOKING_LABELS: Record<BookingType, string> = {
@@ -25,6 +28,7 @@ const BOOKING_LABELS: Record<BookingType, string> = {
   feeding: 'Füttern',
   vacation: 'Urlaub',
   daycare: 'Tagesbetreuung',
+  ride: 'Ausreiten',
 };
 
 export function AvailabilityManager() {
@@ -135,7 +139,9 @@ export function AvailabilityManager() {
       <div className="mt-4">
         <p className="text-sm font-bold">Betreuungsarten</p>
         <div className="mt-2 flex flex-wrap gap-2">
-          {AVAILABILITY_BOOKING_TYPES.map((type) => (
+          {AVAILABILITY_BOOKING_TYPES.filter(
+            (type) => type !== 'ride' || species.includes('horse')
+          ).map((type) => (
             <button
               key={type}
               type="button"
@@ -155,7 +161,15 @@ export function AvailabilityManager() {
               key={value}
               type="button"
               className={`chip ${species.includes(value) ? 'chip-selected' : ''}`}
-              onClick={() => toggle(species, value, setSpecies)}
+                onClick={() => {
+                  const nextSpecies = species.includes(value)
+                    ? species.filter((item) => item !== value)
+                    : [...species, value];
+                  setSpecies(nextSpecies);
+                  if (!nextSpecies.includes('horse')) {
+                    setTypes((current) => current.filter((item) => item !== 'ride'));
+                  }
+                }}
             >
               {SPECIES[value]}
             </button>

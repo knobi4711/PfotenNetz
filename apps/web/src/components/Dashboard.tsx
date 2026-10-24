@@ -108,8 +108,8 @@ function PawWeatherCard() {
   );
 }
 
-const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4700161905065273613';
-const MOBILE_BUILD_VERSION = '0.0.8';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.pfotennetz&pli=1';
+const MOBILE_BUILD_VERSION = '0.1.7';
 
 function PlayStoreCard() {
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -268,7 +268,7 @@ export function Dashboard() {
           <div className="space-y-6">
             <article className="card p-6">
               <div className="mb-5 flex items-center justify-between">
-                <h2 className="text-xl font-extrabold">Meine Schutzlinge</h2>
+                <h2 className="text-xl font-extrabold">Meine Schützlinge</h2>
                 <button
                   type="button"
                   className="text-sm font-bold text-primary"
