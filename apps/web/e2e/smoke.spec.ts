@@ -55,14 +55,12 @@ test.describe('Web smoke flows', () => {
     });
   }
 
-  test('provides dashboard navigation on desktop', async ({ page }) => {
+  test('provides home navigation from the header on desktop', async ({ page }) => {
     await page.goto('/community', { waitUntil: 'domcontentloaded' });
-    const dashboardLink = page
-      .getByRole('navigation', { name: 'Hauptnavigation' })
-      .getByRole('link', { name: 'Dashboard', exact: true });
-    await expect(dashboardLink).toBeVisible();
-    await expect(dashboardLink).toHaveAttribute('href', '/');
-    await dashboardLink.click();
+    const homeLink = page.getByRole('link', { name: 'PfotenNetz Startseite' });
+    await expect(homeLink).toBeVisible();
+    await expect(homeLink).toHaveAttribute('href', '/');
+    await homeLink.click();
     await expect(page).toHaveURL('/');
   });
 
@@ -265,7 +263,14 @@ test.describe('Web smoke flows', () => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([{ ...contactRequest, status: contactStatus }]),
+          body: JSON.stringify([
+            {
+              ...contactRequest,
+              status: contactStatus,
+              requesterProfile: { id: helperId, display_name: 'Testhelfer' },
+              helperProfile: { id: userId, display_name: 'Testkonto' },
+            },
+          ]),
         });
         return;
       }
@@ -342,7 +347,7 @@ test.describe('Web smoke flows', () => {
     await page.goto(`/booking/${bookingId}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Betreuung für Testtier' })).toBeVisible();
     await page.getByRole('button', { name: 'Buchung stornieren' }).click();
-    await expect(page.getByText('Storniert')).toBeVisible();
+    await expect(page.getByText('Storniert', { exact: true })).toBeVisible();
     await page.goto(`/chat/${bookingId}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Betreuung für Testtier')).toBeVisible();
     await page.getByRole('textbox', { name: 'Nachricht' }).fill('Bin gleich da.');
@@ -354,8 +359,8 @@ test.describe('Web smoke flows', () => {
       buffer: Buffer.from('test-image'),
     });
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText('Neue Anfrage · Offen')).toBeVisible();
+    await expect(page.getByText('Anfrage von Testhelfer · Offen')).toBeVisible();
     await page.getByRole('button', { name: 'Annehmen' }).click();
-    await expect(page.getByText('Neue Anfrage · Angenommen')).toBeVisible();
+    await expect(page.getByText('Anfrage von Testhelfer · Angenommen')).toBeVisible();
   });
 });
