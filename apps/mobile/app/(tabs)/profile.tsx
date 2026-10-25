@@ -30,6 +30,7 @@ import { formatDate, formatTimebankHours, formatTimebankHoursMagnitude } from '@
 import { timebankTxDescription, timebankTxTypeLabels } from '../../lib/booking';
 import { AvailabilityManager } from '../../components/helper-availability';
 import { HelperStatusCard } from '../../components/helper-status';
+import { VermittlungsstandortCard } from '../../components/helper-location';
 import { useTheme, type ThemeMode } from '../../providers/theme';
 import {
   friendlyPasskeyError,
@@ -220,8 +221,6 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [privateAddress, setPrivateAddress] = useState('');
   const [profileBio, setProfileBio] = useState('');
   const [kiezRadiusKm, setKiezRadiusKm] = useState<KiezRadius>(1.5);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({
@@ -376,8 +375,6 @@ export default function ProfileScreen() {
   const startEditing = () => {
     setDisplayName(profile?.display_name ?? '');
     setPhone(profile?.phone ?? '');
-    setPostalCode(profile?.postal_code ?? '');
-    setPrivateAddress(profile?.private_address ?? '');
     setProfileBio(profile?.profile_bio ?? '');
     const current = Number(profile?.kiez_radius_km ?? 1.5);
     setKiezRadiusKm(
@@ -404,12 +401,20 @@ export default function ProfileScreen() {
 
   const handleSave = () => {
     setFormHint(null);
+    if (profile === null) return;
+    if (!/^\d{5}$/.test(profile.postal_code ?? '') || !(profile.private_address ?? '').trim()) {
+      setFormHint(
+        'Es ist noch keine Adresse vorhanden. Lege zuerst deinen Vermittlungsstandort im Profil fest und bearbeite es danach erneut – die Adresse wird hier nicht geändert.'
+      );
+      return;
+    }
     updateProfile.mutate(
       {
         displayName: displayName.trim(),
         phone,
-        postalCode,
-        privateAddress,
+        // Adresse bewusst unverändert: sie wird ausschließlich im Vermittlungsstandort gesetzt.
+        postalCode: profile.postal_code ?? '',
+        privateAddress: profile.private_address ?? '',
         profileBio,
         kiezRadiusKm,
         notificationPrefs,
@@ -522,46 +527,9 @@ export default function ProfileScreen() {
                 ]}
                 value={phone}
               />
-              <Text style={[styles.label, { color: c.onSurface }]}>
-                Postleitzahl * (für Regionalprüfung)
-              </Text>
-              <TextInput
-                editable={!updateProfile.isPending}
-                keyboardType="number-pad"
-                maxLength={5}
-                onChangeText={setPostalCode}
-                placeholder="z. B. 10115"
-                placeholderTextColor={c.outline}
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: c.surfaceContainerLow,
-                    borderColor: c.outlineVariant,
-                    color: c.onSurface,
-                  },
-                ]}
-                value={postalCode}
-              />
-              <Text style={[styles.label, { color: c.onSurface }]}>Wohnadresse * (privat)</Text>
-              <TextInput
-                editable={!updateProfile.isPending}
-                autoComplete="street-address"
-                onChangeText={setPrivateAddress}
-                placeholder="Straße und Hausnummer"
-                placeholderTextColor={c.outline}
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: c.surfaceContainerLow,
-                    borderColor: c.outlineVariant,
-                    color: c.onSurface,
-                  },
-                ]}
-                value={privateAddress}
-              />
               <Text style={[styles.hint, { color: c.onSurfaceVariant }]}>
-                Deine genaue Adresse ist nicht öffentlich. Sie wird für die regionale Vermittlung
-                verwendet und nur bei bestätigter Betreuung mit der anderen Person geteilt.
+                Postleitzahl und Wohnadresse werden nicht mehr hier eingegeben: Du legst sie
+                einmalig im Abschnitt „Vermittlungsstandort“ fest und änderst sie dort auch.
               </Text>
               <Text style={[styles.label, { color: c.onSurface }]}>Kurzvorstellung (optional)</Text>
               <TextInput
@@ -752,6 +720,7 @@ export default function ProfileScreen() {
               </View>
             </Card>
             <HelperStatusCard profile={profile} />
+            <VermittlungsstandortCard profile={profile} />
             <AvailabilityManager />
             <Card>
               <SectionTitle>Kennenlernanfragen</SectionTitle>

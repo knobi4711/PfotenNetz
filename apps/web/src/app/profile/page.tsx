@@ -14,6 +14,7 @@ import {
 import {
   reverseGeocodeOpenStreetMap,
   searchOpenStreetMap,
+  timebankTransactionDescription,
   type GeocodingAddress,
   type GeocodingResult,
 } from '@pfotennetz/shared';
@@ -54,10 +55,8 @@ export default function ProfilePage() {
   });
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [privateAddress, setPrivateAddress] = useState('');
-  const [city, setCity] = useState('');
   const [profileFormError, setProfileFormError] = useState<string | null>(null);
+  const [profileSaved, setProfileSaved] = useState(false);
   const [profileSavePending, setProfileSavePending] = useState(false);
   const [profileBio, setProfileBio] = useState('');
   const [radius, setRadius] = useState<KiezRadius>(1.5);
@@ -77,16 +76,6 @@ export default function ProfilePage() {
     if (value) {
       setDisplayName(value.display_name);
       setPhone(value.phone ?? '');
-      setPostalCode(value.postal_code ?? '');
-      const savedAddress = value.private_address ?? '';
-      const addressParts = savedAddress.match(/^(.*?),?\s+(\d{5})\s+(.+)$/);
-      if (addressParts) {
-        setPrivateAddress(addressParts[1]?.trim() ?? '');
-        setCity(addressParts[3]?.trim() ?? '');
-      } else {
-        setPrivateAddress(savedAddress);
-        setCity('');
-      }
       setProfileBio(value.profile_bio ?? '');
       const currentRadius = Number(value.kiez_radius_km);
       if ((KIEZ_RADIUS_OPTIONS as readonly number[]).includes(currentRadius)) {
@@ -104,49 +93,34 @@ export default function ProfilePage() {
 
   const saveProfile = async () => {
     setProfileFormError(null);
-    setLocationMessage(null);
-    if (!/^\d{5}$/.test(postalCode.trim())) {
-      setProfileFormError('Bitte gib eine gültige fünfstellige Postleitzahl ein.');
+    setProfileSaved(false);
+    if (!/^\d{5}$/.test(value?.postal_code ?? '')) {
+      setProfileFormError(
+        'Für dein Profil fehlt noch eine vollständige Adresse. Bitte lege deinen Vermittlungsstandort rechts per GPS oder Ortssuche fest.'
+      );
       return;
     }
-    if (privateAddress.trim().length < 3 || city.trim().length < 2) {
-      setProfileFormError('Bitte gib Straße, Hausnummer und Ort vollständig ein.');
+    if (!(value?.private_address ?? '').trim()) {
+      setProfileFormError(
+        'Für dein Profil fehlt noch eine vollständige Adresse. Bitte lege deinen Vermittlungsstandort rechts per GPS oder Ortssuche fest.'
+      );
       return;
     }
 
-    const fullAddress = `${privateAddress.trim()}, ${postalCode.trim()} ${city.trim()}`;
     setProfileSavePending(true);
     try {
-      let locationResults = await searchOpenStreetMap(fullAddress);
-      if (locationResults.length === 0) {
-        locationResults = await searchOpenStreetMap(`${postalCode.trim()} ${city.trim()}`);
-      }
-      const location = locationResults[0];
-      if (!location) {
-        throw new Error(
-          'Die Adresse wurde gespeichert, aber auf der Karte nicht gefunden. Bitte PLZ und Ort prüfen.'
-        );
-      }
-
+      // Die Adresse wird bewusst unverändert übernommen – sie wird ausschließlich
+      // im Vermittlungsstandort (GPS/Ortssuche) gesetzt, damit es nur eine Quelle gibt.
       await updateProfile.mutateAsync({
         displayName,
         phone,
-        postalCode,
-        privateAddress: fullAddress,
+        postalCode: value?.postal_code ?? '',
+        privateAddress: value?.private_address ?? '',
         profileBio,
         kiezRadiusKm: radius,
         notificationPrefs: preferences,
       });
-      try {
-        await updateLocation.mutateAsync(location);
-      } catch {
-        throw new Error(
-          'Profiladresse gespeichert, Vermittlungsstandort konnte nicht aktualisiert werden. Bitte erneut speichern.'
-        );
-      }
-      setLocationMessage(
-        'Profiladresse und Vermittlungsstandort wurden gemeinsam aktualisiert. Der Standort wird in Suchergebnissen nur gerundet angezeigt.'
-      );
+      setProfileSaved(true);
     } catch (error) {
       setProfileFormError(
         error instanceof Error ? error.message : 'Profil konnte nicht gespeichert werden.'
@@ -252,24 +226,7 @@ export default function ProfilePage() {
     setLocationPending(true);
 
     const confirmedAddress = buildProfileAddress(locationCandidate.address);
-    // Restliche Profilfelder vor dem Standort-Update sichern, damit ein
-    // zwischenzeitliches Neuladen des Profils keine offenen Änderungen verwirft.
-    const profileDraft = {
-      displayName: displayName.trim() || value?.display_name || '',
-      phone: phone.trim() || null,
-      profileBio,
-      kiezRadiusKm: radius,
-      notificationPrefs: preferences,
-    };
-    if (confirmedAddress) {
-      setPrivateAddress(confirmedAddress.street);
-    }
-    if (locationCandidate.address?.postalCode) {
-      setPostalCode(locationCandidate.address.postalCode);
-    }
-    if (locationCandidate.address?.city) {
-      setCity(locationCandidate.address.city);
-    }
+    setProfileFormError(null);
 
     void updateLocation
       .mutateAsync(locationCandidate)
@@ -277,27 +234,31 @@ export default function ProfilePage() {
         if (!confirmedAddress) {
           clearLocationCandidate();
           setLocationError(
-            'Der Vermittlungsstandort wurde gespeichert, aber die Profiladresse ist noch unvollständig. Bitte ergänze Straße, Hausnummer, PLZ und Ort links und speichere das Profil anschließend.'
+            'Der Vermittlungsstandort wurde gespeichert, aber die Profiladresse ist noch unvollständig. Bitte bestimme den Standort erneut oder wähle den Ort über die Ortssuche.'
           );
           return;
         }
 
         try {
           await updateProfile.mutateAsync({
-            ...profileDraft,
+            displayName: displayName.trim() || value?.display_name || '',
+            phone: phone.trim() || null,
+            profileBio,
+            kiezRadiusKm: radius,
+            notificationPrefs: preferences,
             postalCode: confirmedAddress.postalCode,
             privateAddress: `${confirmedAddress.street}, ${confirmedAddress.postalCode} ${confirmedAddress.city}`,
           });
         } catch {
           setLocationError(
-            'Der Vermittlungsstandort wurde gespeichert, aber die Profiladresse konnte nicht übernommen werden. Bitte prüfe die Adressfelder links und speichere das Profil erneut.'
+            'Der Vermittlungsstandort wurde gespeichert, aber die Profiladresse konnte nicht übernommen werden. Bitte versuche es erneut.'
           );
           return;
         }
 
         clearLocationCandidate();
         setLocationMessage(
-          'Standort und Adresse wurden übernommen. Die Profiladresse wird links angezeigt und in Suchergebnissen nur gerundet verwendet.'
+          'Standort und Adresse wurden übernommen. Die genaue Position wird in Suchergebnissen nur gerundet verwendet.'
         );
       })
       .catch((error: unknown) =>
@@ -390,58 +351,6 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-on-surface-variant" htmlFor="profile-postal">
-                    Postleitzahl *
-                  </label>
-                  <input
-                    id="profile-postal"
-                    inputMode="numeric"
-                    maxLength={5}
-                    pattern="[0-9]{5}"
-                    required
-                    value={postalCode}
-                    onChange={(event) => setPostalCode(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-on-surface-variant" htmlFor="profile-address">
-                    Straße und Hausnummer *
-                  </label>
-                  <input
-                    id="profile-address"
-                    type="text"
-                    autoComplete="address-line1"
-                    required
-                    maxLength={300}
-                    placeholder="z. B. Musterstraße 12"
-                    value={privateAddress}
-                    onChange={(event) => setPrivateAddress(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-on-surface-variant" htmlFor="profile-city">
-                    Ort *
-                  </label>
-                  <input
-                    id="profile-city"
-                    type="text"
-                    autoComplete="address-level2"
-                    required
-                    maxLength={120}
-                    value={city}
-                    onChange={(event) => setCity(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
-                  />
-                  <p className="mt-2 text-sm text-on-surface-variant">
-                    Die PLZ gibst du oben ein. Straße, Hausnummer und Ort sind ebenfalls
-                    erforderlich. Deine genaue Adresse ist nicht öffentlich. Sie wird für die
-                    regionale Vermittlung verwendet und nur bei bestätigter Betreuung mit der
-                    anderen Person geteilt.
-                  </p>
-                </div>
-                <div>
                   <label className="font-bold text-on-surface-variant" htmlFor="profile-bio">
                     Kurzvorstellung (optional)
                   </label>
@@ -471,23 +380,20 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   className="btn-primary"
-                  disabled={
-                    profileSavePending || updateProfile.isPending || updateLocation.isPending
-                  }
+                  disabled={profileSavePending || updateProfile.isPending}
                   onClick={() => void saveProfile()}
                 >
-                  {profileSavePending
-                    ? 'Profil und Standort werden gespeichert …'
-                    : 'Profil speichern'}
+                  {profileSavePending ? 'Profil wird gespeichert …' : 'Profil speichern'}
                 </button>
                 {profileFormError ? (
                   <p role="alert" className="mt-2 text-sm text-error">
                     {profileFormError}
                   </p>
                 ) : null}
-                {locationMessage ? (
+                {profileSaved ? (
                   <p role="status" className="mt-2 text-sm font-semibold text-green-700">
-                    {locationMessage}
+                    Profil gespeichert. Deine Adresse verwaltest du in der Karte
+                    „Vermittlungsstandort“.
                   </p>
                 ) : null}
               </div>
@@ -508,7 +414,7 @@ export default function ProfilePage() {
                 <p className="mt-2 text-sm text-on-surface-variant">
                   {value.private_address
                     ? `Hinterlegte Profiladresse: ${value.private_address}`
-                    : 'Noch keine Profiladresse hinterlegt. Bestimme deinen Standort oder trage die Adresse links ein.'}
+                    : 'Noch keine Profiladresse hinterlegt. Bestimme deinen Standort oder wähle einen Ort unten aus.'}
                 </p>
                 <div className="mt-6 rounded-xl border border-outline-variant/40 p-4">
                   <p className="text-sm font-bold text-on-surface">
@@ -541,8 +447,8 @@ export default function ProfilePage() {
                         </p>
                       ) : (
                         <p className="mt-2 text-sm text-on-surface-variant">
-                          Für diese Position wurde keine vollständige Straßenadresse ermittelt. Du
-                          kannst sie nach dem Bestätigen links ergänzen.
+                          Für diese Position wurde keine vollständige Straßenadresse ermittelt.
+                          Wähle den Ort in diesem Fall über die Ortssuche unten.
                         </p>
                       )}
                       {locationCandidate.source === 'browser' ? (
@@ -710,7 +616,7 @@ export default function ProfilePage() {
                       >
                         <span>
                           <span className="block font-semibold text-on-surface">
-                            {transaction.description || transaction.type}
+                            {timebankTransactionDescription(transaction) || transaction.type}
                           </span>
                           <span className="text-on-surface-variant">
                             {new Date(transaction.created_at).toLocaleDateString('de-DE')}

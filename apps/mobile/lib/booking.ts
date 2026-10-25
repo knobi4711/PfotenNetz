@@ -1,5 +1,6 @@
 import type { Database } from '@pfotennetz/supabase';
 import type { TimebankTransaction } from '@pfotennetz/supabase';
+import { timebankTransactionDescription } from '@pfotennetz/shared';
 
 export type BookingStatus = Database['public']['Enums']['booking_status'];
 export type BookingType = Database['public']['Enums']['booking_type'];
@@ -64,33 +65,12 @@ export function keyHandoffLabel(value: KeyHandoffType | null): string {
   return keyHandoffLabels[value] ?? value;
 }
 
-function metadataBookingNumber(metadata: TimebankTransaction['metadata']): string | null {
-  if (typeof metadata !== 'object' || metadata === null || Array.isArray(metadata)) return null;
-  const value = (metadata as Record<string, unknown>)['booking_number'];
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
 /**
  * User-facing German description for a timebank transaction.
- * Prefers tx.type plus the readable booking number from metadata;
- * falls back to parsing the server-generated English description;
- * unknown descriptions are returned unchanged.
+ * Delegates to the shared translation so web and mobile stay in sync.
  */
 export function timebankTxDescription(
   tx: Pick<TimebankTransaction, 'type' | 'reference_type' | 'description' | 'metadata'>
 ): string {
-  const isBookingTx =
-    tx.reference_type === 'booking_earned' || tx.reference_type === 'booking_spent';
-  if (isBookingTx) {
-    const bookingNumber = metadataBookingNumber(tx.metadata);
-    if (bookingNumber !== null) {
-      if (tx.type === 'earned') return `Für Buchung ${bookingNumber} erhalten`;
-      if (tx.type === 'spent') return `Für Buchung ${bookingNumber} ausgegeben`;
-    }
-  }
-  const earned = tx.description.match(/^Kiez-Hours earned for booking (\S+)\s*$/);
-  if (earned !== null) return `Für Buchung ${earned[1]} erhalten`;
-  const spent = tx.description.match(/^Kiez-Hours spent for booking (\S+)\s*$/);
-  if (spent !== null) return `Für Buchung ${spent[1]} ausgegeben`;
-  return tx.description;
+  return timebankTransactionDescription(tx);
 }

@@ -8,6 +8,9 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 // PfotenNetz ships through the closed test track (`alpha`). The internal test
 // track is no longer used; GOOGLE_PLAY_TRACK can still override it when needed.
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
+const releaseNotes =
+  process.env.GOOGLE_PLAY_RELEASE_NOTES ??
+  'Neu: Verfügbarkeit als Wochenplan direkt bearbeiten, Adresse einmalig über den Vermittlungsstandort (GPS oder Ortssuche) und deutsche Zeitbank-Texte.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';
@@ -114,7 +117,13 @@ async function main() {
     headers: { ...authorization, 'content-type': 'application/json' },
     body: JSON.stringify({
       track,
-      releases: [{ versionCodes: [versionCode], status: 'completed' }],
+      releases: [
+        {
+          versionCodes: [versionCode],
+          status: 'completed',
+          releaseNotes: [{ language: 'de-DE', text: releaseNotes }],
+        },
+      ],
     }),
   });
 

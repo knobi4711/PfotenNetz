@@ -27,7 +27,7 @@ describe('timebankTxDescription', () => {
           metadata: { booking_id: 'uuid', booking_number: 'BK-1' },
         })
       )
-    ).toBe('Für Buchung BK-1 ausgegeben');
+    ).toBe('Nachbarschafts-Stunden für Buchung BK-1 ausgegeben');
   });
 
   it('prefers metadata booking number for earned bookings', () => {
@@ -40,7 +40,7 @@ describe('timebankTxDescription', () => {
           metadata: { booking_id: 'uuid', booking_number: 'BK-1' },
         })
       )
-    ).toBe('Für Buchung BK-1 erhalten');
+    ).toBe('Nachbarschafts-Stunden für Buchung BK-1 erhalten');
   });
 
   it('parses the English description when metadata is missing', () => {
@@ -53,7 +53,7 @@ describe('timebankTxDescription', () => {
           metadata: {},
         })
       )
-    ).toBe('Für Buchung BK-20260921-TB01 ausgegeben');
+    ).toBe('Nachbarschafts-Stunden für Buchung BK-20260921-TB01 ausgegeben');
   });
 
   it('keeps unknown descriptions unchanged', () => {

@@ -7,12 +7,16 @@ export type Availability = Database['public']['Tables']['helper_availabilities']
 export const AVAILABILITY_DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 export type AvailabilityDay = (typeof AVAILABILITY_DAYS)[number];
 
-export const AVAILABILITY_BOOKING_TYPES: BookingType[] = ['walk', 'feeding', 'vacation', 'daycare', 'ride'];
+export const AVAILABILITY_BOOKING_TYPES: BookingType[] = [
+  'walk',
+  'feeding',
+  'vacation',
+  'daycare',
+  'ride',
+];
 export const AVAILABILITY_PET_SPECIES = [
   'dog',
   'cat',
-  'rabbit',
-  'guinea_pig',
   'bird',
   'horse',
   'amphibian',
@@ -32,13 +36,19 @@ export interface UpsertAvailabilityInput {
   petSpecies?: string[] | undefined;
 }
 
-const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
+const TIME_RE = /^(\d{2}):(\d{2})(?::(\d{2}))?$/;
 
 export function normalizeTime(value: string): string | null {
   const match = TIME_RE.exec(value.trim());
   if (match === null) return null;
-  const seconds = match[3] ?? '00';
-  return `${match[1]}:${match[2]}:${seconds}`;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3] ?? '0');
+  if (minutes > 59 || seconds > 59) return null;
+  if (hours > 24) return null;
+  if (hours === 24 && (minutes !== 0 || seconds !== 0)) return null;
+  const padded = (part: number) => part.toString().padStart(2, '0');
+  return `${padded(hours)}:${padded(minutes)}:${padded(seconds)}`;
 }
 
 export function validateAvailabilityInput(input: UpsertAvailabilityInput): string | null {
@@ -61,6 +71,9 @@ export function validateAvailabilityInput(input: UpsertAvailabilityInput): strin
   if (input.bookingTypes.includes('ride') && !input.petSpecies?.includes('horse')) {
     return 'Ausreiten kann nur für Pferde angeboten werden.';
   }
+  if (input.bookingTypes.includes('walk') && !input.petSpecies?.includes('dog')) {
+    return 'Gassi kann nur für Hunde angeboten werden.';
+  }
   for (const type of input.bookingTypes) {
     if (!AVAILABILITY_BOOKING_TYPES.includes(type)) {
       return `Unbekannte Betreuungsart: ${type}`;
@@ -74,6 +87,64 @@ export function validateAvailabilityInput(input: UpsertAvailabilityInput): strin
     return 'Der Maximalradius muss zwischen 0 und 50 km liegen.';
   }
   return null;
+}
+
+export interface AvailabilityTimeRange {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
+function rangeMinutes(value: string): number {
+  const [hours = '0', minutes = '0'] = value.split(':');
+  return Number.parseInt(hours, 10) * 60 + Number.parseInt(minutes, 10);
+}
+
+/**
+ * Finds a slot on the same weekday whose time range overlaps the given range.
+ * Paused slots also block a range, so re-activating them cannot create overlaps.
+ */
+export function findAvailabilityOverlap<T extends AvailabilityTimeRange>(
+  slots: readonly T[],
+  input: { dayOfWeek: number; startTime: string; endTime: string },
+  excludeId?: string
+): T | undefined {
+  const start = rangeMinutes(input.startTime);
+  const end = rangeMinutes(input.endTime);
+  if (end <= start) return undefined;
+  return slots.find((slot) => {
+    if (slot.id === excludeId) return false;
+    if (slot.day_of_week !== input.dayOfWeek) return false;
+    const otherStart = rangeMinutes(slot.start_time);
+    const otherEnd = rangeMinutes(slot.end_time);
+    return start < otherEnd && end > otherStart;
+  });
+}
+
+async function assertNoOverlap(
+  client: SupabaseClient<Database>,
+  helperId: string,
+  dayOfWeek: number,
+  start: string,
+  end: string,
+  excludeId?: string
+): Promise<void> {
+  let query = client
+    .from('helper_availabilities')
+    .select('id')
+    .eq('helper_id', helperId)
+    .eq('day_of_week', dayOfWeek)
+    .lt('start_time', end)
+    .gt('end_time', start);
+  if (excludeId !== undefined) query = query.neq('id', excludeId);
+  const { data, error } = await query.limit(1);
+  if (error) throw error;
+  if ((data ?? []).length > 0) {
+    throw new Error(
+      'Dieser Zeitbereich überschneidet sich mit einem bestehenden Zeitfenster am selben Tag.'
+    );
+  }
 }
 
 async function requireUserId(client: SupabaseClient<Database>): Promise<string> {
@@ -108,6 +179,7 @@ export async function createAvailability(
   const helperId = await requireUserId(client);
   const start = normalizeTime(input.startTime) as string;
   const end = normalizeTime(input.endTime) as string;
+  await assertNoOverlap(client, helperId, input.dayOfWeek, start, end);
   const { data, error } = await client
     .from('helper_availabilities')
     .insert({
@@ -168,6 +240,25 @@ export async function updateAvailability(
   if (input.petSpecies !== undefined) {
     if (input.petSpecies.length === 0) throw new Error('Bitte wähle mindestens eine Tierart.');
     patch.pet_species = input.petSpecies;
+  }
+
+  const changesRange =
+    input.dayOfWeek !== undefined || input.startTime !== undefined || input.endTime !== undefined;
+  if (changesRange) {
+    const { data: existing, error: existingError } = await client
+      .from('helper_availabilities')
+      .select('*')
+      .eq('id', id)
+      .eq('helper_id', helperId)
+      .single();
+    if (existingError) throw existingError;
+    const effectiveDay = patch.day_of_week ?? existing.day_of_week;
+    const effectiveStart = patch.start_time ?? existing.start_time;
+    const effectiveEnd = patch.end_time ?? existing.end_time;
+    if (effectiveEnd <= effectiveStart) {
+      throw new Error('Das Ende muss nach dem Beginn liegen.');
+    }
+    await assertNoOverlap(client, helperId, effectiveDay, effectiveStart, effectiveEnd, id);
   }
 
   const { data, error } = await client
