@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint . --ext .ts",
-    "gen:types": "supabase gen types typescript --linked --schema public > src/types/database.ts",
+    "gen:types": "supabase gen types typescript --linked --schema public > src/types/database.ts && pnpm exec prettier --write src/types/database.ts",
     "clean": "rm -rf dist node_modules/.cache"
   },
   "peerDependencies": {

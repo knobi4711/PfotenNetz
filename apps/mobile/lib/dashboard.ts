@@ -68,9 +68,7 @@ export function selectHighlightedBooking(
   const grouped = groupBookingsByRequest(bookings).map((request) => request.primary);
 
   const current = grouped
-    .filter(
-      (b) => b.status === 'in_progress' || (b.status === 'confirmed' && runsNow(b, nowMs))
-    )
+    .filter((b) => b.status === 'in_progress' || (b.status === 'confirmed' && runsNow(b, nowMs)))
     .sort(byStartAsc);
   const currentFirst = current[0];
   if (currentFirst !== undefined) return { booking: currentFirst, kind: 'current' };

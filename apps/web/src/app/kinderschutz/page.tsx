@@ -36,15 +36,15 @@ export default function ChildSafetyPage() {
         <h2 className="text-2xl font-extrabold">Prävention und Moderation</h2>
         <p>
           Öffentliche Inhalte, Profiltexte, Chat-Nachrichten und hochgeladene Medien werden
-          moderiert. Inhalte, die gegen die Kinderschutzstandards verstoßen, werden entfernt und
-          die betreffenden Konten gesperrt.
+          moderiert. Inhalte, die gegen die Kinderschutzstandards verstoßen, werden entfernt und die
+          betreffenden Konten gesperrt.
         </p>
 
         <h2 className="text-2xl font-extrabold">Alter und Verifizierung</h2>
         <p>
           Die Nutzung von PfotenNetz ist nur Personen ab 18 Jahren gestattet. Bei der Registrierung
-          ist das Mindestalter zu bestätigen. Bei begründetem Verdacht auf ein Alter unter 18
-          Jahren wird das Konto gesperrt, bis eine Altersverifikation erfolgt ist.
+          ist das Mindestalter zu bestätigen. Bei begründetem Verdacht auf ein Alter unter 18 Jahren
+          wird das Konto gesperrt, bis eine Altersverifikation erfolgt ist.
         </p>
 
         <h2 className="text-2xl font-extrabold">Zusammenarbeit mit Behörden</h2>

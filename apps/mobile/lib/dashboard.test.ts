@@ -49,12 +49,7 @@ describe('selectHighlightedBooking', () => {
 
   it('treats a confirmed booking with a running care window as current', () => {
     const list = [
-      booking(
-        'running',
-        'confirmed',
-        '2026-09-22T07:00:00.000Z',
-        '2026-09-22T12:00:00.000Z'
-      ),
+      booking('running', 'confirmed', '2026-09-22T07:00:00.000Z', '2026-09-22T12:00:00.000Z'),
       booking('later', 'confirmed', '2026-09-23T10:00:00.000Z'),
     ];
     const result = selectHighlightedBooking(list, NOW);

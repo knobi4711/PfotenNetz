@@ -4,7 +4,15 @@ import type { Database } from '../types/database';
 export type Pet = Database['public']['Tables']['pets']['Row'];
 
 export const PET_SPECIES_OPTIONS = [
-  'dog', 'cat', 'rabbit', 'guinea_pig', 'bird', 'horse', 'amphibian', 'fish', 'other',
+  'dog',
+  'cat',
+  'rabbit',
+  'guinea_pig',
+  'bird',
+  'horse',
+  'amphibian',
+  'fish',
+  'other',
 ] as const;
 export type PetSpecies = (typeof PET_SPECIES_OPTIONS)[number];
 
