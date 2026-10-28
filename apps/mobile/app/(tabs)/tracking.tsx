@@ -19,7 +19,12 @@ import {
   type BookingRequestGroup,
   type Notification,
 } from '@pfotennetz/supabase';
-import { formatCurrency, formatDate, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
+import {
+  formatCurrency,
+  formatDate,
+  formatTimebankHoursMagnitude,
+  routes,
+} from '@pfotennetz/shared';
 import { bookingTypeLabels } from '../../lib/booking';
 import {
   Card,
@@ -256,10 +261,7 @@ export default function TrackingScreen() {
                   key={session.id}
                   accessibilityRole="button"
                   accessibilityLabel="Live-Tracking öffnen"
-                  onPress={() =>
-                    booking &&
-                    router.push({ pathname: '/booking/[id]', params: { id: booking.id } })
-                  }
+                  onPress={() => router.push(routes.liveTracking(session.booking_id))}
                   style={styles.notifRow}
                 >
                   <View style={[styles.notifDot, { backgroundColor: c.secondary }]} />

@@ -14,6 +14,7 @@ declare module 'expo-router' {
     '/marketplace': undefined;
     '/emergency/[token]': { token: string };
     '/booking/[id]': { id: string };
+    '/tracking/live/[bookingId]': { bookingId: string };
   }
 
   // The ambient declaration above shadows the package root types in this

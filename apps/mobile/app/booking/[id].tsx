@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Image,
   Modal,
@@ -28,10 +28,16 @@ import {
   useRejectBooking,
   useStartBooking,
   useUpdateBookingRequest,
+  useActiveTrackingSessions,
   type BookingRatingInput,
   type Database,
 } from '@pfotennetz/supabase';
-import { formatCurrency, formatDate, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
+import {
+  formatCurrency,
+  formatDate,
+  formatTimebankHoursMagnitude,
+  routes,
+} from '@pfotennetz/shared';
 import {
   ActionButton,
   Card,
@@ -53,6 +59,8 @@ import {
 } from '../../lib/booking';
 import { TrackingRecorder } from '../../components/tracking-recorder';
 import { buildDirectionsUrl, openDirections } from '../../lib/navigation';
+import { stopTrackingGeofence } from '../../lib/geofence';
+import { stopBackgroundTracking } from '../../lib/tracking-background';
 
 type BookingStatus = Database['public']['Enums']['booking_status'];
 
@@ -226,6 +234,7 @@ export default function BookingDetailScreen() {
   const bookingGroupQuery = useBookingGroup(bookingQuery.data?.booking_group_id);
   const userQuery = useCurrentUser();
   const profileQuery = useOwnProfile();
+  const activeTracking = useActiveTrackingSessions();
 
   const accept = useAcceptBooking();
   const reject = useRejectBooking();
@@ -245,7 +254,11 @@ export default function BookingDetailScreen() {
   const refresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([bookingQuery.refetch(), bookingGroupQuery.refetch()]);
+      await Promise.all([
+        bookingQuery.refetch(),
+        bookingGroupQuery.refetch(),
+        activeTracking.refetch(),
+      ]);
     } finally {
       setRefreshing(false);
     }
@@ -291,6 +304,21 @@ export default function BookingDetailScreen() {
     booking.helper_id === null &&
     booking.seeker_id !== currentUserId &&
     (profileQuery.data?.role === 'helper' || profileQuery.data?.role === 'admin');
+  const liveSession = activeTracking.data?.find((item) => item.booking_id === bookingId) ?? null;
+
+  // Tracking must not outlive its booking. The database closes the session when
+  // the booking reaches a terminal status; this stops the device-side uploads
+  // and the persistent foreground-service notification at the same moment.
+  const previousStatus = useRef<BookingStatus | null>(null);
+  useEffect(() => {
+    const status = booking?.status ?? null;
+    const terminated = status === 'completed' || status === 'cancelled' || status === 'disputed';
+    if (isHelper && previousStatus.current === 'in_progress' && terminated) {
+      void stopBackgroundTracking().catch(() => undefined);
+      void stopTrackingGeofence().catch(() => undefined);
+    }
+    previousStatus.current = status;
+  }, [booking?.status, isHelper]);
 
   const handleRateHelper = (rating: RatingFields & { review?: string }) => {
     if (bookingId === undefined) return;
@@ -630,6 +658,25 @@ export default function BookingDetailScreen() {
 
             {booking.status === 'in_progress' && isHelper && bookingId ? (
               <TrackingRecorder bookingId={bookingId} radius={booking.tracking_radius_m} />
+            ) : null}
+
+            {booking.status === 'in_progress' && isSeeker && bookingId ? (
+              <Card>
+                <SectionTitle>Live-Standort</SectionTitle>
+                {liveSession !== null ? (
+                  <ActionButton
+                    title="Live-Standort ansehen"
+                    onPress={() => {
+                      router.push(routes.liveTracking(bookingId));
+                    }}
+                  />
+                ) : (
+                  <EmptyText>
+                    Das Live-Tracking startet, sobald dein:e Helfer:in vor Ort ist. Du erhältst dann
+                    hier den Standort.
+                  </EmptyText>
+                )}
+              </Card>
             ) : null}
 
             {(booking.status === 'requested' ||
