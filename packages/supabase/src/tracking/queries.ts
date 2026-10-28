@@ -4,16 +4,22 @@ import type { Database } from '../types/database';
 export type TrackingSession = Database['public']['Tables']['tracking_sessions']['Row'];
 export type TrackingPoint = Database['public']['Tables']['tracking_points']['Row'];
 
+let trackingChannelSequence = 0;
+
 export async function fetchActiveTrackingSessions(
   client: SupabaseClient<Database>
 ): Promise<TrackingSession[]> {
+  // A session is only live while its booking is actually running. Filtering on
+  // the booking prevents sessions that were never closed (app killed, booking
+  // completed on another device) from surfacing as permanent "live" entries.
   const { data, error } = await client
     .from('tracking_sessions')
-    .select('*')
+    .select('*, booking:bookings!inner(status)')
     .is('ended_at', null)
+    .in('booking.status', ['in_progress'])
     .order('started_at', { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map(({ booking: _booking, ...session }) => session as TrackingSession);
 }
 
 export async function fetchTrackingPoints(
@@ -92,8 +98,12 @@ export function subscribeTracking(
   client: SupabaseClient<Database>,
   onChange: () => void
 ): () => void {
+  // Unique topic per subscriber: `channel(topic)` returns an existing channel,
+  // so two mounted screens would share bindings and one unmount would tear the
+  // other subscription down.
+  trackingChannelSequence += 1;
   const channel = client
-    .channel('tracking-sessions-live')
+    .channel(`tracking-sessions-live:${trackingChannelSequence}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tracking_sessions' }, onChange)
     .on(
       'postgres_changes',
