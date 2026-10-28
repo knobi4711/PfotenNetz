@@ -141,6 +141,25 @@ Set-Location apps/mobile
 pnpm exec expo prebuild --platform android
 ```
 
+Der Prebuild setzt `build.gradle` auf Expos Vorlage zurück, die das Release mit dem
+Debug-Key signiert – Google Play lehnt ein so signiertes AAB ab. Deshalb hängt der
+Config-Plugin `apps/mobile/plugins/with-release-signing.js` den Release-Signing-Block
+wieder an und liest die Zugangsdaten aus `~/.gradle/gradle.properties`:
+
+```properties
+PFOTENNETZ_UPLOAD_STORE_FILE=C:/Users/<user>/.android/pfotennetz-eas-upload.jks
+PFOTENNETZ_UPLOAD_STORE_PASSWORD=…
+PFOTENNETZ_UPLOAD_KEY_ALIAS=…
+PFOTENNETZ_UPLOAD_KEY_PASSWORD=…
+```
+
+Fehlt eine dieser Zeilen, bricht der Build mit einer `GradleException` ab. Nach dem Build
+lässt sich die Signatur prüfen (erwartet: `SHA1: 47:48:9A:…`):
+
+```powershell
+& "$env:JAVA_HOME\bin\keytool.exe" -printcert -jarfile apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
+```
+
 Die lokale APK liegt anschließend unter
 `apps/mobile/android/app/build/outputs/apk/release/app-release.apk` und kann mit
 `adb install -r` auf einem Testgerät installiert werden. `build:android:dev` und
