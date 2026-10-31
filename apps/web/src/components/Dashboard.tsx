@@ -109,7 +109,8 @@ function PawWeatherCard() {
 }
 
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.pfotennetz&pli=1';
-const MOBILE_BUILD_VERSION = '0.1.7';
+// Keep in sync with the "version" field in apps/mobile/app.json.
+const MOBILE_BUILD_VERSION = '0.2.2';
 
 function PlayStoreCard() {
   const [qrCode, setQrCode] = useState<string | null>(null);
