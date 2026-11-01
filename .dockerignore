@@ -1,0 +1,31 @@
+# Keep the build context small and secrets out of the image.
+# Used by .oss-scanner/Dockerfile (the OSS Scanner build).
+# Do not exclude .git: the scanner keeps the history for its analysis.
+
+node_modules
+**/node_modules
+.pnpm-store
+
+.next
+.next-dev
+**/.next
+**/.next-dev
+**/dist
+**/build
+.turbo
+**/.turbo
+coverage
+**/coverage
+test-results
+playwright-report
+
+.env
+.env.*
+!.env.example
+
+supabase/.temp
+supabase/.branches
+
+**/*.log
+.DS_Store
+Thumbs.db
