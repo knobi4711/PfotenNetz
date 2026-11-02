@@ -48,6 +48,17 @@ export async function createTrackingSession(
   return data;
 }
 
+export type TrackingPointRow = Database['public']['Tables']['tracking_points']['Insert'];
+
+export async function insertTrackingPointRows(
+  client: SupabaseClient<Database>,
+  rows: TrackingPointRow[]
+): Promise<void> {
+  if (rows.length === 0) return;
+  const { error } = await client.from('tracking_points').insert(rows);
+  if (error) throw error;
+}
+
 export async function insertTrackingPoints(
   client: SupabaseClient<Database>,
   sessionId: string,
@@ -61,8 +72,8 @@ export async function insertTrackingPoints(
     timestamp: number;
   }>
 ): Promise<void> {
-  if (points.length === 0) return;
-  const { error } = await client.from('tracking_points').insert(
+  await insertTrackingPointRows(
+    client,
     points.map((point) => ({
       session_id: sessionId,
       latitude: point.latitude,
@@ -75,7 +86,6 @@ export async function insertTrackingPoints(
       is_batched: points.length > 1,
     }))
   );
-  if (error) throw error;
 }
 
 export async function finishTrackingSession(
@@ -83,12 +93,28 @@ export async function finishTrackingSession(
   sessionId: string,
   totals: { distanceMeters: number; durationSeconds: number }
 ): Promise<void> {
+  // The server trigger (042_tracking_server_telemetry) keeps the totals up to
+  // date while points arrive. A client that was restarted mid-session only
+  // knows the part it recorded itself, so never lower the server values.
+  const { data: current, error: readError } = await client
+    .from('tracking_sessions')
+    .select('total_distance_meters, total_duration_seconds')
+    .eq('id', sessionId)
+    .maybeSingle();
+  if (readError) throw readError;
+
   const { error } = await client
     .from('tracking_sessions')
     .update({
       ended_at: new Date().toISOString(),
-      total_distance_meters: Math.max(0, Math.round(totals.distanceMeters)),
-      total_duration_seconds: Math.max(0, Math.round(totals.durationSeconds)),
+      total_distance_meters: Math.max(
+        0,
+        Math.round(Math.max(totals.distanceMeters, current?.total_distance_meters ?? 0))
+      ),
+      total_duration_seconds: Math.max(
+        0,
+        Math.round(Math.max(totals.durationSeconds, current?.total_duration_seconds ?? 0))
+      ),
     })
     .eq('id', sessionId);
   if (error) throw error;

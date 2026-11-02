@@ -11,15 +11,19 @@ import {
   subscribeTracking,
 } from './queries';
 
-export function useActiveTrackingSessions() {
+export function useActiveTrackingSessions(options?: { refetchInterval?: number }) {
   const client = getSupabaseClient();
   return useQuery({
     queryKey: trackingKeys.active,
     queryFn: () => fetchActiveTrackingSessions(client),
+    ...(options?.refetchInterval === undefined ? {} : { refetchInterval: options.refetchInterval }),
   });
 }
 
-export function useTrackingPoints(sessionId: string | null) {
+export function useTrackingPoints(
+  sessionId: string | null,
+  options?: { refetchInterval?: number }
+) {
   const client = getSupabaseClient();
   return useQuery({
     queryKey:
@@ -28,6 +32,7 @@ export function useTrackingPoints(sessionId: string | null) {
         : trackingKeys.points(sessionId),
     queryFn: () => fetchTrackingPoints(client, sessionId as string),
     enabled: sessionId !== null,
+    ...(options?.refetchInterval === undefined ? {} : { refetchInterval: options.refetchInterval }),
   });
 }
 

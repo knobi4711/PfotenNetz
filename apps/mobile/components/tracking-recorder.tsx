@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
-import { useCreateTrackingSession, useFinishTrackingSession } from '@pfotennetz/supabase';
+import {
+  fetchActiveTrackingSessions,
+  getSupabaseClient,
+  insertTrackingPointRows,
+  useCreateTrackingSession,
+  useFinishTrackingSession,
+} from '@pfotennetz/supabase';
 import { ActionButton, Card, EmptyText, ErrorBox, SectionTitle } from './ui';
 import { distanceMeters } from '../lib/tracking';
 import { startTrackingGeofence, stopTrackingGeofence } from '../lib/geofence';
 import { startBackgroundTracking, stopBackgroundTracking } from '../lib/tracking-background';
+import { appendTrackingQueue, type QueuedTrackingPoint } from '../lib/tracking-queue';
+import { flushTrackingQueue, queuedTrackingPoint } from '../lib/tracking-upload';
 
 export function TrackingRecorder({
   bookingId,
@@ -20,12 +28,55 @@ export function TrackingRecorder({
   const distance = useRef(0);
   const startedAt = useRef<number | null>(null);
   const backgroundEnabled = useRef(false);
+  const pending = useRef<QueuedTrackingPoint[]>([]);
+  const uploadInFlight = useRef<Promise<void> | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [displayedDistanceMeters, setDisplayedDistanceMeters] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [operationPending, setOperationPending] = useState(false);
 
-  useEffect(() => () => subscription.current?.remove(), []);
+  useEffect(
+    () => () => {
+      subscription.current?.remove();
+      // Keep not yet uploaded points for the next start instead of dropping them.
+      if (pending.current.length > 0) {
+        const batch = pending.current;
+        pending.current = [];
+        void appendTrackingQueue(batch);
+      }
+    },
+    []
+  );
+
+  /**
+   * The background task normally uploads every point. Without the "always"
+   * location permission it never runs, so the foreground watcher has to send
+   * the positions itself – otherwise the provider would never see the helper.
+   */
+  const uploadPending = async (): Promise<void> => {
+    if (uploadInFlight.current !== null) {
+      await uploadInFlight.current;
+      if (pending.current.length > 0) await uploadPending();
+      return;
+    }
+    if (pending.current.length === 0) return;
+
+    const batch = pending.current;
+    pending.current = [];
+    const upload = (async () => {
+      try {
+        await insertTrackingPointRows(getSupabaseClient(), batch);
+      } catch {
+        await appendTrackingQueue(batch);
+      }
+    })();
+    uploadInFlight.current = upload;
+    try {
+      await upload;
+    } finally {
+      uploadInFlight.current = null;
+    }
+  };
 
   const start = async () => {
     if (operationPending || sessionId !== null) return;
@@ -37,9 +88,22 @@ export function TrackingRecorder({
         setError('Standortfreigabe wird für das Live-Tracking benötigt.');
         return;
       }
-      const session = await create.mutateAsync(bookingId);
+
+      // Reuse a session that is still open (app restart, screen reopened):
+      // creating a second one would leave the first one running forever.
+      const client = getSupabaseClient();
+      const openSessions = await fetchActiveTrackingSessions(client);
+      const open = openSessions.find((item) => item.booking_id === bookingId);
+      const session = open ?? (await create.mutateAsync(bookingId));
       setSessionId(session.id);
       startedAt.current = Date.now();
+      if (open !== undefined) {
+        // Keep the distance the server already recorded for this session.
+        distance.current = open.total_distance_meters;
+        setDisplayedDistanceMeters(open.total_distance_meters);
+      }
+      await flushTrackingQueue(session.id);
+
       const initial = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
@@ -50,7 +114,7 @@ export function TrackingRecorder({
       } catch {
         backgroundEnabled.current = false;
         setError(
-          'Hintergrund-Tracking konnte nicht aktiviert werden; Vordergrund-Tracking läuft weiter.'
+          'Hintergrund-Tracking konnte nicht aktiviert werden; die Position wird nur bei geöffneter App übertragen.'
         );
       }
       try {
@@ -68,7 +132,9 @@ export function TrackingRecorder({
             setDisplayedDistanceMeters(distance.current);
           }
           previous.current = location.coords;
-          if (!backgroundEnabled.current) return;
+          if (backgroundEnabled.current) return;
+          pending.current.push(queuedTrackingPoint(location, session.id));
+          void uploadPending();
         }
       );
     } catch (reason: unknown) {
@@ -86,6 +152,8 @@ export function TrackingRecorder({
     subscription.current?.remove();
     subscription.current = null;
     try {
+      await uploadPending();
+      await flushTrackingQueue(sessionId);
       await stopBackgroundTracking().catch(() => undefined);
       await stopTrackingGeofence().catch(() => undefined);
       await finish.mutateAsync({

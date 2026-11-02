@@ -49,13 +49,16 @@ export default function LiveTrackingScreen() {
   const params = useLocalSearchParams<{ bookingId: string }>();
   const bookingId = params.bookingId;
   const bookingQuery = useBooking(bookingId);
-  const sessions = useActiveTrackingSessions();
+  // Realtime normally pushes every new position, but the socket can stay
+  // silent (backgrounded app, RLS edge cases). Poll as a fallback so the
+  // provider always sees the helper's distance and position.
+  const sessions = useActiveTrackingSessions({ refetchInterval: 10_000 });
   const userQuery = useCurrentUser();
   useTrackingSubscription();
 
   const booking = bookingQuery.data ?? null;
   const session = sessions.data?.find((item) => item.booking_id === bookingId) ?? null;
-  const points = useTrackingPoints(session?.id ?? null);
+  const points = useTrackingPoints(session?.id ?? null, { refetchInterval: 10_000 });
   const [refreshing, setRefreshing] = useState(false);
 
   const isHelper = booking !== null && booking.helper_id === userQuery.data?.id;
