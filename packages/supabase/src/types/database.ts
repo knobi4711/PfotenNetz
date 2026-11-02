@@ -2646,6 +2646,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      registered_user_count: { Args: never; Returns: number };
       respond_contact_request: {
         Args: { p_request_id: string; p_status: string };
         Returns: {

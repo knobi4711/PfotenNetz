@@ -9,6 +9,7 @@ import {
   useOwnContactRequests,
   useRespondContactRequest,
   useCancelContactRequest,
+  useRegisteredUserCount,
   useTimebankAccount,
   useUnreadCount,
 } from '@pfotennetz/supabase';
@@ -189,6 +190,7 @@ export function Dashboard() {
   const bookings = useBookings();
   const account = useTimebankAccount();
   const unread = useUnreadCount();
+  const registeredUsers = useRegisteredUserCount();
   const contactRequests = useOwnContactRequests();
   const respondContactRequest = useRespondContactRequest();
   const cancelContactRequest = useCancelContactRequest();
@@ -492,6 +494,16 @@ export function Dashboard() {
                     Verifizierte Helfer:innen in deiner Nähe.
                   </p>
                 </div>
+              </div>
+              <div className="mb-4 rounded-xl bg-surface-container-low p-4">
+                <p className="text-3xl font-extrabold text-primary">
+                  {registeredUsers.data === undefined
+                    ? '–'
+                    : registeredUsers.data.toLocaleString('de-DE')}
+                </p>
+                <p className="text-sm text-on-surface-variant">
+                  registrierte Nachbar:innen im PfotenNetz
+                </p>
               </div>
               <button
                 type="button"

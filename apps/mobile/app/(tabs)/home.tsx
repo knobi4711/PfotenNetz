@@ -9,6 +9,7 @@ import {
   useBookings,
   groupBookingsByRequest,
   useOwnProfile,
+  useRegisteredUserCount,
   useTimebankAccount,
   useUnreadCount,
   type BookingWithRelations,
@@ -215,6 +216,7 @@ export default function HomeScreen() {
   const accountQuery = useTimebankAccount();
   const profileQuery = useOwnProfile();
   const unreadQuery = useUnreadCount();
+  const statsQuery = useRegisteredUserCount();
   const [refreshing, setRefreshing] = useState(false);
 
   const bookings = bookingsQuery.data ?? [];
@@ -234,6 +236,7 @@ export default function HomeScreen() {
         accountQuery.refetch(),
         profileQuery.refetch(),
         unreadQuery.refetch(),
+        statsQuery.refetch(),
       ]);
     } finally {
       setRefreshing(false);
@@ -273,6 +276,22 @@ export default function HomeScreen() {
             }}
           />
         ) : null}
+
+        <Card>
+          <View style={styles.statsRow}>
+            <Text style={[styles.statsNumber, { color: c.primary }]}>
+              {statsQuery.data === undefined ? '–' : statsQuery.data.toLocaleString('de-DE')}
+            </Text>
+            <View style={styles.statsText}>
+              <Text style={[styles.statsTitle, { color: c.onSurface }]}>
+                Nachbar:innen im PfotenNetz
+              </Text>
+              <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+                Registrierte Konten in deiner Nachbarschaft.
+              </Text>
+            </View>
+          </View>
+        </Card>
 
         <View style={styles.sectionHeading}>
           <SectionTitle>Aktuelle Betreuungen</SectionTitle>
@@ -494,6 +513,10 @@ const styles = StyleSheet.create({
   bookingNumber: { fontFamily: appFonts.bold, fontSize: 15, lineHeight: 20 },
   rowSub: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18 },
   petMeta: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  statsNumber: { fontFamily: appFonts.extrabold, fontSize: 32, lineHeight: 38 },
+  statsText: { flex: 1 },
+  statsTitle: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
