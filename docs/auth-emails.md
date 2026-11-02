@@ -107,6 +107,11 @@ v=spf1 include:spf.brevo.com include:_spf.mx.cloudflare.net ~all
 
 Ohne funktionierende Empfangsadresse laufen DMARC-Reports ins Leere.
 
+**Nach dem Aktivieren 5–10 Minuten warten**, bevor die erste Mail an die neue
+Adresse geht: Cloudflare nimmt in dieser Zeit noch mit `5xx` ab, Brevo wertet das
+als Hard Bounce und blockiert die Adresse (siehe Fehlersuche). Der Eintrag muss
+dann unter _Transactional → Blockierte Kontakte_ gelöscht werden.
+
 ## 3. SMTP-Zugangsdaten in `.env`
 
 Brevo → **Settings → SMTP & API → SMTP**: dort stehen Login und Passwort
