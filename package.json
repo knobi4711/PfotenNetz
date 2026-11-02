@@ -11,6 +11,7 @@
     "test": "turbo run test",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,css,md,yml,yaml}\"",
+    "auth:mail": "node scripts/configure-auth-mail.mjs",
     "prepare": "husky install || true"
   },
   "devDependencies": {

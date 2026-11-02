@@ -149,6 +149,69 @@ Der `SUPABASE_ACCESS_TOKEN` wird **niemals** im Client-Code verwendet.
 
 ---
 
+## Auth-E-Mails (Registrierung, Passwort-Reset)
+
+Im Hosted-Projekt verschickt Supabase Bestätigungs- und Reset-Mails standardmäßig
+über den **eingebauten Mailer**. Der ist stark gedrosselt (aktuell
+`rate_limit_email_sent = 2`, also zwei Mails pro Stunde und Projekt) und
+antwortet bei Überschreitung mit HTTP 429 und `email rate limit exceeded`.
+Die App fängt das ab und zeigt eine deutsche Meldung mit Wartehinweis –
+beheben lässt sich die Ursache nur im Projekt.
+
+### Geschlossener Test: Bestätigung ist aus
+
+Das Hosted-Projekt `njkyujhbcolvtcnlahsk` läuft derzeit mit
+**Auto-Confirm** (`mailer_autoconfirm = true`). Registrierungen erhalten sofort
+eine Sitzung, es wird keine Bestätigungs-Mail verschickt, und das E-Mail-Limit
+greift bei der Registrierung nicht. Passwort-Reset-Mails sind davon **nicht**
+betroffen – die laufen weiter über den gedrosselten Mailer.
+
+Setzen bzw. wieder abschalten (Management API, nur dieses eine Feld):
+
+```powershell
+# Token aus .env laden (niemals im Klartext ausgeben)
+$token = (Get-Content .env | Select-String '^SUPABASE_ACCESS_TOKEN=').Line -replace '^SUPABASE_ACCESS_TOKEN=', ''
+$ref   = (Get-Content supabase\.temp\project-ref).Trim()
+
+Invoke-RestMethod -Method Patch `
+  -Uri "https://api.supabase.com/v1/projects/$ref/config/auth" `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType 'application/json' `
+  -Body (@{ mailer_autoconfirm = $true } | ConvertTo-Json)   # $false = Bestätigung wieder an
+
+# Kontrolle
+Invoke-RestMethod -Method Get `
+  -Uri "https://api.supabase.com/v1/projects/$ref/config/auth" `
+  -Headers @{ Authorization = "Bearer $token" } |
+  Select-Object mailer_autoconfirm, rate_limit_email_sent
+```
+
+Dashboard-Äquivalent: **Authentication → Sign In / Providers → Email →
+„Confirm email“** aus- bzw. einschalten.
+
+**Vor der Produktionsfreigabe:** `mailer_autoconfirm` wieder auf `false` setzen,
+Bestätigungsmails aktivieren und vorher einen eigenen SMTP-Provider einrichten –
+sonst laufen neue Nutzer:innen sofort in dasselbe Limit.
+
+**SMTP-Einrichtung:** vollständige Anleitung (Brevo, Cloudflare-DNS, deutsches
+Template-Setup, Test) in [`docs/auth-emails.md`](./auth-emails.md). Kurzfassung:
+
+```powershell
+# SMTP-Zugangsdaten in .env eintragen (siehe .env.example), dann:
+pnpm auth:mail            # Dry-Run
+pnpm auth:mail --apply    # SMTP + Rate Limit + deutsche Texte
+```
+
+Eigene E-Mail-Texte erlaubt Supabase im Free-Tier erst, nachdem ein eigener
+SMTP-Provider hinterlegt ist.
+
+**Hinweis:** `supabase/config.toml` gilt nur für die lokale Entwicklung
+(`[auth.email] max_frequency = "1s"`, `enable_confirmations = false`). Die
+Hosted-Einstellungen liegen im Dashboard; `supabase config push` nicht
+verwenden, weil es auch `site_url = "http://localhost:3000"` überschreiben würde.
+
+---
+
 ## Remote-Migrationen
 
 Der read-only Check vom 23. September 2026 zeigt, dass die lokalen Migrationen `000` bis `026`
