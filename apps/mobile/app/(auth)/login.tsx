@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useSignIn } from '@pfotennetz/supabase';
 import { ActionButton, Card, ErrorBox, appFonts, usePalette } from '../../components/ui';
+import { friendlyAuthError } from '../../lib/auth-errors';
 import {
   friendlyPasskeyError,
   isPasskeySupported,
@@ -18,13 +19,6 @@ import {
   storeCredentials,
 } from '../../lib/fingerprint-login';
 import logo from '../../assets/pfotennetz-logo.png';
-
-function friendlyAuthError(message: string): string {
-  if (message.toLowerCase().includes('invalid login credentials')) {
-    return 'E-Mail oder Passwort ist falsch. Bitte versuche es erneut.';
-  }
-  return `Anmeldung fehlgeschlagen: ${message}`;
-}
 
 export default function LoginScreen() {
   const c = usePalette();
@@ -213,7 +207,7 @@ export default function LoginScreen() {
           {formHint !== null ? (
             <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
           ) : null}
-          {signIn.isError ? <ErrorBox message={friendlyAuthError(signIn.error.message)} /> : null}
+          {signIn.isError ? <ErrorBox message={friendlyAuthError(signIn.error, 'signin')} /> : null}
 
           <ActionButton title="Anmelden" pending={signIn.isPending} onPress={handleSignIn} />
           <Pressable

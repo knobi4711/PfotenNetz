@@ -3,6 +3,8 @@ import { ScrollView, Text, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { resetPassword } from '@pfotennetz/supabase';
 import { ActionButton, Card, ErrorBox, appFonts, usePalette } from '../../components/ui';
+import { friendlyAuthError } from '../../lib/auth-errors';
+import { webBaseUrl } from '../../lib/web-url';
 
 export default function ForgotPasswordScreen() {
   const c = usePalette();
@@ -17,19 +19,13 @@ export default function ForgotPasswordScreen() {
       setError('Bitte gib eine gültige E-Mail-Adresse ein.');
       return;
     }
-    const webUrl = process.env.EXPO_PUBLIC_WEB_URL?.replace(/\/$/, '');
-    if (!webUrl) {
-      setError('Die Web-URL für den Passwort-Reset ist nicht konfiguriert.');
-      return;
-    }
+    const webUrl = webBaseUrl();
     setPending(true);
     try {
       await resetPassword(email.trim(), `${webUrl}/reset-password`);
       setSent(true);
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : 'Reset-E-Mail konnte nicht gesendet werden.'
-      );
+      setError(friendlyAuthError(cause, 'reset'));
     } finally {
       setPending(false);
     }

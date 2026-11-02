@@ -5,17 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSignUp } from '@pfotennetz/supabase';
 import { ActionButton, Card, ErrorBox, appFonts, usePalette } from '../../components/ui';
-
-function friendlySignUpError(message: string): string {
-  const normalized = message.toLowerCase();
-  if (normalized.includes('already registered') || normalized.includes('already been registered')) {
-    return 'Für diese E-Mail-Adresse besteht bereits ein Konto.';
-  }
-  if (normalized.includes('password')) {
-    return 'Das Passwort erfüllt die Sicherheitsanforderungen noch nicht.';
-  }
-  return `Registrierung fehlgeschlagen: ${message}`;
-}
+import { friendlyAuthError } from '../../lib/auth-errors';
 
 export default function RegisterScreen() {
   const c = usePalette();
@@ -164,7 +154,7 @@ export default function RegisterScreen() {
                 <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
               ) : null}
               {signUp.isError ? (
-                <ErrorBox message={friendlySignUpError(signUp.error.message)} />
+                <ErrorBox message={friendlyAuthError(signUp.error, 'signup')} />
               ) : null}
               <ActionButton title="Konto erstellen" pending={pending} onPress={handleSignUp} />
             </>

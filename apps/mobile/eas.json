@@ -15,6 +15,9 @@
       "distribution": "internal",
       "environment": "preview",
       "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_WEB_URL": "https://pfotennetz.app"
+      },
       "android": {
         "buildType": "app-bundle"
       }
@@ -22,6 +25,9 @@
     "production": {
       "autoIncrement": true,
       "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_WEB_URL": "https://pfotennetz.app"
+      },
       "android": {
         "buildType": "app-bundle"
       }

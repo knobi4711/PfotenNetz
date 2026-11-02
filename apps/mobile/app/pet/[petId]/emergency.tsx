@@ -28,6 +28,7 @@ import {
   type EmergencyCardSnapshot,
 } from '../../../lib/emergency-cache';
 import { phoneUrl } from '../../../lib/phone';
+import { webBaseUrl } from '../../../lib/web-url';
 
 function calculateAge(birthDate: string | null): string {
   if (!birthDate) return 'Nicht angegeben';
@@ -115,10 +116,7 @@ export default function EmergencyCardScreen() {
         .map((byte) => byte.toString(16).padStart(2, '0'))
         .join('');
       await createEmergencyCardLink(getSupabaseClient(), pet.id, token);
-      const webUrl = process.env.EXPO_PUBLIC_WEB_URL?.replace(/\/$/, '');
-      if (!webUrl) {
-        throw new Error('Die öffentliche Web-URL ist nicht konfiguriert.');
-      }
+      const webUrl = webBaseUrl();
       const publicUrl = `${webUrl}/emergency/${token}`;
       await Share.share({
         title: `Notfallkarte ${pet.name}`,
