@@ -4,13 +4,18 @@ Ziel: Bestätigungs- und Passwort-Reset-Mails von PfotenNetz gehen über einen
 eigenen SMTP-Provider raus, mit deutscher Anrede und ohne das harte Limit des
 Supabase-Standardmailers (2 Mails/Stunde).
 
-**Aktueller Stand**
+**Aktueller Stand** (Stand 2026-11-02)
 
 - Supabase-Projekt: `njkyujhbcolvtcnlahsk`
-- `mailer_autoconfirm = true` (E-Mail-Bestätigung ist für den geschlossenen Test aus)
-- SMTP: noch nicht gesetzt → Mails laufen über den Supabase-Standardmailer
-- Betreffzeilen/Templates: noch englisch. Supabase erlaubt eigene Texte im
-  Free-Tier **erst nach** Einrichtung eines eigenen SMTP-Providers.
+- SMTP: Brevo (`smtp-relay.brevo.com:587`), Absender `noreply@pfotennetz.app`,
+  `rate_limit_email_sent = 60/h`, `smtp_max_frequency = 10 s`
+- `mailer_autoconfirm = false` – Bestätigungs- und Reset-Mails gehen raus,
+  neue Registrierungen müssen die E-Mail bestätigen
+- Betreffzeilen/Templates: deutsch (über `pnpm auth:mail --apply` gesetzt)
+- Empfang: Cloudflare Email Routing, MX `route1-3.mx.cloudflare.net`,
+  `hallo@` und `dmarc@pfotennetz.app` werden an das private Postfach geleitet
+- SPF: ein Record, `v=spf1 include:spf.brevo.com include:_spf.mx.cloudflare.net ~all`
+- DMARC: `p=none`, Reports an Brevo und `dmarc@pfotennetz.app`
 
 ---
 
@@ -84,18 +89,23 @@ einen** DMARC-Record (`_dmarc`, `v=DMARC1 …`) geben. Mehrere TXT-Records mit
 Danach in Brevo **„Authenticate this email domain“** klicken. Bei Erfolg stehen
 Brevo-Code, DKIM und DMARC auf „Value matched“.
 
-### MX-Record aufräumen
+### MX-Record und Empfang (Cloudflare Email Routing)
 
-Aktuell zeigt `pfotennetz.app MX 10 pfotennetz.app.` auf sich selbst – es gibt
-aber keinen Mailserver, eingehende Mail würde also bounced.
+Eingerichtet: Cloudflare → **Email → Email Routing** → _Get started_. Cloudflare
+setzt die MX-Records (`route1/2/3.mx.cloudflare.net`) selbst.
 
-- **Wenn du Antworten/Mails empfangen willst** (z. B. `hallo@pfotennetz.app` für
-  den Play-Store-Support): Cloudflare → **Email → Email Routing** aktivieren und
-  eine Zieladresse hinterlegen. Cloudflare setzt die MX-Records selbst.
-- **Wenn nicht:** Null MX setzen (`MX 0 .`), das signalisiert „nimmt keine Mail
-  an“ und verhindert Bounces.
+- `hallo@pfotennetz.app` → privates Postfach (Support-Adresse fürs Play-Listing)
+- `dmarc@pfotennetz.app` → privates Postfach (DMARC-Reports)
 
-Ohne funktionierende Empfangsadresse laufen auch DMARC-Reports ins Leere.
+**Achtung beim Aktivieren:** Cloudflare überschreibt den bestehenden SPF-Record
+mit `v=spf1 include:_spf.mx.cloudflare.net ~all` – der Brevo-Include geht dabei
+verloren. Danach beide zusammenführen:
+
+```
+v=spf1 include:spf.brevo.com include:_spf.mx.cloudflare.net ~all
+```
+
+Ohne funktionierende Empfangsadresse laufen DMARC-Reports ins Leere.
 
 ## 3. SMTP-Zugangsdaten in `.env`
 
@@ -160,13 +170,13 @@ was noch fehlt.
 
 ## 6. Fehlersuche
 
-| Symptom                                             | Ursache                                                                                       | Lösung                                                       |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Supabase: `500 Error sending recovery email`        | SMTP lehnt die Verbindung ab – Details stehen in Brevo unter **Transactional → Logs**         | Credentials/Sender prüfen                                    |
-| Brevo antwortet `525 5.7.1 Unauthorized IP address` | **IP-Sperre** für SMTP-Keys aktiv (`Settings → Security → Authorized IPs`) | Bei „SMTP keys“ auf **„Deactivate for SMTP keys“** – Supabase hat keine festen Ausgangs-IPs |
-| Brevo: `535 Authentication failed`                  | API-Key statt SMTP-Key, oder Key gelöscht                                                     | neuen SMTP-Key erzeugen                                      |
-| Brevo: `553 sender not allowed`                     | Absenderadresse nicht von der authentifizierten Domain                                        | `AUTH_MAIL_FROM` auf `@pfotennetz.app` ändern                |
-| Mails landen im Spam                                | DMARC/SPF/DKIM noch nicht überall propagiert oder Empfänger filtert streng                    | Header prüfen, DMARC-Reports abwarten                        |
+| Symptom                                             | Ursache                                                                               | Lösung                                                                                      |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Supabase: `500 Error sending recovery email`        | SMTP lehnt die Verbindung ab – Details stehen in Brevo unter **Transactional → Logs** | Credentials/Sender prüfen                                                                   |
+| Brevo antwortet `525 5.7.1 Unauthorized IP address` | **IP-Sperre** für SMTP-Keys aktiv (`Settings → Security → Authorized IPs`)            | Bei „SMTP keys“ auf **„Deactivate for SMTP keys“** – Supabase hat keine festen Ausgangs-IPs |
+| Brevo: `535 Authentication failed`                  | API-Key statt SMTP-Key, oder Key gelöscht                                             | neuen SMTP-Key erzeugen                                                                     |
+| Brevo: `553 sender not allowed`                     | Absenderadresse nicht von der authentifizierten Domain                                | `AUTH_MAIL_FROM` auf `@pfotennetz.app` ändern                                               |
+| Mails landen im Spam                                | DMARC/SPF/DKIM noch nicht überall propagiert oder Empfänger filtert streng            | Header prüfen, DMARC-Reports abwarten                                                       |
 
 Schneller Test der Zugangsdaten ohne Supabase (STARTTLS + AUTH LOGIN, sendet
 keine Mail): siehe `smtp-check`-Skript im Chatverlauf – bei Erfolg antwortet
