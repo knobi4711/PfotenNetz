@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu: Verfügbarkeit als Wochenplan direkt bearbeiten, Adresse einmalig über den Vermittlungsstandort (GPS oder Ortssuche) und deutsche Zeitbank-Texte.';
+  'Neu: Zeitfenster im Wochenplan lassen sich per langem Druck direkt löschen oder pausieren. Der Bearbeiten-Dialog öffnet sich als Sheet und springt nicht mehr ans Seitenende.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';
