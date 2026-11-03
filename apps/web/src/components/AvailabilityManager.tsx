@@ -24,7 +24,13 @@ import {
   shiftAvailabilityRange,
   snapAvailabilityMinutes,
 } from '@pfotennetz/shared';
-import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 
 const SPECIES: Record<string, string> = {
   dog: 'Hund',
@@ -114,12 +120,14 @@ function WeeklyEditor({
   onCreate,
   onUpdateRange,
   onSelect,
+  onOpenActions,
 }: {
   slots: Availability[];
   selectedId: string | null;
   onCreate: (dayOfWeek: number, startMinutes: number, endMinutes: number) => void;
   onUpdateRange: (id: string, startMinutes: number, endMinutes: number) => void;
   onSelect: (slot: Availability) => void;
+  onOpenActions: (slot: Availability, point: { x: number; y: number }) => void;
 }) {
   const week = buildAvailabilityWeek(slots);
   const span = Math.max(1, week.endMinutes - week.startMinutes);
@@ -260,6 +268,20 @@ function WeeklyEditor({
     onUpdateRange(slot.id, current.originStart, end);
   };
 
+  const handleContextMenu = (
+    event: ReactMouseEvent<HTMLDivElement>,
+    day: (typeof week.days)[number]
+  ) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const x = Math.min(rect.width, Math.max(0, event.clientX - rect.left));
+    const y = event.clientY - rect.top;
+    const hit = findAvailabilityBlockAt(day.blocks, week, { x, y, width: rect.width });
+    if (hit === null) return;
+    event.preventDefault();
+    onOpenActions(hit.slot, { x: event.clientX, y: event.clientY });
+  };
+
   return (
     <div className="mt-5 rounded-2xl border border-outline-variant bg-surface-container-low p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -272,7 +294,8 @@ function WeeklyEditor({
       </div>
       <p className="mt-1 text-xs text-on-surface-variant">
         Tippe oder ziehe im Raster, um ein Zeitfenster anzulegen. Blöcke lassen sich verschieben –
-        an der rechten Kante auch verlängern.
+        an der rechten Kante auch verlängern. Rechtsklick auf einen Block öffnet Aktionen wie
+        Löschen und Pausieren.
         {slots.some((slot) => slot.is_active === false) ? ' Graue Zeitfenster sind pausiert.' : ''}
       </p>
 
@@ -295,6 +318,7 @@ function WeeklyEditor({
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={() => setDrag(null)}
+                onContextMenu={(event) => handleContextMenu(event, day)}
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
@@ -433,6 +457,7 @@ export function AvailabilityManager() {
   const [rangeOverrides, setRangeOverrides] = useState<
     Record<string, { start: string; end: string }>
   >({});
+  const [menu, setMenu] = useState<{ slotId: string; x: number; y: number } | null>(null);
 
   const slots = useMemo(() => {
     const source = query.data ?? [];
@@ -448,6 +473,7 @@ export function AvailabilityManager() {
   }, [query.data, rangeOverrides]);
 
   const selectedSlot = slots.find((slot) => slot.id === selectedId) ?? null;
+  const menuSlot = slots.find((slot) => slot.id === menu?.slotId) ?? null;
 
   const toggle = <T,>(items: T[], value: T): T[] =>
     items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
@@ -472,6 +498,35 @@ export function AvailabilityManager() {
     setDraft(null);
     setFormError(null);
   };
+
+  const deleteSlot = (slot: Availability) => {
+    setMenu(null);
+    remove.mutate(slot.id, {
+      onSuccess: () => {
+        clearOverride(slot.id);
+        if (slot.id === selectedId) clearSelection();
+      },
+    });
+  };
+
+  const toggleActive = (slot: Availability) => {
+    update.mutate({ id: slot.id, input: { isActive: slot.is_active === false } });
+    setMenu(null);
+  };
+
+  const menuPosition =
+    menu === null
+      ? null
+      : {
+          left:
+            typeof window === 'undefined'
+              ? menu.x
+              : Math.max(8, Math.min(menu.x, window.innerWidth - 260)),
+          top:
+            typeof window === 'undefined'
+              ? menu.y
+              : Math.max(8, Math.min(menu.y, window.innerHeight - 260)),
+        };
 
   const rememberSettings = (value: DraftSettings) => {
     lastSettings.current = {
@@ -599,6 +654,7 @@ export function AvailabilityManager() {
             onCreate={createSlot}
             onUpdateRange={updateRange}
             onSelect={selectSlot}
+            onOpenActions={(slot, point) => setMenu({ slotId: slot.id, x: point.x, y: point.y })}
           />
 
           {formError !== null ? <p className="mt-3 text-sm text-error">{formError}</p> : null}
@@ -632,6 +688,10 @@ export function AvailabilityManager() {
                         : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
                     } ${paused ? 'opacity-70' : ''}`}
                     onClick={() => selectSlot(slot)}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setMenu({ slotId: slot.id, x: event.clientX, y: event.clientY });
+                    }}
                   >
                     {availabilityWeekdayLabel(slot.day_of_week, 'short')}{' '}
                     {formatAvailabilityRange(slot.start_time, slot.end_time)}
@@ -659,6 +719,25 @@ export function AvailabilityManager() {
                 </div>
                 <button type="button" className={smallButton} onClick={clearSelection}>
                   Schließen
+                </button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={smallButton}
+                  disabled={update.isPending}
+                  onClick={() => toggleActive(selectedSlot)}
+                >
+                  {selectedSlot.is_active === false ? 'Aktivieren' : 'Pausieren'}
+                </button>
+                <button
+                  type="button"
+                  className={smallDangerButton}
+                  disabled={remove.isPending}
+                  onClick={() => deleteSlot(selectedSlot)}
+                >
+                  Löschen
                 </button>
               </div>
 
@@ -800,43 +879,71 @@ export function AvailabilityManager() {
                 >
                   {update.isPending ? 'Wird gespeichert …' : 'Änderungen speichern'}
                 </button>
-                <button
-                  type="button"
-                  className={smallButton}
-                  disabled={update.isPending}
-                  onClick={() =>
-                    update.mutate({
-                      id: selectedSlot.id,
-                      input: { isActive: selectedSlot.is_active === false },
-                    })
-                  }
-                >
-                  {selectedSlot.is_active === false ? 'Aktivieren' : 'Pausieren'}
-                </button>
-                <button
-                  type="button"
-                  className={smallDangerButton}
-                  disabled={remove.isPending}
-                  onClick={() => {
-                    remove.mutate(selectedSlot.id, {
-                      onSuccess: () => {
-                        clearOverride(selectedSlot.id);
-                        clearSelection();
-                      },
-                    });
-                  }}
-                >
-                  Löschen
-                </button>
               </div>
             </div>
           ) : (
             <p className="mt-4 text-xs text-on-surface-variant">
               Tippe auf ein Zeitfenster, um Tag, Uhrzeit, Radius und Betreuungsarten anzupassen.
+              Rechtsklick öffnet Aktionen zum Löschen oder Pausieren.
             </p>
           )}
         </>
       )}
+
+      {menuSlot !== null && menuPosition !== null ? (
+        <div
+          className="fixed inset-0 z-50"
+          onClick={() => setMenu(null)}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            setMenu(null);
+          }}
+        >
+          <div
+            role="menu"
+            className="absolute w-60 rounded-2xl border border-outline-variant bg-surface-container-low p-2 shadow-xl"
+            style={{ left: menuPosition.left, top: menuPosition.top }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="px-3 py-1 text-xs font-bold text-on-surface">
+              {availabilityWeekdayLabel(menuSlot.day_of_week, 'short')}{' '}
+              {formatAvailabilityRange(menuSlot.start_time, menuSlot.end_time)}
+            </p>
+            <p className="px-3 pb-1 text-[10px] font-semibold text-on-surface-variant">
+              {menuSlot.is_active === false ? 'Pausiert' : 'Aktiv'}
+            </p>
+            <button
+              type="button"
+              role="menuitem"
+              className="mt-1 flex w-full items-center rounded-xl px-3 py-2 text-left text-sm font-bold text-on-surface hover:bg-surface-container"
+              onClick={() => {
+                setMenu(null);
+                selectSlot(menuSlot);
+              }}
+            >
+              Bearbeiten
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm font-bold text-on-surface hover:bg-surface-container disabled:opacity-50"
+              disabled={update.isPending}
+              onClick={() => toggleActive(menuSlot)}
+            >
+              {menuSlot.is_active === false ? 'Aktivieren' : 'Pausieren'}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm font-bold text-error hover:bg-error-container disabled:opacity-50"
+              disabled={remove.isPending}
+              onClick={() => deleteSlot(menuSlot)}
+            >
+              Löschen
+            </button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
