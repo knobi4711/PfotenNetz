@@ -3,6 +3,7 @@ import {
   findAvailabilityOverlap,
   isBookingCoveredByAvailabilities,
   normalizeTime,
+  planAvailabilityDays,
   validateAvailabilityInput,
 } from './queries';
 
@@ -115,6 +116,42 @@ describe('availability overlap', () => {
         endTime: '12:00',
       })
     ).toBeUndefined();
+  });
+});
+
+describe('availability multi-day planning', () => {
+  const slots = [
+    { id: 'mon', day_of_week: 1, start_time: '09:00:00', end_time: '12:00:00' },
+    { id: 'tue-exact', day_of_week: 2, start_time: '09:00:00', end_time: '12:00:00' },
+    { id: 'wed-blocked', day_of_week: 3, start_time: '10:00:00', end_time: '11:00:00' },
+    { id: 'thu-other', day_of_week: 4, start_time: '14:00:00', end_time: '16:00:00' },
+  ];
+  const input = { dayOfWeek: 1, startTime: '09:00', endTime: '12:00' };
+
+  it('reuses exact matches instead of creating duplicates', () => {
+    const plan = planAvailabilityDays(slots, input, [2]);
+    expect(plan.reuse.map((slot) => slot.id)).toEqual(['tue-exact']);
+    expect(plan.createDays).toEqual([]);
+    expect(plan.conflicts).toEqual([]);
+  });
+
+  it('creates missing days and reports overlapping ones', () => {
+    const plan = planAvailabilityDays(slots, input, [3, 5, 6]);
+    expect(plan.createDays).toEqual([5, 6]);
+    expect(plan.conflicts.map((entry) => entry.dayOfWeek)).toEqual([3]);
+  });
+
+  it('ignores the anchor day, duplicates and invalid weekdays', () => {
+    const plan = planAvailabilityDays(slots, input, [1, 1, 2, 9, -1]);
+    expect(plan.reuse.map((slot) => slot.id)).toEqual(['tue-exact']);
+    expect(plan.createDays).toEqual([]);
+    expect(plan.conflicts).toEqual([]);
+  });
+
+  it('copies a range that merely touches another slot', () => {
+    const plan = planAvailabilityDays(slots, { ...input, endTime: '14:00' }, [4]);
+    expect(plan.createDays).toEqual([4]);
+    expect(plan.conflicts).toEqual([]);
   });
 });
 

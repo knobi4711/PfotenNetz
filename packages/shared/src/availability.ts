@@ -324,6 +324,16 @@ export function buildAvailabilityWeek<T extends AvailabilitySlotLike>(
   };
 }
 
+/** Joins weekday labels in Monday-first order; all seven days become "Täglich". */
+export function formatAvailabilityDays(days: readonly number[]): string {
+  const unique = new Set(days);
+  const labels = AVAILABILITY_WEEKDAYS.filter((day) => unique.has(day.value)).map(
+    (day) => day.short
+  );
+  if (labels.length === AVAILABILITY_WEEKDAYS.length) return 'Täglich';
+  return labels.join(', ');
+}
+
 /** Total time per week covered by active slots, e.g. "12,5 Std.". */
 export function formatAvailabilityDuration(minutes: number): string {
   const hours = Math.round((minutes / 60) * 10) / 10;

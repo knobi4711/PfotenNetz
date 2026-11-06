@@ -20,10 +20,10 @@ import {
   useCreateAvailability,
   useDeleteAvailability,
   useOwnAvailabilities,
+  useSaveAvailabilityForDays,
   useUpdateAvailability,
   type Availability,
   type BookingType,
-  type UpsertAvailabilityInput,
 } from '@pfotennetz/supabase';
 import {
   AVAILABILITY_WEEKDAYS,
@@ -31,6 +31,7 @@ import {
   buildAvailabilityWeek,
   findAvailabilityBlockAt,
   formatAvailabilityDuration,
+  formatAvailabilityDays,
   formatAvailabilityRange,
   formatAvailabilityTime,
   isAvailabilityCreateDrag,
@@ -72,6 +73,8 @@ const PET_SPECIES_LABELS: Record<string, string> = {
 
 interface SlotDraft {
   dayOfWeek: number;
+  /** Extra weekdays that receive the same range and settings when saving. */
+  additionalDays: number[];
   start: string;
   end: string;
   radius: string;
@@ -112,6 +115,7 @@ function slotToDraft(slot: Availability): SlotDraft {
   const species = (slot.pet_species as string[] | null) ?? [];
   return {
     dayOfWeek: slot.day_of_week,
+    additionalDays: [],
     start: formatAvailabilityTime(slot.start_time),
     end: formatAvailabilityTime(slot.end_time),
     radius: String(Number(slot.max_distance_km)),
@@ -589,7 +593,8 @@ function WeeklyEditor({
       </View>
       <Text style={[styles.graphHint, { color: c.onSurfaceVariant }]}>
         Ziehe waagerecht über einen Tag, um ein Zeitfenster anzulegen. Tippen wählt ein Fenster aus,
-        langes Drücken öffnet Löschen und Pausieren.
+        langes Drücken öffnet Löschen und Pausieren. Im Editor lässt sich dasselbe Zeitfenster für
+        mehrere Tage speichern.
         {slots.some((slot) => slot.is_active === false) ? ' Graue Zeitfenster sind pausiert.' : ''}
       </Text>
 
@@ -641,6 +646,7 @@ export function AvailabilityManager() {
   const listQuery = useOwnAvailabilities();
   const create = useCreateAvailability();
   const update = useUpdateAvailability();
+  const saveDays = useSaveAvailabilityForDays();
   const remove = useDeleteAvailability();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -663,7 +669,7 @@ export function AvailabilityManager() {
   });
   const selectedSlot = slots.find((slot) => slot.id === selectedId) ?? null;
   const actionSlot = slots.find((slot) => slot.id === actionSlotId) ?? null;
-  const busy = create.isPending || update.isPending || remove.isPending;
+  const busy = create.isPending || update.isPending || saveDays.isPending || remove.isPending;
 
   const openActions = (slot: Availability) => {
     setActionSlotId(slot.id);
@@ -771,7 +777,7 @@ export function AvailabilityManager() {
     );
   };
 
-  const saveDraft = () => {
+  const saveDraft = async () => {
     if (selectedSlot === null || draft === null) return;
     setFormError(null);
     if (draft.start >= draft.end) {
@@ -786,32 +792,31 @@ export function AvailabilityManager() {
       setFormError('Bitte wähle mindestens eine Tierart.');
       return;
     }
-    const conflict = findAvailabilityOverlap(
-      slots,
-      { dayOfWeek: draft.dayOfWeek, startTime: draft.start, endTime: draft.end },
-      selectedSlot.id
-    );
-    if (conflict !== undefined) {
-      setFormError(overlapMessage(conflict));
-      return;
-    }
     rememberSettings(draft);
     setRangeOverrides((current) => ({
       ...current,
       [selectedSlot.id]: { start: draft.start, end: draft.end },
     }));
-    const input: UpsertAvailabilityInput = {
-      dayOfWeek: draft.dayOfWeek,
-      startTime: draft.start,
-      endTime: draft.end,
-      maxDistanceKm: Number(draft.radius.replace(',', '.')),
-      bookingTypes: draft.types,
-      petSpecies: draft.species,
-    };
-    update.mutate(
-      { id: selectedSlot.id, input },
-      { onError: () => clearOverride(selectedSlot.id) }
-    );
+    try {
+      await saveDays.mutateAsync({
+        id: selectedSlot.id,
+        input: {
+          dayOfWeek: draft.dayOfWeek,
+          additionalDays: draft.additionalDays,
+          startTime: draft.start,
+          endTime: draft.end,
+          maxDistanceKm: Number(draft.radius.replace(',', '.')),
+          bookingTypes: draft.types,
+          petSpecies: draft.species,
+        },
+      });
+      setDraft((current) => (current === null ? current : { ...current, additionalDays: [] }));
+    } catch (error) {
+      clearOverride(selectedSlot.id);
+      setFormError(
+        error instanceof Error ? error.message : 'Das Zeitfenster konnte nicht gespeichert werden.'
+      );
+    }
   };
 
   return (
@@ -820,6 +825,7 @@ export function AvailabilityManager() {
         <SectionTitle>Meine Verfügbarkeiten</SectionTitle>
         <Text style={[styles.description, { color: c.onSurfaceVariant }]}>
           Male deine Zeiten direkt in den Wochenplan – so siehst du sofort, wann du gefunden wirst.
+          Im Editor übernimmst du ein Zeitfenster mit einer Speicherung auf weitere Tage.
         </Text>
         {listQuery.isPending ? (
           <LoadingView label="Verfügbarkeiten werden geladen …" />
@@ -935,7 +941,8 @@ export function AvailabilityManager() {
                       Zeitfenster bearbeiten
                     </Text>
                     <Text style={[styles.inspectorSubtitle, { color: c.onSurfaceVariant }]}>
-                      {availabilityWeekdayLabel(draft.dayOfWeek)} · {draft.start}–{draft.end} Uhr ·{' '}
+                      {formatAvailabilityDays([draft.dayOfWeek, ...draft.additionalDays])} ·{' '}
+                      {draft.start}–{draft.end} Uhr ·{' '}
                       {selectedSlot.is_active === false ? 'pausiert' : 'aktiv'}
                     </Text>
                   </View>
@@ -981,7 +988,15 @@ export function AvailabilityManager() {
                         accessibilityState={{ selected }}
                         onPress={() =>
                           setDraft((current) =>
-                            current === null ? current : { ...current, dayOfWeek: day.value }
+                            current === null
+                              ? current
+                              : {
+                                  ...current,
+                                  dayOfWeek: day.value,
+                                  additionalDays: current.additionalDays.filter(
+                                    (value) => value !== day.value
+                                  ),
+                                }
                           )
                         }
                         style={[
@@ -997,6 +1012,50 @@ export function AvailabilityManager() {
                       </Pressable>
                     );
                   })}
+                </View>
+
+                <Text style={[styles.label, { color: c.onSurface }]}>Auch an diesen Tagen</Text>
+                <Text style={[styles.hint, { color: c.onSurfaceVariant }]}>
+                  Mehrfachauswahl: Das Zeitfenster wird mit denselben Einstellungen für alle
+                  markierten Tage gespeichert.
+                </Text>
+                <View style={styles.chipRow}>
+                  {AVAILABILITY_WEEKDAYS.filter((day) => day.value !== draft.dayOfWeek).map(
+                    (day) => {
+                      const selected = draft.additionalDays.includes(day.value);
+                      return (
+                        <Pressable
+                          key={day.value}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          accessibilityLabel={`${day.long} als zusätzlichen Tag ${selected ? 'entfernen' : 'hinzufügen'}`}
+                          onPress={() =>
+                            setDraft((current) =>
+                              current === null
+                                ? current
+                                : {
+                                    ...current,
+                                    additionalDays: toggle(current.additionalDays, day.value),
+                                  }
+                            )
+                          }
+                          style={[
+                            styles.chip,
+                            { backgroundColor: selected ? c.secondary : c.surfaceContainerHigh },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.chipText,
+                              { color: selected ? c.onSecondary : c.onSurface },
+                            ]}
+                          >
+                            {day.short}
+                          </Text>
+                        </Pressable>
+                      );
+                    }
+                  )}
                 </View>
 
                 <View style={styles.twoColumns}>
@@ -1119,9 +1178,15 @@ export function AvailabilityManager() {
                 </View>
 
                 <ActionButton
-                  title="Änderungen speichern"
-                  pending={update.isPending}
-                  onPress={saveDraft}
+                  title={
+                    draft.additionalDays.length > 0
+                      ? `Für ${draft.additionalDays.length + 1} Tage speichern`
+                      : 'Änderungen speichern'
+                  }
+                  pending={saveDays.isPending}
+                  onPress={() => {
+                    void saveDraft();
+                  }}
                 />
               </ScrollView>
             </View>
@@ -1218,6 +1283,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     marginTop: 12,
+    marginBottom: 6,
+  },
+  hint: {
+    fontFamily: appFonts.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: -2,
     marginBottom: 6,
   },
   input: {

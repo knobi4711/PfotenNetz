@@ -7,6 +7,7 @@ import {
   useCreateAvailability,
   useDeleteAvailability,
   useOwnAvailabilities,
+  useSaveAvailabilityForDays,
   useUpdateAvailability,
   type Availability,
   type BookingType,
@@ -17,6 +18,7 @@ import {
   buildAvailabilityWeek,
   findAvailabilityBlockAt,
   formatAvailabilityDuration,
+  formatAvailabilityDays,
   formatAvailabilityRange,
   formatAvailabilityTime,
   minutesToTime,
@@ -62,6 +64,8 @@ const smallDangerButton =
 
 interface SlotDraft {
   dayOfWeek: number;
+  /** Extra weekdays that receive the same range and settings when saving. */
+  additionalDays: number[];
   start: string;
   end: string;
   radius: string;
@@ -97,6 +101,7 @@ function slotToDraft(slot: Availability): SlotDraft {
   const species = (slot.pet_species as string[] | null) ?? [];
   return {
     dayOfWeek: slot.day_of_week,
+    additionalDays: [],
     start: formatAvailabilityTime(slot.start_time),
     end: formatAvailabilityTime(slot.end_time),
     radius: String(Number(slot.max_distance_km)),
@@ -448,6 +453,7 @@ export function AvailabilityManager() {
   const query = useOwnAvailabilities();
   const create = useCreateAvailability();
   const update = useUpdateAvailability();
+  const saveDays = useSaveAvailabilityForDays();
   const remove = useDeleteAvailability();
   const inspectorRef = useRef<HTMLDivElement | null>(null);
   const lastSettings = useRef<DraftSettings>(DEFAULT_SETTINGS);
@@ -589,7 +595,7 @@ export function AvailabilityManager() {
     );
   };
 
-  const saveDraft = () => {
+  const saveDraft = async () => {
     if (selectedSlot === null || draft === null) return;
     setFormError(null);
     if (draft.start >= draft.end) {
@@ -604,34 +610,31 @@ export function AvailabilityManager() {
       setFormError('Bitte wähle mindestens eine Tierart.');
       return;
     }
-    const conflict = findAvailabilityOverlap(
-      slots,
-      { dayOfWeek: draft.dayOfWeek, startTime: draft.start, endTime: draft.end },
-      selectedSlot.id
-    );
-    if (conflict !== undefined) {
-      setFormError(overlapMessage(conflict));
-      return;
-    }
     rememberSettings(draft);
     setRangeOverrides((current) => ({
       ...current,
       [selectedSlot.id]: { start: draft.start, end: draft.end },
     }));
-    update.mutate(
-      {
+    try {
+      await saveDays.mutateAsync({
         id: selectedSlot.id,
         input: {
           dayOfWeek: draft.dayOfWeek,
+          additionalDays: draft.additionalDays,
           startTime: draft.start,
           endTime: draft.end,
           maxDistanceKm: Number(draft.radius.replace(',', '.')),
           bookingTypes: draft.types,
           petSpecies: draft.species,
         },
-      },
-      { onError: () => clearOverride(selectedSlot.id) }
-    );
+      });
+      setDraft((current) => (current === null ? current : { ...current, additionalDays: [] }));
+    } catch (error) {
+      clearOverride(selectedSlot.id);
+      setFormError(
+        error instanceof Error ? error.message : 'Das Zeitfenster konnte nicht gespeichert werden.'
+      );
+    }
   };
 
   return (
@@ -639,7 +642,8 @@ export function AvailabilityManager() {
       <h2 className="text-xl font-extrabold text-on-surface">Meine Verfügbarkeiten</h2>
       <p className="mt-2 text-sm text-on-surface-variant">
         Male deine Zeiten direkt in den Wochenplan – so siehst du sofort, wann du in der
-        Helfer:innen-Suche erscheinst.
+        Helfer:innen-Suche erscheinst. Im Editor übernimmst du ein Zeitfenster mit einer Speicherung
+        auf weitere Tage.
       </p>
 
       {query.isPending ? (
@@ -713,7 +717,8 @@ export function AvailabilityManager() {
                     Zeitfenster bearbeiten
                   </h3>
                   <p className="mt-0.5 text-xs font-semibold text-on-surface-variant">
-                    {availabilityWeekdayLabel(draft.dayOfWeek)} · {draft.start}–{draft.end} Uhr ·{' '}
+                    {formatAvailabilityDays([draft.dayOfWeek, ...draft.additionalDays])} ·{' '}
+                    {draft.start}–{draft.end} Uhr ·{' '}
                     {selectedSlot.is_active === false ? 'pausiert' : 'aktiv'}
                   </p>
                 </div>
@@ -741,27 +746,83 @@ export function AvailabilityManager() {
                 </button>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <label className="text-xs font-bold text-on-surface">
-                  Tag
-                  <select
-                    className="input mt-1"
-                    value={draft.dayOfWeek}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current === null
-                          ? current
-                          : { ...current, dayOfWeek: Number(event.target.value) }
-                      )
+              <fieldset className="mt-4">
+                <legend className="text-xs font-bold text-on-surface">Tag</legend>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {AVAILABILITY_WEEKDAYS.map((day) => {
+                    const selected = draft.dayOfWeek === day.value;
+                    return (
+                      <button
+                        key={day.value}
+                        type="button"
+                        aria-pressed={selected}
+                        className={`chip min-h-9 items-center border px-3 text-xs ${
+                          selected
+                            ? 'chip-selected'
+                            : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
+                        }`}
+                        onClick={() =>
+                          setDraft((current) =>
+                            current === null
+                              ? current
+                              : {
+                                  ...current,
+                                  dayOfWeek: day.value,
+                                  additionalDays: current.additionalDays.filter(
+                                    (value) => value !== day.value
+                                  ),
+                                }
+                          )
+                        }
+                      >
+                        {day.short}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
+              <fieldset className="mt-3">
+                <legend className="text-xs font-bold text-on-surface">Auch an diesen Tagen</legend>
+                <p className="mt-1 text-xs text-on-surface-variant">
+                  Mehrfachauswahl: Das Zeitfenster wird mit denselben Einstellungen für alle
+                  markierten Tage gespeichert.
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {AVAILABILITY_WEEKDAYS.filter((day) => day.value !== draft.dayOfWeek).map(
+                    (day) => {
+                      const selected = draft.additionalDays.includes(day.value);
+                      return (
+                        <button
+                          key={day.value}
+                          type="button"
+                          aria-pressed={selected}
+                          aria-label={`${day.long} als zusätzlichen Tag ${selected ? 'entfernen' : 'hinzufügen'}`}
+                          className={`chip min-h-9 items-center border px-3 text-xs ${
+                            selected
+                              ? 'chip-selected'
+                              : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
+                          }`}
+                          onClick={() =>
+                            setDraft((current) =>
+                              current === null
+                                ? current
+                                : {
+                                    ...current,
+                                    additionalDays: toggle(current.additionalDays, day.value),
+                                  }
+                            )
+                          }
+                        >
+                          {day.short}
+                        </button>
+                      );
                     }
-                  >
-                    {AVAILABILITY_WEEKDAYS.map((day) => (
-                      <option key={day.value} value={day.value}>
-                        {day.long}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  )}
+                </div>
+              </fieldset>
+
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <label className="text-xs font-bold text-on-surface">
                   Von
                   <input
@@ -874,17 +935,24 @@ export function AvailabilityManager() {
                 <button
                   type="button"
                   className="btn-primary"
-                  disabled={update.isPending}
-                  onClick={saveDraft}
+                  disabled={saveDays.isPending}
+                  onClick={() => {
+                    void saveDraft();
+                  }}
                 >
-                  {update.isPending ? 'Wird gespeichert …' : 'Änderungen speichern'}
+                  {saveDays.isPending
+                    ? 'Wird gespeichert …'
+                    : draft.additionalDays.length > 0
+                      ? `Für ${draft.additionalDays.length + 1} Tage speichern`
+                      : 'Änderungen speichern'}
                 </button>
               </div>
             </div>
           ) : (
             <p className="mt-4 text-xs text-on-surface-variant">
-              Tippe auf ein Zeitfenster, um Tag, Uhrzeit, Radius und Betreuungsarten anzupassen.
-              Rechtsklick öffnet Aktionen zum Löschen oder Pausieren.
+              Tippe auf ein Zeitfenster, um Tag, Uhrzeit, Radius und Betreuungsarten anzupassen –
+              auch für mehrere Tage gleichzeitig. Rechtsklick öffnet Aktionen zum Löschen oder
+              Pausieren.
             </p>
           )}
         </>

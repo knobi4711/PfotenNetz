@@ -96,6 +96,24 @@ export interface AvailabilityTimeRange {
   end_time: string;
 }
 
+const WEEKDAY_NAMES = [
+  'Sonntag',
+  'Montag',
+  'Dienstag',
+  'Mittwoch',
+  'Donnerstag',
+  'Freitag',
+  'Samstag',
+] as const;
+
+function weekdayName(dayOfWeek: number): string {
+  return WEEKDAY_NAMES[dayOfWeek] ?? 'diesem Tag';
+}
+
+function rangeLabel(slot: AvailabilityTimeRange): string {
+  return `${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)} Uhr`;
+}
+
 function rangeMinutes(value: string): number {
   const [hours = '0', minutes = '0'] = value.split(':');
   return Number.parseInt(hours, 10) * 60 + Number.parseInt(minutes, 10);
@@ -120,6 +138,61 @@ export function findAvailabilityOverlap<T extends AvailabilityTimeRange>(
     const otherEnd = rangeMinutes(slot.end_time);
     return start < otherEnd && end > otherStart;
   });
+}
+
+export interface AvailabilityDayPlan<T extends AvailabilityTimeRange> {
+  /** Existing slots on additional days that already use the exact same range. */
+  reuse: T[];
+  /** Additional days that need a new slot. */
+  createDays: number[];
+  /** Additional days whose existing slots overlap and therefore block the copy. */
+  conflicts: Array<{ dayOfWeek: number; slot: T }>;
+}
+
+/**
+ * Decides how an existing time range should be copied to further weekdays.
+ * Identical ranges are re-used (and only get the new settings), clean days are
+ * created, and overlapping slots are reported instead of being overwritten.
+ */
+export function planAvailabilityDays<T extends AvailabilityTimeRange>(
+  slots: readonly T[],
+  input: { dayOfWeek: number; startTime: string; endTime: string },
+  additionalDays: readonly number[]
+): AvailabilityDayPlan<T> {
+  const start = rangeMinutes(input.startTime);
+  const end = rangeMinutes(input.endTime);
+  const days = [...new Set(additionalDays)].filter(
+    (day) => day !== input.dayOfWeek && Number.isInteger(day) && day >= 0 && day <= 6
+  );
+  const reuse: T[] = [];
+  const createDays: number[] = [];
+  const conflicts: Array<{ dayOfWeek: number; slot: T }> = [];
+
+  for (const day of days) {
+    const exact = slots.find(
+      (slot) =>
+        slot.day_of_week === day &&
+        rangeMinutes(slot.start_time) === start &&
+        rangeMinutes(slot.end_time) === end
+    );
+    if (exact !== undefined) {
+      reuse.push(exact);
+      continue;
+    }
+    const conflict = slots.find((slot) => {
+      if (slot.day_of_week !== day) return false;
+      const otherStart = rangeMinutes(slot.start_time);
+      const otherEnd = rangeMinutes(slot.end_time);
+      return start < otherEnd && end > otherStart;
+    });
+    if (conflict !== undefined) {
+      conflicts.push({ dayOfWeek: day, slot: conflict });
+    } else {
+      createDays.push(day);
+    }
+  }
+
+  return { reuse, createDays, conflicts };
 }
 
 async function assertNoOverlap(
@@ -270,6 +343,97 @@ export async function updateAvailability(
     .single();
   if (error) throw error;
   return data;
+}
+
+export interface SaveAvailabilityDaysInput extends UpsertAvailabilityInput {
+  /** Further weekdays that receive the same range and settings in one save. */
+  additionalDays?: number[] | undefined;
+}
+
+export interface SaveAvailabilityDaysResult {
+  /** The edited slot (updated in place, possibly on a new weekday). */
+  primary: Availability;
+  /** Slots that were created or re-used on the additional weekdays. */
+  additional: Availability[];
+}
+
+/**
+ * Saves one time window for several weekdays at once. Existing slots with the
+ * exact same range are re-used, missing days are created, and overlapping
+ * days abort the save with a readable message.
+ */
+export async function saveAvailabilityForDays(
+  client: SupabaseClient<Database>,
+  anchorId: string,
+  input: SaveAvailabilityDaysInput
+): Promise<SaveAvailabilityDaysResult> {
+  const validationError = validateAvailabilityInput(input);
+  if (validationError !== null) throw new Error(validationError);
+  const start = normalizeTime(input.startTime) as string;
+  const end = normalizeTime(input.endTime) as string;
+  const existing = await fetchOwnAvailabilities(client);
+  const anchor = existing.find((slot) => slot.id === anchorId);
+  if (anchor === undefined) {
+    throw new Error('Das Zeitfenster wurde nicht gefunden. Bitte lade die Seite neu.');
+  }
+  const isActive = input.isActive ?? anchor.is_active;
+
+  const anchorConflict = findAvailabilityOverlap(
+    existing,
+    { dayOfWeek: input.dayOfWeek, startTime: start, endTime: end },
+    anchorId
+  );
+  if (anchorConflict !== undefined) {
+    throw new Error(
+      `Am ${weekdayName(input.dayOfWeek)} überschneidet sich das Zeitfenster mit einem bestehenden (${rangeLabel(anchorConflict)}).`
+    );
+  }
+
+  const plan = planAvailabilityDays(
+    existing,
+    { dayOfWeek: input.dayOfWeek, startTime: start, endTime: end },
+    input.additionalDays ?? []
+  );
+  const conflict = plan.conflicts[0];
+  if (conflict !== undefined) {
+    throw new Error(
+      `Am ${weekdayName(conflict.dayOfWeek)} überschneidet sich das Zeitfenster mit einem bestehenden (${rangeLabel(conflict.slot)}). Bitte passe die Zeiten dort zuerst an.`
+    );
+  }
+
+  const primary = await updateAvailability(client, anchorId, {
+    dayOfWeek: input.dayOfWeek,
+    startTime: start,
+    endTime: end,
+    bookingTypes: input.bookingTypes,
+    maxDistanceKm: input.maxDistanceKm,
+    petSpecies: input.petSpecies,
+    ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+  });
+
+  const additional = await Promise.all([
+    ...plan.reuse.map((slot) =>
+      updateAvailability(client, slot.id, {
+        bookingTypes: input.bookingTypes,
+        maxDistanceKm: input.maxDistanceKm,
+        petSpecies: input.petSpecies,
+        isActive,
+      })
+    ),
+    ...plan.createDays.map((dayOfWeek) =>
+      createAvailability(client, {
+        dayOfWeek,
+        startTime: start,
+        endTime: end,
+        bookingTypes: input.bookingTypes,
+        maxDistanceKm: input.maxDistanceKm,
+        petSpecies: input.petSpecies,
+        isActive,
+      })
+    ),
+  ]);
+
+  return { primary, additional };
 }
 
 export async function deleteAvailability(

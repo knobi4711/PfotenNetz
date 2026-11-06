@@ -3,6 +3,7 @@ import {
   availabilityWeekdayLabel,
   buildAvailabilityWeek,
   findAvailabilityBlockAt,
+  formatAvailabilityDays,
   formatAvailabilityDuration,
   formatAvailabilityRange,
   layoutAvailabilityDay,
@@ -36,6 +37,13 @@ describe('availability time helpers', () => {
     expect(availabilityWeekdayLabel(1)).toBe('Montag');
     expect(availabilityWeekdayLabel(0, 'short')).toBe('So');
     expect(availabilityWeekdayLabel(9)).toBe('–');
+  });
+
+  it('formats a multi-day selection in Monday-first order', () => {
+    expect(formatAvailabilityDays([3, 1, 5])).toBe('Mo, Mi, Fr');
+    expect(formatAvailabilityDays([0, 1, 2, 3, 4, 5, 6])).toBe('Täglich');
+    expect(formatAvailabilityDays([1, 1])).toBe('Mo');
+    expect(formatAvailabilityDays([])).toBe('');
   });
 });
 

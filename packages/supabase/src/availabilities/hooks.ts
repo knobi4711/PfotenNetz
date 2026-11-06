@@ -6,8 +6,10 @@ import {
   createAvailability,
   deleteAvailability,
   fetchOwnAvailabilities,
+  saveAvailabilityForDays,
   updateAvailability,
   type Availability,
+  type SaveAvailabilityDaysInput,
   type UpsertAvailabilityInput,
 } from './queries';
 
@@ -43,6 +45,16 @@ export function useUpdateAvailability() {
   return useMutation({
     mutationFn: (args: { id: string; input: Partial<UpsertAvailabilityInput> }) =>
       updateAvailability(client, args.id, args.input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSaveAvailabilityForDays() {
+  const client = getSupabaseClient();
+  const invalidate = useInvalidateOwn();
+  return useMutation({
+    mutationFn: (args: { id: string; input: SaveAvailabilityDaysInput }) =>
+      saveAvailabilityForDays(client, args.id, args.input),
     onSuccess: invalidate,
   });
 }

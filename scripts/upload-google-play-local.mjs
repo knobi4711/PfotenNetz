@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Behoben: Die Angaben unter „Bedürfnisse und Hinweise“ erscheinen jetzt im Auftrag – auf dem Handy als eigener Abschnitt, im Web mit erhaltenen Zeilenumbrüchen. Das Feld heißt auf Web und Handy einheitlich „Bedürfnisse und Hinweise“.';
+  'Neu: Ein Zeitfenster in den Verfügbarkeiten lässt sich mit einer Speicherung auf mehrere Tage übernehmen. Unter „Auch an diesen Tagen“ mehrere Tage markieren – bestehende identische Zeitfenster werden übernommen, Überschneidungen mit einem klaren Hinweis abgelehnt.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';
