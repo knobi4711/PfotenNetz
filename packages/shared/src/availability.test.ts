@@ -8,6 +8,7 @@ import {
   layoutAvailabilityDay,
   minutesToTime,
   normalizeAvailabilityRange,
+  isAvailabilityCreateDrag,
   shiftAvailabilityRange,
   snapAvailabilityMinutes,
   timeToMinutes,
@@ -69,6 +70,15 @@ describe('graphical availability editing helpers', () => {
       startMinutes: 0,
       endMinutes: 3 * 60,
     });
+  });
+
+  it('only treats a clear sideways drag as a create gesture', () => {
+    expect(isAvailabilityCreateDrag(0, 0)).toBe(false);
+    expect(isAvailabilityCreateDrag(4, 1)).toBe(false);
+    expect(isAvailabilityCreateDrag(6, 30)).toBe(false);
+    expect(isAvailabilityCreateDrag(12, 40)).toBe(false);
+    expect(isAvailabilityCreateDrag(12, 3)).toBe(true);
+    expect(isAvailabilityCreateDrag(-40, 8)).toBe(true);
   });
 
   it('finds the block under a pointer position', () => {

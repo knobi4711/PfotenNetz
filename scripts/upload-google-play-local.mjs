@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu: Zeitfenster im Wochenplan lassen sich per langem Druck direkt löschen oder pausieren. Der Bearbeiten-Dialog öffnet sich als Sheet und springt nicht mehr ans Seitenende.';
+  'Behoben: Die GPS-Ortung und die Ortssuche liefern wieder vollständige Adressen und Treffer. Neu: ein Einrichtungs-Assistent beim ersten Start, ein überarbeiteter Wochenplan und Helfer:innen in der Umgebung auf der Übersicht.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';

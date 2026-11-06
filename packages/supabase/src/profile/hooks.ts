@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { getSupabaseClient } from '../client/createClient';
 import { profileKeys } from './keys';
+import { statsKeys } from '../stats/keys';
 import {
   fetchOwnProfile,
   deleteOwnAccount,
@@ -27,6 +28,7 @@ export function useUpdateOwnProfile() {
     mutationFn: (input: UpdateOwnProfileInput) => updateOwnProfile(client, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: profileKeys.own });
+      void queryClient.invalidateQueries({ queryKey: statsKeys.nearbyHelpers });
     },
   });
 }

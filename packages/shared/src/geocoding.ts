@@ -28,6 +28,20 @@ interface NominatimResult {
   address?: NominatimAddress;
 }
 
+/**
+ * Nominatim (OpenStreetMap) weist Anfragen mit generischen Bibliotheks-User-Agents
+ * wie `okhttp/…` mit HTTP 403 ab. Im Browser ergänzt der Browser einen eigenen
+ * User-Agent, in der Mobile-App (React Native) muss er explizit gesetzt werden.
+ * Webbrowser ignorieren den Header, weil er dort nicht erlaubt ist.
+ */
+export const OPENSTREETMAP_USER_AGENT = 'PfotenNetz/1.0 (+https://pfotennetz.app)';
+
+const OPENSTREETMAP_HEADERS: Record<string, string> = {
+  Accept: 'application/json',
+  'Accept-Language': 'de',
+  'User-Agent': OPENSTREETMAP_USER_AGENT,
+};
+
 function parseGeocodingAddress(
   address: NominatimAddress | undefined
 ): GeocodingAddress | undefined {
@@ -70,7 +84,7 @@ export async function searchOpenStreetMap(query: string): Promise<GeocodingResul
   if (normalizedQuery.length < 3) return [];
 
   const response = await fetch(buildOpenStreetMapSearchUrl(normalizedQuery), {
-    headers: { Accept: 'application/json', 'Accept-Language': 'de' },
+    headers: OPENSTREETMAP_HEADERS,
   });
   if (!response.ok) throw new Error('Ort konnte nicht gesucht werden.');
 
@@ -96,7 +110,7 @@ export async function reverseGeocodeOpenStreetMap(
   longitude: number
 ): Promise<GeocodingResult> {
   const response = await fetch(buildOpenStreetMapReverseUrl(latitude, longitude), {
-    headers: { Accept: 'application/json', 'Accept-Language': 'de' },
+    headers: OPENSTREETMAP_HEADERS,
   });
   if (!response.ok) throw new Error('Adresse zum Standort konnte nicht ermittelt werden.');
 

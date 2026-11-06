@@ -246,6 +246,18 @@ function unionMinutes(intervals: readonly { start: number; end: number }[]): num
   return total;
 }
 
+/** Minimum horizontal travel that counts as a deliberate create gesture. */
+export const AVAILABILITY_CREATE_DRAG_PX = 10;
+
+/**
+ * Slots are only created after a deliberate sideways drag. A tap, a jitter or a
+ * vertical scroll inside the grid therefore never adds a time window.
+ */
+export function isAvailabilityCreateDrag(dx: number, dy: number): boolean {
+  const horizontal = Math.abs(dx);
+  return horizontal >= AVAILABILITY_CREATE_DRAG_PX && horizontal > Math.abs(dy);
+}
+
 export interface AvailabilityWeekOptions {
   /** Start of the visible window when no earlier slot exists. Default: 06:00. */
   minHour?: number;

@@ -22,6 +22,7 @@ import { Providers } from '../providers/Providers';
 import '../lib/geofence';
 import '../lib/tracking-background';
 import { ErrorBox, LoadingView, usePalette } from '../components/ui';
+import { OnboardingWizard } from '../components/onboarding';
 import {
   configureForegroundPresentation,
   ensurePushRegistration,
@@ -189,20 +190,23 @@ function AuthGate() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: 'transparent' },
-      }}
-    >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="booking/new" options={{ title: 'Neue Betreuung buchen' }} />
-      <Stack.Screen name="booking/[id]" options={{ title: 'Buchung' }} />
-      <Stack.Screen name="marketplace" options={{ title: 'Tauschbörse' }} />
-      <Stack.Screen name="helper/[id]" options={{ title: 'Helper-Profil' }} />
-    </Stack>
+    <>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'transparent' },
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="booking/new" options={{ title: 'Neue Betreuung buchen' }} />
+        <Stack.Screen name="booking/[id]" options={{ title: 'Buchung' }} />
+        <Stack.Screen name="marketplace" options={{ title: 'Tauschbörse' }} />
+        <Stack.Screen name="helper/[id]" options={{ title: 'Helper-Profil' }} />
+      </Stack>
+      {auth.userId !== null ? <OnboardingWizard userId={auth.userId} /> : null}
+    </>
   );
 }
 

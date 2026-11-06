@@ -6,4 +6,6 @@ export const statsKeys = {
   all: ['stats'] as const,
   /** Number of registered profiles. */
   registeredUsers: ['stats', 'registered-users'] as const,
+  /** Number of verified helpers around the caller's stored location. */
+  nearbyHelpers: ['stats', 'nearby-helpers'] as const,
 } as const;

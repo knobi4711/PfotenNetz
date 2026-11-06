@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { getSupabaseClient } from '../client/createClient';
 import { verificationKeys } from './keys';
+import { statsKeys } from '../stats/keys';
 import {
   fetchOwnVerifications,
   fetchAdminHelperVerifications,
@@ -40,6 +41,7 @@ export function useReviewHelperVerification() {
       void queryClient.invalidateQueries({ queryKey: verificationKeys.own });
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['helpers'] });
+      void queryClient.invalidateQueries({ queryKey: statsKeys.nearbyHelpers });
     },
   });
 }
@@ -65,6 +67,7 @@ export function useUpdateOwnLocation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['helpers'] });
+      void queryClient.invalidateQueries({ queryKey: statsKeys.nearbyHelpers });
     },
   });
 }

@@ -2,6 +2,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'rea
 import { StyleSheet } from 'react-native';
 import type { ComponentProps, ReactNode } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { usePathname, useRouter } from 'expo-router';
 import { colors } from '@pfotennetz/design-system';
 import { bookingStatusLabels, type BookingStatus } from '../lib/booking';
 import { useTheme } from '../providers/theme';
@@ -193,14 +194,24 @@ export function AppHeader({
   avatarLabel,
   onNotifications,
   hasNotifications,
+  onAvatarPress,
 }: {
   title: string;
   subtitle?: string;
   avatarLabel?: string;
   onNotifications?: () => void;
   hasNotifications?: boolean;
+  onAvatarPress?: () => void;
 }) {
   const c = usePalette();
+  const router = useRouter();
+  const pathname = usePathname();
+  const isProfileTab = pathname === '/profile';
+  const openProfile =
+    onAvatarPress ??
+    (() => {
+      if (!isProfileTab) router.navigate('/(tabs)/profile');
+    });
   return (
     <View style={styles.appHeaderWrap}>
       <View style={styles.brandRow}>
@@ -224,7 +235,11 @@ export function AppHeader({
               ) : null}
             </Pressable>
           ) : null}
-          <View
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Mein Profil öffnen"
+            accessibilityHint="Wechselt zur Profilansicht."
+            onPress={openProfile}
             style={[
               styles.avatar,
               { backgroundColor: c.secondaryContainer, borderColor: c.surfaceContainerLowest },
@@ -233,7 +248,7 @@ export function AppHeader({
             <Text style={[styles.avatarText, { color: c.onSecondaryContainer }]}>
               {avatarLabel ?? '🐾'}
             </Text>
-          </View>
+          </Pressable>
         </View>
       </View>
       <View style={styles.appHeaderMain}>

@@ -30,6 +30,7 @@ import {
   formatAvailabilityDuration,
   formatAvailabilityRange,
   formatAvailabilityTime,
+  isAvailabilityCreateDrag,
   minutesToTime,
   normalizeAvailabilityRange,
   shiftAvailabilityRange,
@@ -301,18 +302,21 @@ function DayTrack({
           moved: false,
           longPressed: false,
         };
-        setPreview({
-          slotId: null,
-          startMinutes: start,
-          endMinutes: Math.min(24 * 60, start + 60),
-          isActive: true,
-        });
+        // No preview yet: accidental taps must not look like they created a slot.
+        // The ghost block appears once the finger really drags horizontally.
       },
       onPanResponderMove: (_event, gestureState) => {
         const active = gesture.current;
         if (active === null) return;
-        if (Math.abs(gestureState.dx) > 6 || Math.abs(gestureState.dy) > 6) {
+        const horizontal = Math.abs(gestureState.dx);
+        if (horizontal > 6 || Math.abs(gestureState.dy) > 6) {
           cancelLongPress();
+        }
+        // Creating a slot needs a deliberate horizontal drag, so scrolling or
+        // brushing over the grid does not add time windows.
+        if (active.mode === 'create' && !active.moved) {
+          if (!isAvailabilityCreateDrag(gestureState.dx, gestureState.dy)) return;
+          active.moved = true;
         }
         const { week: currentWeek } = current.current;
         const width = trackWidth.current;
@@ -368,12 +372,8 @@ function DayTrack({
         const moved = active.moved || Math.abs(gestureState.dx) > 4;
 
         if (active.mode === 'create') {
-          const range = active.moved
-            ? normalizeAvailabilityRange(active.anchorMinutes, minutes)
-            : {
-                startMinutes: active.anchorMinutes,
-                endMinutes: Math.min(24 * 60, active.anchorMinutes + 60),
-              };
+          if (!active.moved) return;
+          const range = normalizeAvailabilityRange(active.anchorMinutes, minutes);
           current.current.onCreate(currentDay.dayOfWeek, range.startMinutes, range.endMinutes);
           return;
         }
@@ -430,8 +430,8 @@ function DayTrack({
       <View
         accessible
         accessibilityRole="button"
-        accessibilityLabel={`${day.long}: Zeitfenster antippen, ziehen oder neu anlegen`}
-        accessibilityHint="Tippen legt ein einstündiges Zeitfenster an. Ziehen verschiebt oder verlängert ein Zeitfenster. Langes Drücken auf ein Zeitfenster öffnet Aktionen wie Löschen."
+        accessibilityLabel={`${day.long}: Zeitfenster wählen oder per Ziehen anlegen`}
+        accessibilityHint="Waagerechtes Ziehen legt ein Zeitfenster an. Tippen wählt ein Zeitfenster aus. Langes Drücken auf ein Zeitfenster öffnet Aktionen wie Löschen. Mit der Bedienungshilfen-Aktion wird ein Zeitfenster von 9 bis 10 Uhr angelegt."
         onAccessibilityTap={() => current.current.onCreate(day.dayOfWeek, 9 * 60, 10 * 60)}
         onLayout={(event) => {
           trackWidth.current = event.nativeEvent.layout.width;
@@ -571,6 +571,19 @@ function WeeklyEditor({
   const span = Math.max(1, week.endMinutes - week.startMinutes);
   const percent = (minutes: number) => ((minutes - week.startMinutes) / span) * 100;
   const activeCount = slots.filter((slot) => slot.is_active !== false).length;
+  const majorTicks = week.hourTicks.filter(
+    (tick) =>
+      tick.minutes === week.startMinutes ||
+      tick.minutes === week.endMinutes ||
+      tick.minutes % 240 === 0
+  );
+  // Directly before the right edge the labels would overlap on narrow phones,
+  // so the penultimate one is dropped instead of squeezing both together.
+  const axisTicks =
+    majorTicks.length > 1 &&
+    majorTicks[majorTicks.length - 1]!.minutes - majorTicks[majorTicks.length - 2]!.minutes < 180
+      ? majorTicks.filter((_, index) => index !== majorTicks.length - 2)
+      : majorTicks;
 
   return (
     <View style={[styles.graph, { backgroundColor: c.surfaceContainerLow }]}>
@@ -583,8 +596,8 @@ function WeeklyEditor({
         </Text>
       </View>
       <Text style={[styles.graphHint, { color: c.onSurfaceVariant }]}>
-        Tippen legt ein Zeitfenster an. Ziehen verschiebt oder verlängert es. Lange drücken öffnet
-        Löschen und Pausieren.
+        Ziehe waagerecht über einen Tag, um ein Zeitfenster anzulegen. Tippen wählt ein Fenster aus,
+        langes Drücken öffnet Löschen und Pausieren.
         {slots.some((slot) => slot.is_active === false) ? ' Graue Zeitfenster sind pausiert.' : ''}
       </Text>
 
@@ -606,13 +619,8 @@ function WeeklyEditor({
       <View style={styles.graphAxis}>
         <View style={styles.graphAxisSpacer} />
         <View style={styles.graphAxisTrack}>
-          {week.hourTicks.map((tick, index) => {
-            const major =
-              tick.minutes === week.startMinutes ||
-              tick.minutes === week.endMinutes ||
-              tick.minutes % 240 === 0;
-            if (!major) return null;
-            const last = index === week.hourTicks.length - 1;
+          {axisTicks.map((tick, index) => {
+            const last = index === axisTicks.length - 1;
             return (
               <Text
                 key={tick.minutes}

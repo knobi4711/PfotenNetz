@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Image, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { File } from 'expo-file-system';
@@ -31,6 +31,7 @@ import { timebankTxDescription, timebankTxTypeLabels } from '../../lib/booking';
 import { AvailabilityManager } from '../../components/helper-availability';
 import { HelperStatusCard } from '../../components/helper-status';
 import { VermittlungsstandortCard } from '../../components/helper-location';
+import { openOnboarding } from '../../lib/onboarding';
 import { useTheme, type ThemeMode } from '../../providers/theme';
 import {
   friendlyPasskeyError,
@@ -203,6 +204,14 @@ function ContactRequestRow({
 export default function ProfileScreen() {
   const c = usePalette();
   const theme = useTheme();
+  const { edit: editParam, section: sectionParam } = useLocalSearchParams<{
+    edit?: string;
+    section?: string;
+  }>();
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionOffsets = useRef<Record<string, number>>({});
+  const pendingSection = useRef<string | null>(null);
+  const handledDeepLink = useRef<string | null>(null);
   const profileQuery = useOwnProfile();
   const updateProfile = useUpdateOwnProfile();
   const uploadAvatar = useUploadOwnAvatar();
@@ -372,7 +381,7 @@ export default function ProfileScreen() {
     );
   };
 
-  const startEditing = () => {
+  const startEditing = useCallback(() => {
     setDisplayName(profile?.display_name ?? '');
     setPhone(profile?.phone ?? '');
     setProfileBio(profile?.profile_bio ?? '');
@@ -397,7 +406,48 @@ export default function ProfileScreen() {
     });
     setFormHint(null);
     setEditing(true);
-  };
+  }, [profile]);
+
+  // The first-run assistant deep links into a specific part of this screen.
+  const scrollToSection = useCallback((section: string) => {
+    const offset = sectionOffsets.current[section];
+    if (offset === undefined) return false;
+    scrollRef.current?.scrollTo({ y: Math.max(0, offset - 16), animated: true });
+    return true;
+  }, []);
+
+  const rememberSection = useCallback((section: string, offset: number) => {
+    sectionOffsets.current[section] = offset;
+    if (pendingSection.current !== section) return;
+    pendingSection.current = null;
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, offset - 16), animated: true });
+    }, 80);
+  }, []);
+
+  useEffect(() => {
+    if (profile === null) return;
+    const key = `${editParam ?? ''}|${sectionParam ?? ''}`;
+    if (key === '|') {
+      handledDeepLink.current = null;
+      return;
+    }
+    if (handledDeepLink.current === key) return;
+    handledDeepLink.current = key;
+    if (editParam === '1') {
+      startEditing();
+      return;
+    }
+    if (sectionParam === undefined) return;
+    // The card may still be measuring; its onLayout retries this scroll.
+    pendingSection.current = sectionParam;
+    const timer = setTimeout(() => {
+      if (scrollToSection(sectionParam)) pendingSection.current = null;
+    }, 200);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [profile, editParam, sectionParam, startEditing, scrollToSection]);
 
   const handleSave = () => {
     setFormHint(null);
@@ -444,7 +494,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} ref={scrollRef}>
         <AppHeader
           title="Mein Profil & Nachbarschaft"
           subtitle="Vertrauen, Verfügbarkeit und Nachbarschafts-Einstellungen."
@@ -472,7 +522,7 @@ export default function ProfileScreen() {
           <SectionTitle>Mein Profil</SectionTitle>
           <EmptyText>Verwalte dein Profil oder öffne deine Tierprofile.</EmptyText>
           <ActionButton
-            title="Meine Tiere öffnen"
+            title="Zu meinen Tieren"
             variant="secondary"
             onPress={() => router.push('/(tabs)/pets')}
           />
@@ -719,9 +769,32 @@ export default function ProfileScreen() {
                 ))}
               </View>
             </Card>
+            <Card>
+              <SectionTitle>Einführung</SectionTitle>
+              <EmptyText>
+                Profil, Tierprofil und Helferprofil in drei Schritten – jederzeit erneut ansehen.
+              </EmptyText>
+              <ActionButton
+                title="Einführung erneut ansehen"
+                variant="secondary"
+                onPress={openOnboarding}
+              />
+            </Card>
             <HelperStatusCard profile={profile} />
-            <VermittlungsstandortCard profile={profile} />
-            <AvailabilityManager />
+            <View
+              onLayout={(event) => {
+                rememberSection('standort', event.nativeEvent.layout.y);
+              }}
+            >
+              <VermittlungsstandortCard profile={profile} />
+            </View>
+            <View
+              onLayout={(event) => {
+                rememberSection('helfer', event.nativeEvent.layout.y);
+              }}
+            >
+              <AvailabilityManager />
+            </View>
             <Card>
               <SectionTitle>Kennenlernanfragen</SectionTitle>
               {contactRequestsQuery.isPending ? (

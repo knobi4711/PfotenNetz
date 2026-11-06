@@ -2580,6 +2580,7 @@ export type Database = {
       };
       is_verified_helper: { Args: never; Returns: boolean };
       longtransactionsenabled: { Args: never; Returns: boolean };
+      nearby_helper_count: { Args: never; Returns: number };
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string };

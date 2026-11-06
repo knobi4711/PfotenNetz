@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  OPENSTREETMAP_USER_AGENT,
   buildOpenStreetMapSearchUrl,
   reverseGeocodeOpenStreetMap,
   searchOpenStreetMap,
@@ -15,6 +16,30 @@ describe('OpenStreetMap geocoding', () => {
     expect(url).toContain('https://nominatim.openstreetmap.org/search?');
     expect(url).toContain('q=Leipzig%2C+Markt');
     expect(url).toContain('format=jsonv2');
+  });
+
+  it('identifies the app to Nominatim on search and reverse lookups', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ lat: '51.4', lon: '12.1', display_name: 'Leipzig' }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await searchOpenStreetMap('Leipzig');
+    await reverseGeocodeOpenStreetMap(51.4, 12.1);
+
+    const expectedInit = expect.objectContaining({
+      headers: expect.objectContaining({ 'User-Agent': OPENSTREETMAP_USER_AGENT }),
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(1, expect.stringContaining('/search?'), expectedInit);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/reverse?'),
+      expectedInit
+    );
   });
 
   it('normalizes valid results and ignores invalid coordinates', async () => {

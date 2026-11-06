@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { getSupabaseClient } from '../client/createClient';
 import { availabilityKeys } from './keys';
+import { statsKeys } from '../stats/keys';
 import {
   createAvailability,
   deleteAvailability,
@@ -23,6 +24,7 @@ function useInvalidateOwn() {
   return () => {
     void queryClient.invalidateQueries({ queryKey: availabilityKeys.own });
     void queryClient.invalidateQueries({ queryKey: ['helpers'] });
+    void queryClient.invalidateQueries({ queryKey: statsKeys.nearbyHelpers });
   };
 }
 

@@ -9,6 +9,7 @@ import {
   useOwnContactRequests,
   useRespondContactRequest,
   useCancelContactRequest,
+  useNearbyHelperCount,
   useRegisteredUserCount,
   useTimebankAccount,
   useUnreadCount,
@@ -191,6 +192,7 @@ export function Dashboard() {
   const account = useTimebankAccount();
   const unread = useUnreadCount();
   const registeredUsers = useRegisteredUserCount();
+  const nearbyHelpers = useNearbyHelperCount();
   const contactRequests = useOwnContactRequests();
   const respondContactRequest = useRespondContactRequest();
   const cancelContactRequest = useCancelContactRequest();
@@ -224,6 +226,7 @@ export function Dashboard() {
 
   const displayName = profile.data?.display_name ?? 'Nachbarin oder Nachbar';
   const visibleBookings = groupBookingsByRequest(bookings.data ?? []).slice(0, 4);
+  const helperRadiusKm = Number(profile.data?.kiez_radius_km) || 1.5;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -495,15 +498,33 @@ export function Dashboard() {
                   </p>
                 </div>
               </div>
-              <div className="mb-4 rounded-xl bg-surface-container-low p-4">
-                <p className="text-3xl font-extrabold text-primary">
-                  {registeredUsers.data === undefined
-                    ? '–'
-                    : registeredUsers.data.toLocaleString('de-DE')}
-                </p>
-                <p className="text-sm text-on-surface-variant">
-                  registrierte Nachbar:innen im PfotenNetz
-                </p>
+              <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl bg-surface-container-low p-4">
+                  <p className="text-3xl font-extrabold text-primary">
+                    {registeredUsers.data === undefined
+                      ? '–'
+                      : registeredUsers.data.toLocaleString('de-DE')}
+                  </p>
+                  <p className="text-sm font-bold text-on-surface">PfotenNetz-Mitglieder</p>
+                  <p className="text-xs text-on-surface-variant">Alle registrierten Konten</p>
+                </div>
+                <div className="rounded-xl bg-surface-container-low p-4">
+                  <p className="text-3xl font-extrabold text-primary">
+                    {nearbyHelpers.data === undefined || nearbyHelpers.data === null
+                      ? '–'
+                      : nearbyHelpers.data.toLocaleString('de-DE')}
+                  </p>
+                  <p className="text-sm font-bold text-on-surface">Helfer:innen in der Umgebung</p>
+                  <p className="text-xs text-on-surface-variant">
+                    {nearbyHelpers.isError
+                      ? 'Aktuell nicht verfügbar'
+                      : nearbyHelpers.data === undefined
+                        ? 'Wird geladen …'
+                        : nearbyHelpers.data === null
+                          ? 'Standort im Profil festlegen'
+                          : `Verifiziert im Umkreis von ${helperRadiusKm.toLocaleString('de-DE')} km`}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"

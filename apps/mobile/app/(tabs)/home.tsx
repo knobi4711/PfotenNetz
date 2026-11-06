@@ -8,6 +8,7 @@ import * as Location from 'expo-location';
 import {
   useBookings,
   groupBookingsByRequest,
+  useNearbyHelperCount,
   useOwnProfile,
   useRegisteredUserCount,
   useTimebankAccount,
@@ -217,6 +218,7 @@ export default function HomeScreen() {
   const profileQuery = useOwnProfile();
   const unreadQuery = useUnreadCount();
   const statsQuery = useRegisteredUserCount();
+  const nearbyHelperStats = useNearbyHelperCount();
   const [refreshing, setRefreshing] = useState(false);
 
   const bookings = bookingsQuery.data ?? [];
@@ -227,6 +229,7 @@ export default function HomeScreen() {
   const disputed = bookings.find((booking) => booking.status === 'disputed') ?? null;
   const firstName = profileQuery.data?.display_name.trim().split(/\s+/)[0] ?? '';
   const avatarLabel = firstName.slice(0, 1).toUpperCase() || '🐾';
+  const helperRadiusKm = Number(profileQuery.data?.kiez_radius_km) || 1.5;
 
   const refresh = async () => {
     setRefreshing(true);
@@ -237,6 +240,7 @@ export default function HomeScreen() {
         profileQuery.refetch(),
         unreadQuery.refetch(),
         statsQuery.refetch(),
+        nearbyHelperStats.refetch(),
       ]);
     } finally {
       setRefreshing(false);
@@ -283,11 +287,39 @@ export default function HomeScreen() {
               {statsQuery.data === undefined ? '–' : statsQuery.data.toLocaleString('de-DE')}
             </Text>
             <View style={styles.statsText}>
+              <Text style={[styles.statsTitle, { color: c.onSurface }]}>PfotenNetz-Mitglieder</Text>
+              <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+                Alle registrierten Konten.
+              </Text>
+            </View>
+          </View>
+          <View
+            style={[
+              styles.statsRow,
+              {
+                borderTopColor: c.outlineVariant,
+                borderTopWidth: StyleSheet.hairlineWidth,
+                paddingTop: 14,
+              },
+            ]}
+          >
+            <Text style={[styles.statsNumber, { color: c.primary }]}>
+              {nearbyHelperStats.data === undefined || nearbyHelperStats.data === null
+                ? '–'
+                : nearbyHelperStats.data.toLocaleString('de-DE')}
+            </Text>
+            <View style={styles.statsText}>
               <Text style={[styles.statsTitle, { color: c.onSurface }]}>
-                Nachbar:innen im PfotenNetz
+                Helfer:innen in der Umgebung
               </Text>
               <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
-                Registrierte Konten in deiner Nachbarschaft.
+                {nearbyHelperStats.isError
+                  ? 'Aktuell nicht verfügbar.'
+                  : nearbyHelperStats.data === undefined
+                    ? 'Wird geladen …'
+                    : nearbyHelperStats.data === null
+                      ? 'Standort im Profil festlegen.'
+                      : `Verifiziert im Umkreis von ${helperRadiusKm.toLocaleString('de-DE')} km.`}
               </Text>
             </View>
           </View>

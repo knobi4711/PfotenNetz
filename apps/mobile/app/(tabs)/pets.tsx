@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -96,7 +96,7 @@ function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
 
 export default function PetsScreen() {
   const c = usePalette();
-  const { editPetId } = useLocalSearchParams<{ editPetId?: string }>();
+  const { editPetId, new: newPet } = useLocalSearchParams<{ editPetId?: string; new?: string }>();
   const petsQuery = useOwnPets();
   const createPet = useCreatePet();
   const updatePet = useUpdatePet();
@@ -174,6 +174,14 @@ export default function PetsScreen() {
     const pet = (petsQuery.data ?? []).find((candidate) => candidate.id === editPetId);
     if (pet !== undefined) openEditForm(pet);
   }, [editPetId, editingPet, petsQuery.data, petsQuery.isPending]);
+
+  // The first-run assistant deep links here with ?new=1 to open the empty form.
+  const handledNewParam = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (newPet !== '1' || handledNewParam.current === newPet) return;
+    handledNewParam.current = newPet;
+    setShowForm(true);
+  }, [newPet]);
 
   const closeForm = () => {
     setShowForm(false);
