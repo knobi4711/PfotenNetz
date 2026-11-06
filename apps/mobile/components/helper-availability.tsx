@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import {
   Modal,
   PanResponder,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,6 +10,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AVAILABILITY_BOOKING_TYPES,
@@ -38,6 +41,7 @@ import {
   type AvailabilityDay,
   type AvailabilityWeek,
 } from '@pfotennetz/shared';
+import { clockToPickerDate, pickerDateToClock } from '../lib/availability-time';
 import { bookingTypeLabels } from '../lib/booking';
 import {
   ActionButton,
@@ -56,13 +60,6 @@ const DEFAULT_SETTINGS = {
   species: [...AVAILABILITY_PET_SPECIES] as string[],
 };
 
-const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
-  const hour = Math.floor(index / 2)
-    .toString()
-    .padStart(2, '0');
-  const minute = index % 2 === 0 ? '00' : '30';
-  return `${hour}:${minute}`;
-});
 const PET_SPECIES_LABELS: Record<string, string> = {
   dog: 'Hund',
   cat: 'Katze',
@@ -132,7 +129,7 @@ function overlapMessage(slot: Availability): string {
   )}. Bitte wähle einen freien Zeitraum.`;
 }
 
-function TimeDropdown({
+function TimeField({
   label,
   value,
   disabled,
@@ -146,12 +143,20 @@ function TimeDropdown({
   const c = usePalette();
   const [open, setOpen] = useState(false);
 
+  const handleChange = (event: DateTimePickerEvent, selected?: Date) => {
+    // Android shows a dialog that must be dismissed after any interaction;
+    // iOS renders the spinner inline and closes via the "Fertig" button.
+    if (Platform.OS !== 'ios') setOpen(false);
+    if (event.type === 'dismissed' || selected === undefined) return;
+    onChange(pickerDateToClock(selected));
+  };
+
   return (
     <View style={styles.dropdownContainer}>
       <Text style={[styles.label, { color: c.onSurface }]}>{label}</Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${label} auswählen`}
+        accessibilityLabel={`${label} auswählen, aktuell ${value} Uhr`}
         accessibilityState={{ expanded: open }}
         disabled={disabled}
         onPress={() => setOpen((current) => !current)}
@@ -161,42 +166,29 @@ function TimeDropdown({
         ]}
       >
         <Text style={[styles.dropdownValue, { color: c.onSurface }]}>{value} Uhr</Text>
-        <Text style={[styles.dropdownArrow, { color: c.onSurfaceVariant }]}>
-          {open ? '▲' : '▼'}
-        </Text>
+        <MaterialCommunityIcons name="clock-outline" size={16} color={c.onSurfaceVariant} />
       </Pressable>
       {open ? (
-        <View
-          style={[
-            styles.dropdownMenu,
-            { backgroundColor: c.surfaceContainerLowest, borderColor: c.outlineVariant },
-          ]}
-        >
-          {TIME_OPTIONS.map((option) => (
+        <>
+          <DateTimePicker
+            value={clockToPickerDate(value)}
+            mode="time"
+            is24Hour
+            minuteInterval={5}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            locale="de-DE"
+            onChange={handleChange}
+          />
+          {Platform.OS === 'ios' ? (
             <Pressable
-              key={option}
               accessibilityRole="button"
-              accessibilityState={{ selected: option === value }}
-              onPress={() => {
-                onChange(option);
-                setOpen(false);
-              }}
-              style={[
-                styles.dropdownOption,
-                { backgroundColor: option === value ? c.primaryContainer : 'transparent' },
-              ]}
+              onPress={() => setOpen(false)}
+              style={[styles.dropdownDone, { backgroundColor: c.surfaceContainerHigh }]}
             >
-              <Text
-                style={[
-                  styles.dropdownOptionText,
-                  { color: option === value ? c.onPrimaryContainer : c.onSurface },
-                ]}
-              >
-                {option} Uhr
-              </Text>
+              <Text style={[styles.miniText, { color: c.onSurface }]}>Fertig</Text>
             </Pressable>
-          ))}
-        </View>
+          ) : null}
+        </>
       ) : null}
     </View>
   );
@@ -851,7 +843,7 @@ export function AvailabilityManager() {
 
             {slots.length === 0 ? (
               <EmptyText>
-                Noch keine Zeitfenster. Tippe oder ziehe im Wochenplan, um dein erstes Zeitfenster
+                Noch keine Zeitfenster. Ziehe waagerecht über einen Tag, um dein erstes Zeitfenster
                 anzulegen.
               </EmptyText>
             ) : (
@@ -1009,7 +1001,7 @@ export function AvailabilityManager() {
 
                 <View style={styles.twoColumns}>
                   <View style={styles.column}>
-                    <TimeDropdown
+                    <TimeField
                       label="Von"
                       value={draft.start}
                       disabled={busy}
@@ -1019,7 +1011,7 @@ export function AvailabilityManager() {
                     />
                   </View>
                   <View style={styles.column}>
-                    <TimeDropdown
+                    <TimeField
                       label="Bis"
                       value={draft.end}
                       disabled={busy}
@@ -1247,21 +1239,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   dropdownValue: { fontFamily: appFonts.regular, fontSize: 15 },
-  dropdownArrow: { fontSize: 11 },
-  dropdownMenu: {
-    position: 'absolute',
-    top: 78,
-    left: 0,
-    right: 0,
-    maxHeight: 220,
-    borderWidth: 1,
-    borderRadius: 14,
-    overflow: 'hidden',
-    zIndex: 10,
-    elevation: 6,
+  dropdownDone: {
+    marginTop: 8,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignSelf: 'flex-start',
   },
-  dropdownOption: { paddingHorizontal: 14, paddingVertical: 10 },
-  dropdownOptionText: { fontFamily: appFonts.regular, fontSize: 14, lineHeight: 18 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
   chipText: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18 },

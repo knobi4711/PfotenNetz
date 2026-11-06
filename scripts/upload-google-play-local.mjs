@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Behoben: Die GPS-Ortung und die Ortssuche liefern wieder vollständige Adressen und Treffer. Neu: ein Einrichtungs-Assistent beim ersten Start, ein überarbeiteter Wochenplan und Helfer:innen in der Umgebung auf der Übersicht.';
+  'Behoben: Zeitfenster in den Verfügbarkeiten lassen sich wieder bearbeiten – die Uhrzeit wird jetzt über den System-Zeitpicker gewählt. Der Hinweis im leeren Wochenplan verweist nur noch auf das Ziehen.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';
