@@ -282,7 +282,7 @@ export default function BookingDetailPage() {
                     label="Sicherheitszone"
                     value={`${formatTrackingRadius(value.tracking_radius_m)} um den Tracking-Startpunkt`}
                   />
-                  <Row label="Betreuungsnotizen" value={value.care_notes ?? 'Keine'} />
+                  <Row label="Bedürfnisse und Hinweise" value={value.care_notes ?? 'Keine'} />
                   <Row label="Suchende:r" value={value.seekerProfile?.display_name ?? '–'} />
                   <Row
                     label="Helfer:in"
@@ -489,7 +489,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="font-bold text-on-surface-variant">{label}</dt>
-      <dd className="mt-1 text-on-surface">{value}</dd>
+      <dd className="mt-1 whitespace-pre-line text-on-surface">{value}</dd>
     </div>
   );
 }

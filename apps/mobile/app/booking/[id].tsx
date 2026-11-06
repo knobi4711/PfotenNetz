@@ -561,6 +561,15 @@ export default function BookingDetailScreen() {
               ) : null}
             </Card>
 
+            {booking.care_notes !== null && booking.care_notes.trim() !== '' ? (
+              <Card>
+                <SectionTitle>Bedürfnisse und Hinweise</SectionTitle>
+                <Text style={[styles.careNotesText, { color: c.onSurface }]}>
+                  {booking.care_notes}
+                </Text>
+              </Card>
+            ) : null}
+
             {booking.helper_id !== null &&
             (booking.status === 'awaiting_seeker' ||
               booking.status === 'confirmed' ||
@@ -841,6 +850,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textAlign: 'center',
   },
+  careNotesText: { fontFamily: appFonts.regular, fontSize: 14, lineHeight: 21 },
   petPhotoPreview: { alignItems: 'center' },
   petPhoto: { width: 120, height: 120, borderRadius: 20 },
   photoHint: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 18, marginTop: 2 },

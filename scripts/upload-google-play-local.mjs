@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Behoben: Zeitfenster in den Verfügbarkeiten lassen sich wieder bearbeiten – die Uhrzeit wird jetzt über den System-Zeitpicker gewählt. Der Hinweis im leeren Wochenplan verweist nur noch auf das Ziehen.';
+  'Behoben: Die Angaben unter „Bedürfnisse und Hinweise“ erscheinen jetzt im Auftrag – auf dem Handy als eigener Abschnitt, im Web mit erhaltenen Zeilenumbrüchen. Das Feld heißt auf Web und Handy einheitlich „Bedürfnisse und Hinweise“.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';

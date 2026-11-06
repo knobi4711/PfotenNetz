@@ -400,7 +400,7 @@ function NewBookingForm() {
               />
             </label>
             <label className="mt-4 block text-sm font-bold">
-              Betreuungsnotizen
+              Bedürfnisse und Hinweise
               <textarea
                 className="input mt-1 min-h-28"
                 maxLength={2000}
