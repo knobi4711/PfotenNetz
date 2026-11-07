@@ -27,6 +27,7 @@ import {
   snapAvailabilityMinutes,
 } from '@pfotennetz/shared';
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -455,7 +456,6 @@ export function AvailabilityManager() {
   const update = useUpdateAvailability();
   const saveDays = useSaveAvailabilityForDays();
   const remove = useDeleteAvailability();
-  const inspectorRef = useRef<HTMLDivElement | null>(null);
   const lastSettings = useRef<DraftSettings>(DEFAULT_SETTINGS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<SlotDraft | null>(null);
@@ -520,6 +520,33 @@ export function AvailabilityManager() {
     setMenu(null);
   };
 
+  // Escape closes the topmost layer, so the dialog behaves like a native sheet.
+  useEffect(() => {
+    if (menu === null && selectedSlot === null) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (menu !== null) {
+        setMenu(null);
+        return;
+      }
+      setSelectedId(null);
+      setDraft(null);
+      setFormError(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [menu, selectedSlot]);
+
+  // The open dialog must not scroll the page behind it.
+  useEffect(() => {
+    if (selectedSlot === null) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [selectedSlot]);
+
   const menuPosition =
     menu === null
       ? null
@@ -564,7 +591,6 @@ export function AvailabilityManager() {
       {
         onSuccess: (slot) => {
           selectSlot(slot);
-          inspectorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         },
       }
     );
@@ -708,96 +734,64 @@ export function AvailabilityManager() {
 
           {selectedSlot !== null && draft !== null ? (
             <div
-              ref={inspectorRef}
-              className="mt-5 scroll-mt-24 rounded-2xl border border-primary bg-surface-container-low p-4"
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-6"
+              onClick={clearSelection}
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-base font-extrabold text-on-surface">
-                    Zeitfenster bearbeiten
-                  </h3>
-                  <p className="mt-0.5 text-xs font-semibold text-on-surface-variant">
-                    {formatAvailabilityDays([draft.dayOfWeek, ...draft.additionalDays])} ·{' '}
-                    {draft.start}–{draft.end} Uhr ·{' '}
-                    {selectedSlot.is_active === false ? 'pausiert' : 'aktiv'}
-                  </p>
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="availability-editor-title"
+                onClick={(event) => event.stopPropagation()}
+                className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl border border-outline-variant bg-surface-container-low p-5 shadow-2xl sm:rounded-3xl"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h3
+                      id="availability-editor-title"
+                      className="text-base font-extrabold text-on-surface"
+                    >
+                      Zeitfenster bearbeiten
+                    </h3>
+                    <p className="mt-0.5 text-xs font-semibold text-on-surface-variant">
+                      {formatAvailabilityDays([draft.dayOfWeek, ...draft.additionalDays])} ·{' '}
+                      {draft.start}–{draft.end} Uhr ·{' '}
+                      {selectedSlot.is_active === false ? 'pausiert' : 'aktiv'}
+                    </p>
+                  </div>
+                  <button type="button" className={smallButton} onClick={clearSelection}>
+                    Schließen
+                  </button>
                 </div>
-                <button type="button" className={smallButton} onClick={clearSelection}>
-                  Schließen
-                </button>
-              </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className={smallButton}
-                  disabled={update.isPending}
-                  onClick={() => toggleActive(selectedSlot)}
-                >
-                  {selectedSlot.is_active === false ? 'Aktivieren' : 'Pausieren'}
-                </button>
-                <button
-                  type="button"
-                  className={smallDangerButton}
-                  disabled={remove.isPending}
-                  onClick={() => deleteSlot(selectedSlot)}
-                >
-                  Löschen
-                </button>
-              </div>
-
-              <fieldset className="mt-4">
-                <legend className="text-xs font-bold text-on-surface">Tag</legend>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {AVAILABILITY_WEEKDAYS.map((day) => {
-                    const selected = draft.dayOfWeek === day.value;
-                    return (
-                      <button
-                        key={day.value}
-                        type="button"
-                        aria-pressed={selected}
-                        className={`chip min-h-9 items-center border px-3 text-xs ${
-                          selected
-                            ? 'chip-selected'
-                            : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
-                        }`}
-                        onClick={() =>
-                          setDraft((current) =>
-                            current === null
-                              ? current
-                              : {
-                                  ...current,
-                                  dayOfWeek: day.value,
-                                  additionalDays: current.additionalDays.filter(
-                                    (value) => value !== day.value
-                                  ),
-                                }
-                          )
-                        }
-                      >
-                        {day.short}
-                      </button>
-                    );
-                  })}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={smallButton}
+                    disabled={update.isPending}
+                    onClick={() => toggleActive(selectedSlot)}
+                  >
+                    {selectedSlot.is_active === false ? 'Aktivieren' : 'Pausieren'}
+                  </button>
+                  <button
+                    type="button"
+                    className={smallDangerButton}
+                    disabled={remove.isPending}
+                    onClick={() => deleteSlot(selectedSlot)}
+                  >
+                    Löschen
+                  </button>
                 </div>
-              </fieldset>
 
-              <fieldset className="mt-3">
-                <legend className="text-xs font-bold text-on-surface">Auch an diesen Tagen</legend>
-                <p className="mt-1 text-xs text-on-surface-variant">
-                  Mehrfachauswahl: Das Zeitfenster wird mit denselben Einstellungen für alle
-                  markierten Tage gespeichert.
-                </p>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {AVAILABILITY_WEEKDAYS.filter((day) => day.value !== draft.dayOfWeek).map(
-                    (day) => {
-                      const selected = draft.additionalDays.includes(day.value);
+                <fieldset className="mt-4">
+                  <legend className="text-xs font-bold text-on-surface">Tag</legend>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {AVAILABILITY_WEEKDAYS.map((day) => {
+                      const selected = draft.dayOfWeek === day.value;
                       return (
                         <button
                           key={day.value}
                           type="button"
                           aria-pressed={selected}
-                          aria-label={`${day.long} als zusätzlichen Tag ${selected ? 'entfernen' : 'hinzufügen'}`}
                           className={`chip min-h-9 items-center border px-3 text-xs ${
                             selected
                               ? 'chip-selected'
@@ -809,7 +803,10 @@ export function AvailabilityManager() {
                                 ? current
                                 : {
                                     ...current,
-                                    additionalDays: toggle(current.additionalDays, day.value),
+                                    dayOfWeek: day.value,
+                                    additionalDays: current.additionalDays.filter(
+                                      (value) => value !== day.value
+                                    ),
                                   }
                             )
                           }
@@ -817,135 +814,177 @@ export function AvailabilityManager() {
                           {day.short}
                         </button>
                       );
-                    }
-                  )}
-                </div>
-              </fieldset>
+                    })}
+                  </div>
+                </fieldset>
 
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <label className="text-xs font-bold text-on-surface">
-                  Von
-                  <input
-                    className="input mt-1"
-                    type="time"
-                    step="1800"
-                    value={draft.start}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current === null ? current : { ...current, start: event.target.value }
-                      )
-                    }
-                  />
-                </label>
-                <label className="text-xs font-bold text-on-surface">
-                  Bis
-                  <input
-                    className="input mt-1"
-                    type="time"
-                    step="1800"
-                    value={draft.end}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current === null ? current : { ...current, end: event.target.value }
-                      )
-                    }
-                  />
-                </label>
-                <label className="text-xs font-bold text-on-surface">
-                  Radius (km)
-                  <input
-                    className="input mt-1"
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={draft.radius}
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current === null ? current : { ...current, radius: event.target.value }
-                      )
-                    }
-                  />
-                </label>
-              </div>
+                <fieldset className="mt-3">
+                  <legend className="text-xs font-bold text-on-surface">
+                    Auch an diesen Tagen
+                  </legend>
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    Mehrfachauswahl: Das Zeitfenster wird mit denselben Einstellungen für alle
+                    markierten Tage gespeichert.
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {AVAILABILITY_WEEKDAYS.filter((day) => day.value !== draft.dayOfWeek).map(
+                      (day) => {
+                        const selected = draft.additionalDays.includes(day.value);
+                        return (
+                          <button
+                            key={day.value}
+                            type="button"
+                            aria-pressed={selected}
+                            aria-label={`${day.long} als zusätzlichen Tag ${selected ? 'entfernen' : 'hinzufügen'}`}
+                            className={`chip min-h-9 items-center border px-3 text-xs ${
+                              selected
+                                ? 'chip-selected'
+                                : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
+                            }`}
+                            onClick={() =>
+                              setDraft((current) =>
+                                current === null
+                                  ? current
+                                  : {
+                                      ...current,
+                                      additionalDays: toggle(current.additionalDays, day.value),
+                                    }
+                              )
+                            }
+                          >
+                            {day.short}
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+                </fieldset>
 
-              <fieldset className="mt-3">
-                <legend className="text-xs font-bold text-on-surface">Betreuungsarten</legend>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {AVAILABILITY_BOOKING_TYPES.filter(
-                    (type) =>
-                      (type !== 'ride' || draft.species.includes('horse')) &&
-                      (type !== 'walk' || draft.species.includes('dog'))
-                  ).map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      className={`chip min-h-8 items-center border px-2.5 text-xs ${
-                        draft.types.includes(type)
-                          ? 'chip-selected'
-                          : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
-                      }`}
-                      onClick={() =>
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <label className="text-xs font-bold text-on-surface">
+                    Von
+                    <input
+                      className="input mt-1"
+                      type="time"
+                      step="1800"
+                      value={draft.start}
+                      onChange={(event) =>
                         setDraft((current) =>
-                          current === null
-                            ? current
-                            : { ...current, types: toggle(current.types, type) }
+                          current === null ? current : { ...current, start: event.target.value }
                         )
                       }
-                    >
-                      {BOOKING_LABELS[type]}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
-
-              <fieldset className="mt-3">
-                <legend className="text-xs font-bold text-on-surface">Tierarten</legend>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {AVAILABILITY_PET_SPECIES.map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      className={`chip min-h-8 items-center border px-2.5 text-xs ${
-                        draft.species.includes(value)
-                          ? 'chip-selected'
-                          : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
-                      }`}
-                      onClick={() =>
-                        setDraft((current) => {
-                          if (current === null) return current;
-                          const species = toggle(current.species, value);
-                          let types = current.types;
-                          if (!species.includes('horse')) {
-                            types = types.filter((type) => type !== 'ride');
-                          }
-                          if (!species.includes('dog')) {
-                            types = types.filter((type) => type !== 'walk');
-                          }
-                          return { ...current, species, types };
-                        })
+                    />
+                  </label>
+                  <label className="text-xs font-bold text-on-surface">
+                    Bis
+                    <input
+                      className="input mt-1"
+                      type="time"
+                      step="1800"
+                      value={draft.end}
+                      onChange={(event) =>
+                        setDraft((current) =>
+                          current === null ? current : { ...current, end: event.target.value }
+                        )
                       }
-                    >
-                      {SPECIES[value]}
-                    </button>
-                  ))}
+                    />
+                  </label>
+                  <label className="text-xs font-bold text-on-surface">
+                    Radius (km)
+                    <input
+                      className="input mt-1"
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={draft.radius}
+                      onChange={(event) =>
+                        setDraft((current) =>
+                          current === null ? current : { ...current, radius: event.target.value }
+                        )
+                      }
+                    />
+                  </label>
                 </div>
-              </fieldset>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={saveDays.isPending}
-                  onClick={() => {
-                    void saveDraft();
-                  }}
-                >
-                  {saveDays.isPending
-                    ? 'Wird gespeichert …'
-                    : draft.additionalDays.length > 0
-                      ? `Für ${draft.additionalDays.length + 1} Tage speichern`
-                      : 'Änderungen speichern'}
-                </button>
+                <fieldset className="mt-3">
+                  <legend className="text-xs font-bold text-on-surface">Betreuungsarten</legend>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {AVAILABILITY_BOOKING_TYPES.filter(
+                      (type) =>
+                        (type !== 'ride' || draft.species.includes('horse')) &&
+                        (type !== 'walk' || draft.species.includes('dog'))
+                    ).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        className={`chip min-h-8 items-center border px-2.5 text-xs ${
+                          draft.types.includes(type)
+                            ? 'chip-selected'
+                            : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
+                        }`}
+                        onClick={() =>
+                          setDraft((current) =>
+                            current === null
+                              ? current
+                              : { ...current, types: toggle(current.types, type) }
+                          )
+                        }
+                      >
+                        {BOOKING_LABELS[type]}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset className="mt-3">
+                  <legend className="text-xs font-bold text-on-surface">Tierarten</legend>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {AVAILABILITY_PET_SPECIES.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={`chip min-h-8 items-center border px-2.5 text-xs ${
+                          draft.species.includes(value)
+                            ? 'chip-selected'
+                            : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
+                        }`}
+                        onClick={() =>
+                          setDraft((current) => {
+                            if (current === null) return current;
+                            const species = toggle(current.species, value);
+                            let types = current.types;
+                            if (!species.includes('horse')) {
+                              types = types.filter((type) => type !== 'ride');
+                            }
+                            if (!species.includes('dog')) {
+                              types = types.filter((type) => type !== 'walk');
+                            }
+                            return { ...current, species, types };
+                          })
+                        }
+                      >
+                        {SPECIES[value]}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={saveDays.isPending}
+                    onClick={() => {
+                      void saveDraft();
+                    }}
+                  >
+                    {saveDays.isPending
+                      ? 'Wird gespeichert …'
+                      : draft.additionalDays.length > 0
+                        ? `Für ${draft.additionalDays.length + 1} Tage speichern`
+                        : 'Änderungen speichern'}
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
