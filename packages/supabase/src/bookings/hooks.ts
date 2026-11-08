@@ -14,6 +14,7 @@ import {
   fetchBooking,
   fetchBookingGroup,
   fetchBookingsForUser,
+  fetchCanAcceptOpenBooking,
   subscribeBookings,
   type Booking,
   type BookingListScope,
@@ -67,6 +68,19 @@ export function useBooking(
       return fetchBooking(client, bookingId);
     },
     enabled: bookingId !== undefined,
+  });
+}
+
+/** Radius check for the accept button on open requests. */
+export function useCanAcceptOpenBooking(bookingId: string | null): UseQueryResult<boolean, Error> {
+  const client = getSupabaseClient();
+  return useQuery({
+    queryKey: bookingKeys.canAcceptOpen(bookingId ?? 'unknown'),
+    queryFn: () => {
+      if (bookingId === null) throw new Error('bookingId is required');
+      return fetchCanAcceptOpenBooking(client, bookingId);
+    },
+    enabled: bookingId !== null,
   });
 }
 

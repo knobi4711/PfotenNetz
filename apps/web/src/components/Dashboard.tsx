@@ -462,35 +462,47 @@ export function Dashboard() {
                 <p className="text-sm text-on-surface-variant">Anfragen werden geladen …</p>
               ) : visibleBookings.length ? (
                 <div className="space-y-3">
-                  {visibleBookings.map((request) => (
-                    <button
-                      type="button"
-                      key={request.id}
-                      className="flex w-full items-center justify-between rounded-xl border border-outline-variant/40 p-4 text-left hover:bg-surface-container-low"
-                      onClick={() => router.push(`/booking/${request.primary.id}`)}
-                    >
-                      <span className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-xl">
-                          {petSpeciesEmoji(request.primary.pet?.species)}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block font-bold">
-                            {request.bookings
-                              .map((booking) => formatPetDisplayName(booking.pet))
-                              .join(', ')}
+                  {visibleBookings.map((request) => {
+                    const showAdminBadge =
+                      profile.data?.role === 'admin' &&
+                      request.primary.status === 'requested' &&
+                      request.primary.helper_id === null &&
+                      request.primary.seeker_id !== profile.data?.id;
+                    return (
+                      <button
+                        type="button"
+                        key={request.id}
+                        className="flex w-full items-center justify-between rounded-xl border border-outline-variant/40 p-4 text-left hover:bg-surface-container-low"
+                        onClick={() => router.push(`/booking/${request.primary.id}`)}
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-xl">
+                            {petSpeciesEmoji(request.primary.pet?.species)}
                           </span>
-                          <span className="text-sm text-on-surface-variant">
-                            {bookingTypeLabel(request.primary.type)} ·{' '}
-                            {statusLabel(request.primary.status)}
-                            {request.bookings.length > 1
-                              ? ` · ${request.bookings.length} Tiere`
-                              : ''}
+                          <span className="min-w-0">
+                            <span className="block font-bold">
+                              {request.bookings
+                                .map((booking) => formatPetDisplayName(booking.pet))
+                                .join(', ')}
+                            </span>
+                            <span className="text-sm text-on-surface-variant">
+                              {bookingTypeLabel(request.primary.type)} ·{' '}
+                              {statusLabel(request.primary.status)}
+                              {request.bookings.length > 1
+                                ? ` · ${request.bookings.length} Tiere`
+                                : ''}
+                              {showAdminBadge ? (
+                                <span className="ml-2 inline-block rounded-full bg-secondary-container px-2 py-0.5 text-[10px] font-bold text-on-secondary-container">
+                                  Admin-Ansicht
+                                </span>
+                              ) : null}
+                            </span>
                           </span>
                         </span>
-                      </span>
-                      <span className="text-sm font-bold text-primary">Öffnen →</span>
-                    </button>
-                  ))}
+                        <span className="text-sm font-bold text-primary">Öffnen →</span>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-on-surface-variant">Noch keine laufenden Anfragen.</p>

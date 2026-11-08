@@ -9,6 +9,7 @@ import {
   useArchivedBookings,
   useBookings,
   useCurrentUser,
+  useOwnProfile,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
@@ -57,13 +58,20 @@ function roleLabel(booking: BookingWithRelations, currentUserId: string | null):
 function BookingRow({
   request,
   currentUserId,
+  isAdmin,
 }: {
   request: BookingRequestGroup;
   currentUserId: string | null;
+  isAdmin: boolean;
 }) {
   const c = usePalette();
   const booking = request.primary;
   const role = roleLabel(booking, currentUserId);
+  const showAdminBadge =
+    isAdmin &&
+    booking.status === 'requested' &&
+    booking.helper_id === null &&
+    booking.seeker_id !== currentUserId;
   const petNames = request.bookings.map((item) => item.pet?.name ?? 'Tier');
   return (
     <Pressable
@@ -92,6 +100,16 @@ function BookingRow({
           })}
           {role !== null ? ` · ${role}` : ''}
         </Text>
+        {showAdminBadge ? (
+          <Text
+            style={[
+              styles.adminBadge,
+              { backgroundColor: c.secondaryContainer, color: c.onSecondaryContainer },
+            ]}
+          >
+            Admin-Ansicht
+          </Text>
+        ) : null}
         <Text style={[styles.price, { color: c.onSurface }]}>{priceLabel(booking)}</Text>
       </View>
       <StatusBadge status={booking.status} />
@@ -104,6 +122,7 @@ export default function TrackingScreen() {
   const bookingsQuery = useBookings();
   const archivedBookingsQuery = useArchivedBookings();
   const userQuery = useCurrentUser();
+  const profileQuery = useOwnProfile();
   const notificationsQuery = useNotifications();
   const unreadQuery = useUnreadCount();
   const markRead = useMarkNotificationRead();
@@ -118,6 +137,7 @@ export default function TrackingScreen() {
   const activeBookings = bookingsQuery.data ?? [];
   const bookings = displayedQuery.data ?? [];
   const currentUserId = userQuery.data?.id ?? null;
+  const isAdmin = profileQuery.data?.role === 'admin';
   const notifications = notificationsQuery.data ?? [];
   const unread = unreadQuery.data ?? 0;
 
@@ -244,7 +264,12 @@ export default function TrackingScreen() {
           </Card>
         ) : (
           groupBookingsByRequest(visibleBookings).map((request) => (
-            <BookingRow key={request.id} request={request} currentUserId={currentUserId} />
+            <BookingRow
+              key={request.id}
+              request={request}
+              currentUserId={currentUserId}
+              isAdmin={isAdmin}
+            />
           ))
         )}
 
@@ -372,6 +397,17 @@ const styles = StyleSheet.create({
   rowMain: { flexShrink: 1, flex: 1, gap: 2 },
   bookingNumber: { fontFamily: appFonts.bold, fontSize: 15, lineHeight: 20 },
   rowSub: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18 },
+  adminBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    fontFamily: appFonts.bold,
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 4,
+    overflow: 'hidden',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
   price: { fontFamily: appFonts.bold, fontSize: 13, lineHeight: 18, marginTop: 4 },
   notifHeader: {
     flexDirection: 'row',

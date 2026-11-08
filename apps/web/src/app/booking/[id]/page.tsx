@@ -6,6 +6,7 @@ import {
   useAcceptBooking,
   useBooking,
   useBookingGroup,
+  useCanAcceptOpenBooking,
   useCancelBooking,
   useCompleteBooking,
   useCurrentUser,
@@ -185,6 +186,8 @@ export default function BookingDetailPage() {
     value.helper_id === null &&
     value.seeker_id !== user.data?.id &&
     (profile.data?.role === 'helper' || profile.data?.role === 'admin');
+  const isAdmin = profile.data?.role === 'admin';
+  const canAcceptOpen = useCanAcceptOpenBooking(isOpenRequest === true ? (id ?? null) : null);
   const pending =
     accept.isPending ||
     reject.isPending ||
@@ -326,19 +329,39 @@ export default function BookingDetailPage() {
                   ) : null}
                   {value.status === 'requested' && isOpenRequest ? (
                     <>
-                      <p className="rounded-xl bg-secondary-container p-3 text-sm text-on-secondary-container">
-                        Die Anfrage liegt in deinem Gebiet: gleiche Postleitzahl oder innerhalb des
-                        Nachbarschafts-Radius der anfragenden Person – und in deiner
-                        Reisebereitschaft für diese Betreuungsart. Die genaue Adresse wird erst nach
-                        Bestätigung geteilt.
-                      </p>
-                      <button
-                        className="btn-primary w-full"
-                        disabled={pending}
-                        onClick={() => accept.mutate(id)}
-                      >
-                        Anfrage annehmen
-                      </button>
+                      {isAdmin ? (
+                        <span className="w-fit rounded-full bg-secondary-container px-3 py-1 text-xs font-bold text-on-secondary-container">
+                          Admin-Ansicht
+                        </span>
+                      ) : null}
+                      {canAcceptOpen.isPending ? (
+                        <p className="rounded-xl bg-secondary-container p-3 text-sm text-on-secondary-container">
+                          Radius wird geprüft …
+                        </p>
+                      ) : canAcceptOpen.data === false ? (
+                        <p className="rounded-xl bg-secondary-container p-3 text-sm text-on-secondary-container">
+                          Diese Anfrage liegt außerhalb deines Nachbarschafts-Radius.
+                          {isAdmin
+                            ? ' Als Admin siehst du sie zur Übersicht, kannst sie aber nicht annehmen.'
+                            : ' Du kannst sie daher nicht annehmen.'}
+                        </p>
+                      ) : (
+                        <>
+                          <p className="rounded-xl bg-secondary-container p-3 text-sm text-on-secondary-container">
+                            Die Anfrage liegt in deinem Gebiet: gleiche Postleitzahl oder innerhalb
+                            des Nachbarschafts-Radius der anfragenden Person – und in deiner
+                            Reisebereitschaft für diese Betreuungsart. Die genaue Adresse wird erst
+                            nach Bestätigung geteilt.
+                          </p>
+                          <button
+                            className="btn-primary w-full"
+                            disabled={pending || canAcceptOpen.data !== true}
+                            onClick={() => accept.mutate(id)}
+                          >
+                            Anfrage annehmen
+                          </button>
+                        </>
+                      )}
                     </>
                   ) : null}
                   {value.status === 'awaiting_seeker' && isSeeker ? (

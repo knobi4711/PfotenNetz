@@ -16,6 +16,7 @@ import {
   formatTrackingRadius,
   useAcceptBooking,
   useBooking,
+  useCanAcceptOpenBooking,
   useBookingGroup,
   useCancelBooking,
   useCompleteBooking,
@@ -304,6 +305,10 @@ export default function BookingDetailScreen() {
     booking.helper_id === null &&
     booking.seeker_id !== currentUserId &&
     (profileQuery.data?.role === 'helper' || profileQuery.data?.role === 'admin');
+  const isAdmin = profileQuery.data?.role === 'admin';
+  const canAcceptOpen = useCanAcceptOpenBooking(
+    isOpenRequest && bookingId !== undefined ? bookingId : null
+  );
   const liveSession = activeTracking.data?.find((item) => item.booking_id === bookingId) ?? null;
 
   // Tracking must not outlive its booking. The database closes the session when
@@ -618,19 +623,43 @@ export default function BookingDetailScreen() {
             {isOpenRequest ? (
               <Card>
                 <SectionTitle>Offene Anfrage</SectionTitle>
-                <EmptyText>
-                  Die Anfrage liegt in deinem Gebiet: gleiche Postleitzahl oder innerhalb des
-                  Nachbarschafts-Radius der anfragenden Person – und in deiner Reisebereitschaft für
-                  diese Betreuungsart. Die genaue Adresse wird erst nach Bestätigung geteilt.
-                </EmptyText>
-                <ActionButton
-                  title="Anfrage annehmen"
-                  pending={accept.isPending}
-                  disabled={anyPending}
-                  onPress={() => {
-                    if (bookingId !== undefined) accept.mutate(bookingId);
-                  }}
-                />
+                {isAdmin ? (
+                  <Text
+                    style={[
+                      styles.adminBadge,
+                      { backgroundColor: c.secondaryContainer, color: c.onSecondaryContainer },
+                    ]}
+                  >
+                    Admin-Ansicht
+                  </Text>
+                ) : null}
+                {canAcceptOpen.isPending ? (
+                  <EmptyText>Radius wird geprüft …</EmptyText>
+                ) : canAcceptOpen.data === false ? (
+                  <EmptyText>
+                    Diese Anfrage liegt außerhalb deines Nachbarschafts-Radius.
+                    {isAdmin
+                      ? ' Als Admin siehst du sie zur Übersicht, kannst sie aber nicht annehmen.'
+                      : ' Du kannst sie daher nicht annehmen.'}
+                  </EmptyText>
+                ) : (
+                  <>
+                    <EmptyText>
+                      Die Anfrage liegt in deinem Gebiet: gleiche Postleitzahl oder innerhalb des
+                      Nachbarschafts-Radius der anfragenden Person – und in deiner Reisebereitschaft
+                      für diese Betreuungsart. Die genaue Adresse wird erst nach Bestätigung
+                      geteilt.
+                    </EmptyText>
+                    <ActionButton
+                      title="Anfrage annehmen"
+                      pending={accept.isPending}
+                      disabled={anyPending || canAcceptOpen.data !== true}
+                      onPress={() => {
+                        if (bookingId !== undefined) accept.mutate(bookingId);
+                      }}
+                    />
+                  </>
+                )}
               </Card>
             ) : null}
 
@@ -820,6 +849,17 @@ const styles = StyleSheet.create({
   timeline: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   timelineStep: { flex: 1, alignItems: 'center', gap: 6 },
   timelineDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
+  adminBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    fontFamily: appFonts.bold,
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 8,
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
   timelineLabel: {
     fontFamily: appFonts.regular,
     fontSize: 11,

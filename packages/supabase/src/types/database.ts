@@ -2292,6 +2292,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      helper_can_accept_open_booking: {
+        Args: { p_booking_id: string };
+        Returns: boolean;
+      };
       helper_complete_booking: {
         Args: { p_booking_id: string };
         Returns: {

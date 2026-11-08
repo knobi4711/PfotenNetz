@@ -6,6 +6,7 @@ import {
   useArchivedBookings,
   useBookings,
   useCurrentUser,
+  useOwnProfile,
   type BookingRequestGroup,
 } from '@pfotennetz/supabase';
 import { bookingTypeLabel } from '@pfotennetz/shared';
@@ -24,16 +25,20 @@ const STATUS: Record<string, string> = {
 function BookingCard({
   request,
   currentUserId,
+  isAdmin,
   archived = false,
 }: {
   request: BookingRequestGroup;
   currentUserId: string | null;
+  isAdmin: boolean;
   archived?: boolean;
 }) {
   const router = useRouter();
   const booking = request.primary;
   const isHelper = booking.helper_id === currentUserId;
   const isOwnRequest = booking.seeker_id === currentUserId;
+  const isOpenRequest =
+    booking.status === 'requested' && booking.helper_id === null && !isOwnRequest;
   const petNames = request.bookings.map((item) => formatPetDisplayName(item.pet));
   return (
     <button
@@ -57,9 +62,16 @@ function BookingCard({
               : ''}
           </p>
         </div>
-        <span className="rounded-full bg-primary-fixed px-3 py-1 text-xs font-bold text-on-primary-fixed-variant">
-          {STATUS[booking.status] ?? booking.status}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-primary-fixed px-3 py-1 text-xs font-bold text-on-primary-fixed-variant">
+            {STATUS[booking.status] ?? booking.status}
+          </span>
+          {isAdmin && isOpenRequest ? (
+            <span className="rounded-full bg-secondary-container px-3 py-1 text-xs font-bold text-on-secondary-container">
+              Admin-Ansicht
+            </span>
+          ) : null}
+        </div>
       </div>
       <div className="mt-5 grid gap-3 text-sm text-on-surface-variant sm:grid-cols-3">
         <span>
@@ -96,6 +108,8 @@ export default function BookingsPage() {
   const activeBookings = useBookings();
   const archivedBookings = useArchivedBookings();
   const user = useCurrentUser();
+  const profile = useOwnProfile();
+  const isAdmin = profile.data?.role === 'admin';
   const bookings = view === 'active' ? activeBookings : archivedBookings;
   const data = bookings.data ?? [];
   const requests = groupBookingsByRequest(data);
@@ -178,6 +192,7 @@ export default function BookingsPage() {
                 key={request.id}
                 request={request}
                 currentUserId={user.data?.id ?? null}
+                isAdmin={isAdmin}
                 archived={view === 'archive'}
               />
             ))}

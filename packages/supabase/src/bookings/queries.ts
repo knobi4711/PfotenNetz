@@ -111,6 +111,18 @@ export async function fetchBookingGroup(
   );
 }
 
+/** Server-side radius check for accepting an open request. */
+export async function fetchCanAcceptOpenBooking(
+  client: SupabaseClient<Database>,
+  bookingId: string
+): Promise<boolean> {
+  const { data, error } = await client.rpc('helper_can_accept_open_booking', {
+    p_booking_id: bookingId,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
 /** Collapses grouped rows for list views without merging independent requests. */
 export function groupBookingsByRequest(bookings: BookingWithRelations[]): BookingRequestGroup[] {
   const groups = new Map<string, BookingWithRelations[]>();

@@ -15,4 +15,6 @@ export const bookingKeys = {
     scope === 'active' ? (['bookings', 'list'] as const) : (['bookings', 'list', scope] as const),
   /** Single booking detail, including relations. */
   detail: (bookingId: string) => ['booking', bookingId] as const,
+  /** Whether the current user may accept this open request (radius check). */
+  canAcceptOpen: (bookingId: string) => ['booking', bookingId, 'can-accept'] as const,
 } as const;

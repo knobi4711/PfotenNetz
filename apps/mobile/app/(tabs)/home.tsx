@@ -110,9 +110,11 @@ function HighlightCard({
 function PreviewRow({
   booking,
   petNames,
+  adminOpenRequest = false,
 }: {
   booking: BookingWithRelations;
   petNames?: string[] | undefined;
+  adminOpenRequest?: boolean;
 }) {
   const c = usePalette();
   return (
@@ -129,6 +131,16 @@ function PreviewRow({
     >
       <View style={styles.rowMain}>
         <Text style={[styles.rowTitle, { color: c.onSurface }]}>{booking.booking_number}</Text>
+        {adminOpenRequest ? (
+          <Text
+            style={[
+              styles.adminBadge,
+              { backgroundColor: c.secondaryContainer, color: c.onSecondaryContainer },
+            ]}
+          >
+            Admin-Ansicht
+          </Text>
+        ) : null}
         <Text style={[styles.rowSub, { color: c.onSurfaceVariant }]}>
           {bookingTypeLabels[booking.type]} · {petNames?.join(', ') ?? booking.pet?.name ?? '–'}
         </Text>
@@ -479,6 +491,12 @@ export default function HomeScreen() {
                 petNames={requests
                   .find((request) => request.primary.id === booking.id)
                   ?.bookings.map((item) => item.pet?.name ?? 'Tier')}
+                adminOpenRequest={
+                  profileQuery.data?.role === 'admin' &&
+                  booking.status === 'requested' &&
+                  booking.helper_id === null &&
+                  booking.seeker_id !== profileQuery.data?.id
+                }
               />
             ))
           )}
@@ -546,6 +564,17 @@ const styles = StyleSheet.create({
   bookingIconEmoji: { fontSize: 24, lineHeight: 30 },
   bookingNumber: { fontFamily: appFonts.bold, fontSize: 15, lineHeight: 20 },
   rowSub: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18 },
+  adminBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    fontFamily: appFonts.bold,
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 4,
+    overflow: 'hidden',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
   petMeta: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
   statsRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   statsNumber: { fontFamily: appFonts.extrabold, fontSize: 32, lineHeight: 38 },
