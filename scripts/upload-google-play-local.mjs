@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu in 0.3.0: Eine kurze Einführung führt durch die wichtigsten Funktionen. Nachbarschafts-Radien sind jetzt einheitlich und bestimmen offene Anfragen, die Umgebungs-Statistik und den Start der Helfersuche. Anfragen und der Gefahrenradar folgen klareren Radius-Regeln.';
+  'Neu in 0.3.1: Einheitliche Nachbarschafts-Radien für offene Anfragen, Umgebungs-Statistik und Helfersuche. Anfragen und Gefahrenradar folgen klareren Radius-Regeln; die Einführung und die Mehrfach-Tage für Zeitfenster bleiben enthalten.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';
