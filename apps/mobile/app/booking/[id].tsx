@@ -619,8 +619,9 @@ export default function BookingDetailScreen() {
               <Card>
                 <SectionTitle>Offene Anfrage</SectionTitle>
                 <EmptyText>
-                  Die Anfrage liegt in deinem registrierten Gebiet oder im Suchradius des Anbieters.
-                  Die genaue Adresse wird erst nach Bestätigung geteilt.
+                  Die Anfrage liegt in deinem Gebiet: gleiche Postleitzahl oder innerhalb des
+                  Nachbarschafts-Radius der anfragenden Person – und in deiner Reisebereitschaft für
+                  diese Betreuungsart. Die genaue Adresse wird erst nach Bestätigung geteilt.
                 </EmptyText>
                 <ActionButton
                   title="Anfrage annehmen"

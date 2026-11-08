@@ -15,8 +15,8 @@ export default function HazardSuccessScreen() {
         <Text style={styles.icon}>✓</Text>
         <Text style={[styles.title, { color: c.onSurface }]}>Warnung eingegangen</Text>
         <Text style={[styles.body, { color: c.onSurfaceVariant }]}>
-          Deine Meldung {hazardNumber ? `(${hazardNumber}) ` : ''}wird geprüft. Sobald sie aktiv
-          ist, werden Menschen im Warnradius informiert.
+          Deine Meldung {hazardNumber ? `(${hazardNumber}) ` : ''}ist jetzt aktiv und im
+          Gefahrenradar deiner Nachbarschaft sichtbar.
         </Text>
         <ActionButton
           title="Gefahrenradar öffnen"

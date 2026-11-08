@@ -83,3 +83,18 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 docker run --rm --network caddy_proxy curlimages/curl:8.10.1 -fsSI http://pfotennetz-web:3000/
 curl -I https://pfotennetz.app
 ```
+
+## App-Release mit Web-Abgleich
+
+`apps/web/next.config.js` liest die App-Version beim Build aus `apps/mobile/app.json` und
+zeigt sie im Dashboard an. Deshalb gehört zu **jedem** Mobile-Release auch ein neuer
+Web-Build und ein Deployment – sonst bleibt im Dashboard die alte Version stehen.
+
+Ablauf bei jedem App-Release:
+
+1. In `apps/mobile/app.json` `version` und `versionCode` erhöhen (und den lokalen
+   `apps/mobile/android/app/build.gradle`-Stand angleichen).
+2. AAB bauen (`apps/mobile/android`: `./gradlew.bat app:bundleRelease`) und mit
+   `pnpm --filter @pfotennetz/mobile upload:android:local` zu Google Play hochladen.
+3. `pnpm --filter @pfotennetz/web build` ausführen und den Web-Deploy wie oben beschrieben.
+4. Live prüfen, dass die neue Version im ausgelieferten Dashboard-Chunk enthalten ist.

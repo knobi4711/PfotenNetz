@@ -18,7 +18,7 @@ import {
   type BookingType,
   type CareLocation,
 } from '@pfotennetz/supabase';
-import { BOOKING_TYPE_LABELS } from '@pfotennetz/shared';
+import { BOOKING_TYPE_LABELS, maxDistanceForBookingType } from '@pfotennetz/shared';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { WebHeader } from '../../../components/WebHeader';
@@ -114,6 +114,17 @@ function NewBookingForm() {
       })
     )
       return setFormError('Der Zeitraum liegt außerhalb der Verfügbarkeit dieses Helfers.');
+    if (!isEditMode && helper.data) {
+      const maxDistanceKm = maxDistanceForBookingType(helper.data.slots, type);
+      if (
+        maxDistanceKm !== null &&
+        helper.data.distance_km !== null &&
+        Number(helper.data.distance_km) > maxDistanceKm
+      )
+        return setFormError(
+          'Der Helfer bietet diese Betreuungsart nicht in deiner Entfernung an. Wähle einen anderen Helfer oder sende die Anfrage ohne Helper.'
+        );
+    }
     if (isEditMode && bookingId !== null) {
       update.mutate(
         {

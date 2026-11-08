@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { MAX_HELPER_SEARCH_RADIUS_KM, MIN_HELPER_SEARCH_RADIUS_KM } from '@pfotennetz/shared';
 import type { Database } from '../types/database';
 import type { BookingType } from '../bookings/creation';
 
@@ -35,8 +36,12 @@ export function validateNearbyHelperSearch(input: NearbyHelperSearch): string | 
   if (!Number.isFinite(input.longitude) || input.longitude < -180 || input.longitude > 180) {
     return 'Ungültiger Längengrad.';
   }
-  if (!Number.isFinite(input.radiusKm) || input.radiusKm < 0.5 || input.radiusKm > 50) {
-    return 'Der Suchradius muss zwischen 0,5 und 50 km liegen.';
+  if (
+    !Number.isFinite(input.radiusKm) ||
+    input.radiusKm < MIN_HELPER_SEARCH_RADIUS_KM ||
+    input.radiusKm > MAX_HELPER_SEARCH_RADIUS_KM
+  ) {
+    return `Der Suchradius muss zwischen ${MIN_HELPER_SEARCH_RADIUS_KM.toLocaleString('de-DE')} und ${MAX_HELPER_SEARCH_RADIUS_KM.toLocaleString('de-DE')} km liegen.`;
   }
   if (
     input.limit !== undefined &&

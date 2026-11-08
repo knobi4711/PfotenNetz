@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu: Ein Zeitfenster in den Verfügbarkeiten lässt sich mit einer Speicherung auf mehrere Tage übernehmen. Unter „Auch an diesen Tagen“ mehrere Tage markieren – bestehende identische Zeitfenster werden übernommen, Überschneidungen mit einem klaren Hinweis abgelehnt.';
+  'Neu in 0.3.0: Eine kurze Einführung führt durch die wichtigsten Funktionen. Nachbarschafts-Radien sind jetzt einheitlich und bestimmen offene Anfragen, die Umgebungs-Statistik und den Start der Helfersuche. Anfragen und der Gefahrenradar folgen klareren Radius-Regeln.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';

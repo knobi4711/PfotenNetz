@@ -3,6 +3,7 @@ export * from './constants';
 export * from './availability';
 export * from './routes';
 export * from './geocoding';
+export * from './onboarding';
 export * from './routing';
 export * from './timebank';
 export * from './utils';

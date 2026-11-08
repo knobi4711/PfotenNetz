@@ -9,9 +9,15 @@ import {
   BOOKING_TYPES,
   nearbyHelperErrorMessage,
   useNearbyHelpers,
+  useOwnProfile,
   type NearbyHelper,
   type BookingType,
 } from '@pfotennetz/supabase';
+import {
+  HELPER_SEARCH_RADII,
+  helperSearchRadiusFromKiez,
+  type HelperSearchRadiusKm,
+} from '@pfotennetz/shared';
 import {
   ActionButton,
   AppHeader,
@@ -28,7 +34,6 @@ import {
 } from '../../components/ui';
 import { formatAvailableDays, projectNearbyPoint, type MapCoordinate } from '../../lib/helper-map';
 
-const RADII = [1.5, 3, 5, 10] as const;
 const SPECIES = [
   ['dog', 'Hund'],
   ['cat', 'Katze'],
@@ -144,7 +149,7 @@ function NeighborhoodMap({
         );
       })}
       <Text style={[styles.north, { color: c.onSurfaceVariant }]}>N</Text>
-      <Text style={[styles.mapCaption, { color: c.onSurfaceVariant }]}>ca. ±{radiusKm} km</Text>
+      <Text style={[styles.mapCaption, { color: c.onSurfaceVariant }]}>Radius {radiusKm} km</Text>
     </View>
   );
 }
@@ -220,7 +225,9 @@ function HelperCard({
 export default function ExploreScreen() {
   const c = usePalette();
   const [center, setCenter] = useState<MapCoordinate | null>(null);
-  const [radiusKm, setRadiusKm] = useState<(typeof RADII)[number]>(3);
+  const [radiusOverride, setRadiusOverride] = useState<HelperSearchRadiusKm | null>(null);
+  const profileQuery = useOwnProfile();
+  const radiusKm = radiusOverride ?? helperSearchRadiusFromKiez(profileQuery.data?.kiez_radius_km);
   const [locationPending, setLocationPending] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -277,7 +284,7 @@ export default function ExploreScreen() {
 
         <View style={styles.filterSection}>
           <ChipRow>
-            {RADII.map((radius) => {
+            {HELPER_SEARCH_RADII.map((radius) => {
               const selected = radius === radiusKm;
               return (
                 <Chip
@@ -286,7 +293,7 @@ export default function ExploreScreen() {
                   selected={selected}
                   icon="map-marker-radius"
                   onPress={() => {
-                    setRadiusKm(radius);
+                    setRadiusOverride(radius);
                     setSelectedId(null);
                   }}
                 />

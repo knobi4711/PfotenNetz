@@ -14,6 +14,7 @@ import {
 } from '@pfotennetz/supabase';
 import {
   AVAILABILITY_WEEKDAYS,
+  DEFAULT_HELPER_MAX_DISTANCE_KM,
   availabilityWeekdayLabel,
   buildAvailabilityWeek,
   findAvailabilityBlockAt,
@@ -25,6 +26,7 @@ import {
   normalizeAvailabilityRange,
   shiftAvailabilityRange,
   snapAvailabilityMinutes,
+  toggleAvailabilityDaySelection,
 } from '@pfotennetz/shared';
 import {
   useEffect,
@@ -53,7 +55,7 @@ const BOOKING_LABELS: Record<BookingType, string> = {
 };
 
 const DEFAULT_SETTINGS = {
-  radius: '5',
+  radius: String(DEFAULT_HELPER_MAX_DISTANCE_KM),
   types: ['walk'] as BookingType[],
   species: [...AVAILABILITY_PET_SPECIES] as string[],
 };
@@ -484,6 +486,17 @@ export function AvailabilityManager() {
   const toggle = <T,>(items: T[], value: T): T[] =>
     items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
 
+  const toggleDraftDay = (dayOfWeek: number) => {
+    setDraft((current) => {
+      if (current === null) return current;
+      const [primary, ...additionalDays] = toggleAvailabilityDaySelection(
+        [current.dayOfWeek, ...current.additionalDays],
+        dayOfWeek
+      );
+      return { ...current, dayOfWeek: primary ?? current.dayOfWeek, additionalDays };
+    });
+  };
+
   const clearOverride = (id: string) => {
     setRangeOverrides((current) => {
       if (!(id in current)) return current;
@@ -664,7 +677,7 @@ export function AvailabilityManager() {
   };
 
   return (
-    <section className="card p-7">
+    <section id="verfuegbarkeiten" className="card scroll-mt-24 p-7">
       <h2 className="text-xl font-extrabold text-on-surface">Meine Verfügbarkeiten</h2>
       <p className="mt-2 text-sm text-on-surface-variant">
         Male deine Zeiten direkt in den Wochenplan – so siehst du sofort, wann du in der
@@ -783,80 +796,32 @@ export function AvailabilityManager() {
                 </div>
 
                 <fieldset className="mt-4">
-                  <legend className="text-xs font-bold text-on-surface">Tag</legend>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {AVAILABILITY_WEEKDAYS.map((day) => {
-                      const selected = draft.dayOfWeek === day.value;
-                      return (
-                        <button
-                          key={day.value}
-                          type="button"
-                          aria-pressed={selected}
-                          className={`chip min-h-9 items-center border px-3 text-xs ${
-                            selected
-                              ? 'chip-selected'
-                              : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
-                          }`}
-                          onClick={() =>
-                            setDraft((current) =>
-                              current === null
-                                ? current
-                                : {
-                                    ...current,
-                                    dayOfWeek: day.value,
-                                    additionalDays: current.additionalDays.filter(
-                                      (value) => value !== day.value
-                                    ),
-                                  }
-                            )
-                          }
-                        >
-                          {day.short}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </fieldset>
-
-                <fieldset className="mt-3">
-                  <legend className="text-xs font-bold text-on-surface">
-                    Auch an diesen Tagen
-                  </legend>
+                  <legend className="text-xs font-bold text-on-surface">Tage</legend>
                   <p className="mt-1 text-xs text-on-surface-variant">
                     Mehrfachauswahl: Das Zeitfenster wird mit denselben Einstellungen für alle
                     markierten Tage gespeichert.
                   </p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {AVAILABILITY_WEEKDAYS.filter((day) => day.value !== draft.dayOfWeek).map(
-                      (day) => {
-                        const selected = draft.additionalDays.includes(day.value);
-                        return (
-                          <button
-                            key={day.value}
-                            type="button"
-                            aria-pressed={selected}
-                            aria-label={`${day.long} als zusätzlichen Tag ${selected ? 'entfernen' : 'hinzufügen'}`}
-                            className={`chip min-h-9 items-center border px-3 text-xs ${
-                              selected
-                                ? 'chip-selected'
-                                : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
-                            }`}
-                            onClick={() =>
-                              setDraft((current) =>
-                                current === null
-                                  ? current
-                                  : {
-                                      ...current,
-                                      additionalDays: toggle(current.additionalDays, day.value),
-                                    }
-                              )
-                            }
-                          >
-                            {day.short}
-                          </button>
-                        );
-                      }
-                    )}
+                    {AVAILABILITY_WEEKDAYS.map((day) => {
+                      const selected =
+                        draft.dayOfWeek === day.value || draft.additionalDays.includes(day.value);
+                      return (
+                        <button
+                          key={day.value}
+                          type="button"
+                          aria-pressed={selected}
+                          aria-label={`${day.long} ${selected ? 'abwählen' : 'auswählen'}`}
+                          className={`chip min-h-9 items-center border px-3 text-xs ${
+                            selected
+                              ? 'chip-selected'
+                              : 'border-outline-variant bg-surface-container-high text-on-surface hover:bg-surface-container'
+                          }`}
+                          onClick={() => toggleDraftDay(day.value)}
+                        >
+                          {day.short}
+                        </button>
+                      );
+                    })}
                   </div>
                 </fieldset>
 

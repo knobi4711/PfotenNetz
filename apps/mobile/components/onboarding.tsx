@@ -15,12 +15,14 @@ import {
 import {
   buildOnboardingSteps,
   firstOpenStepIndex,
+  firstOpenTaskIndex,
   type OnboardingStep,
   type OnboardingTarget,
-} from '../lib/onboarding-progress';
+} from '@pfotennetz/shared';
 import { ActionButton, appFonts, usePalette } from './ui';
 
 const STEP_ICONS: Record<OnboardingStep['id'], keyof typeof MaterialCommunityIcons.glyphMap> = {
+  intro: 'compass-outline',
   profile: 'account-circle-outline',
   pets: 'paw-outline',
   helper: 'hand-heart-outline',
@@ -106,6 +108,12 @@ export function OnboardingWizard({ userId }: { userId: string }) {
   };
 
   const startStep = (step: OnboardingStep) => {
+    if (step.target === null) {
+      // The overview has no screen of its own: continue with the first task.
+      autoStep.current = false;
+      setStepIndex(firstOpenTaskIndex(stepsRef.current));
+      return;
+    }
     close();
     openTarget(step.target);
   };
@@ -176,26 +184,39 @@ export function OnboardingWizard({ userId }: { userId: string }) {
           <Text style={[styles.title, { color: c.onSurface }]}>{step.title}</Text>
           <Text style={[styles.summary, { color: c.onSurfaceVariant }]}>{step.summary}</Text>
 
-          <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name={step.done ? 'check-circle' : 'progress-clock'}
-              size={16}
-              color={step.done ? c.secondary : c.onSurfaceVariant}
-            />
-            <Text
-              style={[styles.statusText, { color: step.done ? c.secondary : c.onSurfaceVariant }]}
-            >
-              {step.done
-                ? 'Bereits erledigt'
-                : step.optional
-                  ? 'Optional – noch offen'
-                  : 'Noch offen'}
-            </Text>
-          </View>
+          {step.bullets === undefined ? null : (
+            <View style={styles.bullets}>
+              {step.bullets.map((bullet) => (
+                <View key={bullet} style={styles.bulletRow}>
+                  <MaterialCommunityIcons name="paw" size={14} color={c.primary} />
+                  <Text style={[styles.bulletText, { color: c.onSurface }]}>{bullet}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {step.kind === 'intro' ? null : (
+            <View style={styles.statusRow}>
+              <MaterialCommunityIcons
+                name={step.done ? 'check-circle' : 'progress-clock'}
+                size={16}
+                color={step.done ? c.secondary : c.onSurfaceVariant}
+              />
+              <Text
+                style={[styles.statusText, { color: step.done ? c.secondary : c.onSurfaceVariant }]}
+              >
+                {step.done
+                  ? 'Bereits erledigt'
+                  : step.optional
+                    ? 'Optional – noch offen'
+                    : 'Noch offen'}
+              </Text>
+            </View>
+          )}
 
           <ActionButton
             title={step.actionLabel}
-            variant={step.done ? 'secondary' : 'primary'}
+            variant={step.kind === 'task' && step.done ? 'secondary' : 'primary'}
             onPress={() => startStep(step)}
           />
 
@@ -274,6 +295,9 @@ const styles = StyleSheet.create({
   },
   title: { fontFamily: appFonts.extrabold, fontSize: 22, lineHeight: 28, marginTop: 14 },
   summary: { fontFamily: appFonts.medium, fontSize: 13, lineHeight: 20, marginTop: 6 },
+  bullets: { marginTop: 12, gap: 8 },
+  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  bulletText: { flex: 1, fontFamily: appFonts.medium, fontSize: 13, lineHeight: 19 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
   statusText: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 17 },
   footerRow: { flexDirection: 'row', gap: 10, marginTop: 14 },

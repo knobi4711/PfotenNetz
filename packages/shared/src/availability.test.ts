@@ -13,6 +13,7 @@ import {
   shiftAvailabilityRange,
   snapAvailabilityMinutes,
   timeToMinutes,
+  toggleAvailabilityDaySelection,
 } from './availability';
 
 describe('availability time helpers', () => {
@@ -44,6 +45,15 @@ describe('availability time helpers', () => {
     expect(formatAvailabilityDays([0, 1, 2, 3, 4, 5, 6])).toBe('Täglich');
     expect(formatAvailabilityDays([1, 1])).toBe('Mo');
     expect(formatAvailabilityDays([])).toBe('');
+  });
+
+  it('toggles weekdays in a selection and always keeps one day', () => {
+    expect(toggleAvailabilityDaySelection([1], 3)).toEqual([1, 3]);
+    expect(toggleAvailabilityDaySelection([3, 1], 5)).toEqual([1, 3, 5]);
+    expect(toggleAvailabilityDaySelection([1, 3, 5], 3)).toEqual([1, 5]);
+    expect(toggleAvailabilityDaySelection([1, 3], 1)).toEqual([3]);
+    expect(toggleAvailabilityDaySelection([1], 1)).toEqual([1]);
+    expect(toggleAvailabilityDaySelection([0, 2], 0)).toEqual([2]);
   });
 });
 

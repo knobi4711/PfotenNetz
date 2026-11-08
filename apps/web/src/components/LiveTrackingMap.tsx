@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { fetchOsrmWalkingRoute, type RoutingPoint } from '@pfotennetz/shared';
+import { MAP_TILE_ATTRIBUTION, MAP_TILE_URL } from '../lib/map-tiles';
 
 type LeafletMap = {
   setView: (center: [number, number], zoom: number) => LeafletMap;
@@ -87,9 +88,9 @@ export function LiveTrackingMap({
       layers.current.clearLayers();
       if (fresh) {
         leaflet
-          .tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+          .tileLayer(MAP_TILE_URL, {
             maxZoom: 19,
-            attribution: '© OpenStreetMap-Mitwirkende',
+            attribution: MAP_TILE_ATTRIBUTION,
           })
           .addTo(map.current);
       }

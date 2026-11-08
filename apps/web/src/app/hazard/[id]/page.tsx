@@ -7,6 +7,7 @@ import {
   useCreateHazardSighting,
   useHazard,
 } from '@pfotennetz/supabase';
+import { formatRadiusKm } from '@pfotennetz/shared';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { WebHeader } from '../../../components/WebHeader';
@@ -76,8 +77,8 @@ export default function WebHazardDetailPage() {
         ) : null}
         <section className="card mt-6 p-7">
           <p className="text-sm text-on-surface-variant">
-            {hazard.address ?? 'Standort in deiner Nachbarschaft'} · Warnradius {hazard.radius_km}{' '}
-            km
+            {hazard.address ?? 'Standort in deiner Nachbarschaft'} · Warnradius{' '}
+            {formatRadiusKm(Number(hazard.radius_km))}
           </p>
           {hazard.description ? (
             <p className="mt-5 text-lg leading-8 text-on-surface">{hazard.description}</p>

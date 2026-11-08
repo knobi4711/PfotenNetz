@@ -10,6 +10,7 @@ import {
   useHazard,
 } from '@pfotennetz/supabase';
 import { getSupabaseClient } from '@pfotennetz/supabase';
+import { formatRadiusKm } from '@pfotennetz/shared';
 import {
   ActionButton,
   AppHeader,
@@ -116,7 +117,8 @@ export default function HazardDetailScreen() {
           </Text>
         </View>
         <Text style={[styles.meta, { color: c.onSurfaceVariant }]}>
-          {hazard.address ?? 'Standort in deiner Nachbarschaft'} · Warnradius {hazard.radius_km} km
+          {hazard.address ?? 'Standort in deiner Nachbarschaft'} · Warnradius{' '}
+          {formatRadiusKm(Number(hazard.radius_km))}
         </Text>
         {hazard.description ? (
           <Text style={[styles.body, { color: c.onSurface }]}>{hazard.description}</Text>

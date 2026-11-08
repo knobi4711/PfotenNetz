@@ -6,6 +6,7 @@ import {
   useOwnPets,
   useMarkMissingPetFound,
 } from '@pfotennetz/supabase';
+import { MISSING_PET_SEARCH_RADIUS_KM } from '@pfotennetz/shared';
 import Link from 'next/link';
 import { WebHeader } from '../../components/WebHeader';
 import { getCurrentBrowserLocation } from '../../lib/location';
@@ -31,7 +32,7 @@ export default function MissingPetsPage() {
         longitude: point.longitude,
         description,
         lastSeenAt: new Date().toISOString(),
-        radiusKm: 3,
+        radiusKm: MISSING_PET_SEARCH_RADIUS_KM,
       });
       setSelectedPetId('');
       setDescription('');
@@ -57,7 +58,7 @@ export default function MissingPetsPage() {
           <h2 className="text-xl font-extrabold">Vermisstes Tier melden</h2>
           <p className="mt-2 text-sm text-on-surface-variant">
             Der aktuelle Browserstandort wird als letzter bekannter Ort gespeichert. Der Suchradius
-            beträgt 3 km.
+            beträgt {MISSING_PET_SEARCH_RADIUS_KM} km.
           </p>
           <Link href="/missing/radar" className="btn-secondary mt-5 inline-flex">
             Vermissten-Radar öffnen

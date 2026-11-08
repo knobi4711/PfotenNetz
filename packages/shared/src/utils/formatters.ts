@@ -5,6 +5,13 @@ export function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+/** German label for a radius given in kilometres, e.g. `500 m`, `1,5 km` or `3 km`. */
+export function formatRadiusKm(km: number): string {
+  if (!Number.isFinite(km)) return '–';
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km`;
+}
+
 export function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);

@@ -12,6 +12,7 @@ import {
   type HazardSeverity,
   type HazardType,
 } from '@pfotennetz/supabase';
+import { formatRadiusKm, hazardWarningRadiusKm } from '@pfotennetz/shared';
 import {
   ActionButton,
   AppHeader,
@@ -91,7 +92,7 @@ export default function HazardReportScreen() {
         severity,
         latitude: point.latitude,
         longitude: point.longitude,
-        radiusKm: severity === 'critical' ? 1.5 : 0.5,
+        radiusKm: hazardWarningRadiusKm(severity),
         address: address.trim() || null,
         description,
       });
@@ -219,7 +220,7 @@ export default function HazardReportScreen() {
           </Text>
           <Text style={[styles.summary, { color: c.onSurfaceVariant }]}>
             {HAZARD_SEVERITY_LABELS[severity]} · Warnradius{' '}
-            {severity === 'critical' ? '1,5 km' : '500 m'}
+            {formatRadiusKm(hazardWarningRadiusKm(severity))}
           </Text>
           <Text style={[styles.summary, { color: c.onSurfaceVariant }]}>
             {address || 'Standort wird verwendet'}
@@ -228,8 +229,8 @@ export default function HazardReportScreen() {
             {description || 'Keine weiteren Details angegeben.'}
           </Text>
           <Text style={[styles.notice, { color: c.onSurfaceVariant }]}>
-            Die Meldung wird zunächst geprüft und anschließend an Menschen in der Nähe
-            weitergegeben.
+            Die Meldung wird sofort veröffentlicht und ist anschließend im Gefahrenradar deiner
+            Nachbarschaft sichtbar.
           </Text>
         </Card>
       ) : null}

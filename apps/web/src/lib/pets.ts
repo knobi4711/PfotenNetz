@@ -1,6 +1,6 @@
 import { PET_SPECIES_LABELS, type PetSpecies } from '@pfotennetz/supabase';
 
-export function petSpeciesEmoji(species: string): string {
+export function petSpeciesEmoji(species: string | null | undefined): string {
   switch (species) {
     case 'dog':
       return '🐶';

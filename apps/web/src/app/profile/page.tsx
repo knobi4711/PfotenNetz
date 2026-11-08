@@ -20,6 +20,7 @@ import {
 } from '@pfotennetz/shared';
 import { WebHeader } from '../../components/WebHeader';
 import { AvailabilityManager } from '../../components/AvailabilityManager';
+import { openOnboarding } from '../../lib/onboarding';
 import Image from 'next/image';
 import { getCurrentBrowserLocation, type BrowserLocation } from '../../lib/location';
 import { useEffect, useRef, useState } from 'react';
@@ -275,6 +276,9 @@ export default function ProfilePage() {
       <div className="mx-auto max-w-5xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">Mein Konto</p>
         <h1 className="mt-2 text-4xl font-extrabold text-on-surface">Profil & Nachbarschaft</h1>
+        <button type="button" className="btn-secondary mt-4" onClick={() => openOnboarding()}>
+          Einführung erneut ansehen
+        </button>
         {profile.isPending ? (
           <p className="mt-10 text-on-surface-variant">Profil wird geladen …</p>
         ) : profile.isError ? (
@@ -363,7 +367,7 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <p className="font-bold text-on-surface-variant">Suchradius</p>
+                  <p className="font-bold text-on-surface-variant">Nachbarschafts-Radius</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {KIEZ_RADIUS_OPTIONS.map((option) => (
                       <button
@@ -376,6 +380,10 @@ export default function ProfilePage() {
                       </button>
                     ))}
                   </div>
+                  <p className="mt-2 text-sm text-on-surface-variant">
+                    Bestimmt, wer deine offenen Anfragen sieht, die Statistik in deiner Umgebung und
+                    den Startradius der Helfersuche.
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -399,7 +407,7 @@ export default function ProfilePage() {
               </div>
             </section>
             <div className="space-y-6">
-              <section className="card p-7">
+              <section id="vermittlungsstandort" className="card scroll-mt-24 p-7">
                 <h2 className="text-xl font-extrabold text-on-surface">Vermittlungsstandort</h2>
                 <p className="mt-2 text-sm text-on-surface-variant">
                   Wird automatisch aus deiner Profiladresse ermittelt. Alternativ kannst du hier

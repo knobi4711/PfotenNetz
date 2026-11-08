@@ -8,6 +8,7 @@ import {
   useOwnMissingPets,
   useOwnPets,
 } from '@pfotennetz/supabase';
+import { MISSING_PET_SEARCH_RADIUS_KM } from '@pfotennetz/shared';
 import {
   ActionButton,
   AppHeader,
@@ -47,7 +48,7 @@ export default function MissingPetsScreen() {
           longitude: position.coords.longitude,
           description,
           lastSeenAt: new Date().toISOString(),
-          radiusKm: 3,
+          radiusKm: MISSING_PET_SEARCH_RADIUS_KM,
         });
         setDescription('');
         setSelectedPetId(null);

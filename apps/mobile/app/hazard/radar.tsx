@@ -13,6 +13,12 @@ import {
   type ActiveHazard,
   type Hazard,
 } from '@pfotennetz/supabase';
+import {
+  DEFAULT_HAZARD_RADAR_RADIUS_KM,
+  HAZARD_RADAR_RADII,
+  formatRadiusKm,
+  type HazardRadarRadiusKm,
+} from '@pfotennetz/shared';
 import { projectNearbyPoint, type MapCoordinate } from '../../lib/helper-map';
 import {
   ActionButton,
@@ -28,7 +34,6 @@ import {
   usePalette,
 } from '../../components/ui';
 
-const RADII = [0.5, 1, 1.5, 3] as const;
 const SEVERITY_FILTERS = ['all', 'critical', 'high', 'medium', 'low'] as const;
 const TIME_FILTERS = [2, 24, 168] as const;
 
@@ -79,7 +84,7 @@ function HazardRow({ hazard }: { hazard: ActiveHazard }) {
         </View>
         <Text style={[styles.meta, { color: c.onSurfaceVariant }]}>
           ca. {Number(hazard.distance_km).toLocaleString('de-DE')} km entfernt · Radius{' '}
-          {hazard.radius_km} km
+          {formatRadiusKm(Number(hazard.radius_km))}
         </Text>
         {hazard.description ? (
           <Text style={[styles.description, { color: c.onSurface }]}>{hazard.description}</Text>
@@ -203,7 +208,7 @@ export default function HazardRadarScreen() {
   const c = usePalette();
   useHazardSubscription();
   const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [radiusKm, setRadiusKm] = useState<(typeof RADII)[number]>(1.5);
+  const [radiusKm, setRadiusKm] = useState<HazardRadarRadiusKm>(DEFAULT_HAZARD_RADAR_RADIUS_KM);
   const [severityFilter, setSeverityFilter] = useState<(typeof SEVERITY_FILTERS)[number]>('all');
   const [timeFilterHours, setTimeFilterHours] = useState<(typeof TIME_FILTERS)[number]>(24);
   const [locationPending, setLocationPending] = useState(false);
@@ -253,7 +258,10 @@ export default function HazardRadarScreen() {
       style={[styles.container, { backgroundColor: c.surface }]}
       contentContainerStyle={styles.content}
     >
-      <AppHeader title="Gefahrenradar" subtitle="Aktive Warnungen in deiner Nachbarschaft." />
+      <AppHeader
+        title="Gefahrenradar"
+        subtitle="Warnungen, deren Warnkreis deinen Bereich berührt."
+      />
       <Pressable
         accessibilityLabel="Zurück"
         accessibilityRole="button"
@@ -275,7 +283,7 @@ export default function HazardRadarScreen() {
         />
       </View>
       <ChipRow>
-        {RADII.map((radius) => (
+        {HAZARD_RADAR_RADII.map((radius) => (
           <Chip
             key={radius}
             label={`${radius.toString().replace('.', ',')} km`}

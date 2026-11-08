@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { KIEZ_RADIUS_OPTIONS, type KiezRadius } from '@pfotennetz/shared';
 import type { Database } from '../types/database';
+
+export { KIEZ_RADIUS_OPTIONS };
+export type { KiezRadius };
 
 export type Profile = Database['public']['Tables']['profiles']['Row'] & {
   private_address?: string | null;
@@ -9,9 +13,6 @@ export type NotificationPreferences = {
   bookings: boolean;
   community: boolean;
 };
-
-export const KIEZ_RADIUS_OPTIONS = [0.5, 1.0, 1.5, 3.0] as const;
-export type KiezRadius = (typeof KIEZ_RADIUS_OPTIONS)[number];
 
 export interface UpdateOwnProfileInput {
   displayName: string;

@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import {
+  MAX_HAZARD_WARNING_RADIUS_KM,
+  MIN_HAZARD_WARNING_RADIUS_KM,
+  HAZARD_WARNING_RADIUS_KM,
+} from '../constants/geo';
 
 export const emailSchema = z.string().email('Ungültige E-Mail-Adresse').min(1).max(254);
 
@@ -126,7 +131,11 @@ export const createHazardSchema = z.object({
   severity: hazardSeveritySchema.default('medium'),
   location: locationSchema,
   address: z.string().min(5).max(200).optional(),
-  radius_km: z.number().min(0.1).max(10).default(1.5),
+  radius_km: z
+    .number()
+    .min(MIN_HAZARD_WARNING_RADIUS_KM)
+    .max(MAX_HAZARD_WARNING_RADIUS_KM)
+    .default(HAZARD_WARNING_RADIUS_KM.default),
   description: z.string().max(1000).optional(),
   photos: z.array(z.string().url()).max(5).default([]),
 });

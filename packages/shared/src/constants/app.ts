@@ -13,9 +13,6 @@ export const API_TIMEOUT = 30000;
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export const KIEZ_RADIUS_OPTIONS = [0.5, 1.0, 1.5, 3.0] as const;
-export const DEFAULT_KIEZ_RADIUS = 1.5;
-
 export const TRUST_LEVELS = ['basic', 'bronze', 'silver', 'gold'] as const;
 export const USER_ROLES = ['user', 'helper', 'admin'] as const;
 

@@ -111,8 +111,9 @@ function PawWeatherCard() {
 }
 
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.pfotennetz&pli=1';
-// Keep in sync with the "version" field in apps/mobile/app.json.
-const MOBILE_BUILD_VERSION = '0.2.2';
+// Injected from apps/mobile/app.json at build time (see next.config.js), so the
+// dashboard version always matches the released app.
+const MOBILE_BUILD_VERSION = process.env.NEXT_PUBLIC_MOBILE_APP_VERSION ?? '0.0.0';
 
 function PlayStoreCard() {
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -468,16 +469,23 @@ export function Dashboard() {
                       className="flex w-full items-center justify-between rounded-xl border border-outline-variant/40 p-4 text-left hover:bg-surface-container-low"
                       onClick={() => router.push(`/booking/${request.primary.id}`)}
                     >
-                      <span>
-                        <span className="block font-bold">
-                          {request.bookings
-                            .map((booking) => formatPetDisplayName(booking.pet))
-                            .join(', ')}
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-xl">
+                          {petSpeciesEmoji(request.primary.pet?.species)}
                         </span>
-                        <span className="text-sm text-on-surface-variant">
-                          {bookingTypeLabel(request.primary.type)} ·{' '}
-                          {statusLabel(request.primary.status)}
-                          {request.bookings.length > 1 ? ` · ${request.bookings.length} Tiere` : ''}
+                        <span className="min-w-0">
+                          <span className="block font-bold">
+                            {request.bookings
+                              .map((booking) => formatPetDisplayName(booking.pet))
+                              .join(', ')}
+                          </span>
+                          <span className="text-sm text-on-surface-variant">
+                            {bookingTypeLabel(request.primary.type)} ·{' '}
+                            {statusLabel(request.primary.status)}
+                            {request.bookings.length > 1
+                              ? ` · ${request.bookings.length} Tiere`
+                              : ''}
+                          </span>
                         </span>
                       </span>
                       <span className="text-sm font-bold text-primary">Öffnen →</span>
@@ -522,7 +530,7 @@ export function Dashboard() {
                         ? 'Wird geladen …'
                         : nearbyHelpers.data === null
                           ? 'Standort im Profil festlegen'
-                          : `Verifiziert im Umkreis von ${helperRadiusKm.toLocaleString('de-DE')} km`}
+                          : `Verifiziert in deinem Nachbarschafts-Radius (${helperRadiusKm.toLocaleString('de-DE')} km)`}
                   </p>
                 </div>
               </div>

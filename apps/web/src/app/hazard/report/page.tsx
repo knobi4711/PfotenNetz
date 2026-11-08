@@ -9,6 +9,8 @@ import {
   type HazardType,
 } from '@pfotennetz/supabase';
 import {
+  formatRadiusKm,
+  hazardWarningRadiusKm,
   reverseGeocodeOpenStreetMap,
   searchOpenStreetMap,
   type GeocodingResult,
@@ -86,7 +88,7 @@ export default function WebHazardReportPage() {
         severity,
         latitude: point.latitude,
         longitude: point.longitude,
-        radiusKm: severity === 'critical' ? 1.5 : 0.5,
+        radiusKm: hazardWarningRadiusKm(severity),
         address: address.trim() || null,
         description,
       });
@@ -250,7 +252,7 @@ export default function WebHazardReportPage() {
               <p className="font-bold">{HAZARD_TYPE_LABELS[type]}</p>
               <p className="text-sm text-on-surface-variant">
                 {HAZARD_SEVERITY_LABELS[severity]} · Warnradius{' '}
-                {severity === 'critical' ? '1,5 km' : '500 m'}
+                {formatRadiusKm(hazardWarningRadiusKm(severity))}
               </p>
               <p className="text-sm text-on-surface-variant">
                 {address ||

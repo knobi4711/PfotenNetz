@@ -27,6 +27,7 @@ import {
 } from '@pfotennetz/supabase';
 import {
   AVAILABILITY_WEEKDAYS,
+  DEFAULT_HELPER_MAX_DISTANCE_KM,
   availabilityWeekdayLabel,
   buildAvailabilityWeek,
   findAvailabilityBlockAt,
@@ -39,6 +40,7 @@ import {
   normalizeAvailabilityRange,
   shiftAvailabilityRange,
   snapAvailabilityMinutes,
+  toggleAvailabilityDaySelection,
   type AvailabilityDay,
   type AvailabilityWeek,
 } from '@pfotennetz/shared';
@@ -56,7 +58,7 @@ import {
 } from './ui';
 
 const DEFAULT_SETTINGS = {
-  radius: '5',
+  radius: String(DEFAULT_HELPER_MAX_DISTANCE_KM),
   types: ['walk'] as BookingType[],
   species: [...AVAILABILITY_PET_SPECIES] as string[],
 };
@@ -700,6 +702,17 @@ export function AvailabilityManager() {
   const toggle = <T,>(items: T[], value: T): T[] =>
     items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
 
+  const toggleDraftDay = (dayOfWeek: number) => {
+    setDraft((current) => {
+      if (current === null) return current;
+      const [primary, ...additionalDays] = toggleAvailabilityDaySelection(
+        [current.dayOfWeek, ...current.additionalDays],
+        dayOfWeek
+      );
+      return { ...current, dayOfWeek: primary ?? current.dayOfWeek, additionalDays };
+    });
+  };
+
   const clearOverride = (id: string) => {
     setRangeOverrides((current) => {
       if (!(id in current)) return current;
@@ -977,28 +990,22 @@ export function AvailabilityManager() {
                   </Pressable>
                 </View>
 
-                <Text style={[styles.label, { color: c.onSurface }]}>Tag</Text>
+                <Text style={[styles.label, { color: c.onSurface }]}>Tage</Text>
+                <Text style={[styles.hint, { color: c.onSurfaceVariant }]}>
+                  Mehrfachauswahl: Das Zeitfenster wird mit denselben Einstellungen für alle
+                  markierten Tage gespeichert.
+                </Text>
                 <View style={styles.chipRow}>
                   {AVAILABILITY_WEEKDAYS.map((day) => {
-                    const selected = draft.dayOfWeek === day.value;
+                    const selected =
+                      draft.dayOfWeek === day.value || draft.additionalDays.includes(day.value);
                     return (
                       <Pressable
                         key={day.value}
                         accessibilityRole="button"
                         accessibilityState={{ selected }}
-                        onPress={() =>
-                          setDraft((current) =>
-                            current === null
-                              ? current
-                              : {
-                                  ...current,
-                                  dayOfWeek: day.value,
-                                  additionalDays: current.additionalDays.filter(
-                                    (value) => value !== day.value
-                                  ),
-                                }
-                          )
-                        }
+                        accessibilityLabel={`${day.long} ${selected ? 'abwählen' : 'auswählen'}`}
+                        onPress={() => toggleDraftDay(day.value)}
                         style={[
                           styles.chip,
                           { backgroundColor: selected ? c.primary : c.surfaceContainerHigh },
@@ -1012,50 +1019,6 @@ export function AvailabilityManager() {
                       </Pressable>
                     );
                   })}
-                </View>
-
-                <Text style={[styles.label, { color: c.onSurface }]}>Auch an diesen Tagen</Text>
-                <Text style={[styles.hint, { color: c.onSurfaceVariant }]}>
-                  Mehrfachauswahl: Das Zeitfenster wird mit denselben Einstellungen für alle
-                  markierten Tage gespeichert.
-                </Text>
-                <View style={styles.chipRow}>
-                  {AVAILABILITY_WEEKDAYS.filter((day) => day.value !== draft.dayOfWeek).map(
-                    (day) => {
-                      const selected = draft.additionalDays.includes(day.value);
-                      return (
-                        <Pressable
-                          key={day.value}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected }}
-                          accessibilityLabel={`${day.long} als zusätzlichen Tag ${selected ? 'entfernen' : 'hinzufügen'}`}
-                          onPress={() =>
-                            setDraft((current) =>
-                              current === null
-                                ? current
-                                : {
-                                    ...current,
-                                    additionalDays: toggle(current.additionalDays, day.value),
-                                  }
-                            )
-                          }
-                          style={[
-                            styles.chip,
-                            { backgroundColor: selected ? c.secondary : c.surfaceContainerHigh },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.chipText,
-                              { color: selected ? c.onSecondary : c.onSurface },
-                            ]}
-                          >
-                            {day.short}
-                          </Text>
-                        </Pressable>
-                      );
-                    }
-                  )}
                 </View>
 
                 <View style={styles.twoColumns}>
@@ -1088,7 +1051,7 @@ export function AvailabilityManager() {
                   onChangeText={(radius) =>
                     setDraft((current) => (current === null ? current : { ...current, radius }))
                   }
-                  placeholder="5"
+                  placeholder={String(DEFAULT_HELPER_MAX_DISTANCE_KM)}
                   placeholderTextColor={c.outline}
                   style={[
                     styles.input,

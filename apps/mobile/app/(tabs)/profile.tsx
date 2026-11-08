@@ -630,6 +630,10 @@ export default function ProfileScreen() {
                   );
                 })}
               </View>
+              <Text style={[styles.hint, { color: c.onSurfaceVariant }]}>
+                Bestimmt, wer deine offenen Anfragen sieht, die Statistik in deiner Umgebung und den
+                Startradius der Helfersuche.
+              </Text>
               <Text style={[styles.label, { color: c.onSurface }]}>Benachrichtigungen</Text>
               {(
                 [

@@ -17,6 +17,7 @@ import {
 } from '@pfotennetz/supabase';
 import { formatDate, formatTimebankHours, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
 import { bookingTypeLabels } from '../../lib/booking';
+import { petSpeciesEmoji } from '../../lib/pets';
 import {
   highlightHeadings,
   selectBookingPreview,
@@ -83,7 +84,7 @@ function HighlightCard({
       >
         <View style={styles.bookingSummary}>
           <View style={[styles.bookingIcon, { backgroundColor: c.secondaryFixed }]}>
-            <MaterialCommunityIcons name="dog-side" size={24} color={c.secondary} />
+            <Text style={styles.bookingIconEmoji}>{petSpeciesEmoji(booking.pet?.species)}</Text>
           </View>
           <View style={styles.rowMain}>
             <Text style={[styles.bookingNumber, { color: c.onSurface }]}>
@@ -319,7 +320,7 @@ export default function HomeScreen() {
                     ? 'Wird geladen …'
                     : nearbyHelperStats.data === null
                       ? 'Standort im Profil festlegen.'
-                      : `Verifiziert im Umkreis von ${helperRadiusKm.toLocaleString('de-DE')} km.`}
+                      : `Verifiziert in deinem Nachbarschafts-Radius (${helperRadiusKm.toLocaleString('de-DE')} km).`}
               </Text>
             </View>
           </View>
@@ -542,6 +543,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  bookingIconEmoji: { fontSize: 24, lineHeight: 30 },
   bookingNumber: { fontFamily: appFonts.bold, fontSize: 15, lineHeight: 20 },
   rowSub: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18 },
   petMeta: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },

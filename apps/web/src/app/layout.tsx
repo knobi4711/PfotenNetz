@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { OnboardingWizardHost } from '../components/OnboardingWizard';
 import { Providers } from '../providers/Providers';
 import './globals.css';
 
@@ -16,7 +17,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de">
       <body className="min-h-screen bg-surface text-on-surface antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <OnboardingWizardHost />
+        </Providers>
       </body>
     </html>
   );

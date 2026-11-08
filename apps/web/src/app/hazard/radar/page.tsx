@@ -8,13 +8,19 @@ import {
   useOwnProfile,
   type ActiveHazard,
 } from '@pfotennetz/supabase';
-import { searchOpenStreetMap, type GeocodingResult } from '@pfotennetz/shared';
+import {
+  DEFAULT_HAZARD_RADAR_RADIUS_KM,
+  HAZARD_RADAR_RADII,
+  searchOpenStreetMap,
+  type GeocodingResult,
+  type HazardRadarRadiusKm,
+} from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { WebHeader } from '../../../components/WebHeader';
 import { getCurrentBrowserLocation } from '../../../lib/location';
+import { MAP_TILE_ATTRIBUTION, MAP_TILE_URL } from '../../../lib/map-tiles';
 
-const RADII = [0.5, 1, 1.5, 3] as const;
 const SEVERITIES = ['all', 'critical', 'high', 'medium', 'low'] as const;
 const TIME_RANGES = [2, 24, 168] as const;
 
@@ -109,9 +115,9 @@ function OSMHazardMap({
       layers.current.clearLayers();
       if (fresh)
         leaflet
-          .tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+          .tileLayer(MAP_TILE_URL, {
             maxZoom: 19,
-            attribution: '© OpenStreetMap-Mitwirkende',
+            attribution: MAP_TILE_ATTRIBUTION,
           })
           .addTo(map.current);
       leaflet
@@ -151,7 +157,7 @@ export default function WebHazardRadarPage() {
   const profile = useOwnProfile();
   useHazardSubscription();
   const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [radius, setRadius] = useState<(typeof RADII)[number]>(1.5);
+  const [radius, setRadius] = useState<HazardRadarRadiusKm>(DEFAULT_HAZARD_RADAR_RADIUS_KM);
   const [severity, setSeverity] = useState<(typeof SEVERITIES)[number]>('all');
   const [hours, setHours] = useState<(typeof TIME_RANGES)[number]>(24);
   const [error, setError] = useState<string | null>(null);
@@ -243,7 +249,7 @@ export default function WebHazardRadarPage() {
               Nachbarschafts-Gefahrenradar
             </h1>
             <p className="mt-3 text-lg text-on-surface-variant">
-              Aktive Warnungen in deinem gewählten Radius.
+              Aktive Warnungen, deren Warnkreis deinen Suchbereich berührt.
             </p>
           </div>
           <button
@@ -267,7 +273,7 @@ export default function WebHazardRadarPage() {
           <button type="button" className="btn-primary" onClick={handleLocate}>
             {center ? 'Standort aktualisieren' : 'Standort verwenden'}
           </button>
-          {RADII.map((value) => (
+          {HAZARD_RADAR_RADII.map((value) => (
             <button
               type="button"
               key={value}
@@ -336,8 +342,8 @@ export default function WebHazardRadarPage() {
               Standort für das Radar aktivieren
             </h2>
             <p className="mx-auto mt-2 max-w-lg text-on-surface-variant">
-              Wir zeigen nur Warnungen in deiner Nähe und geben deinen genauen Standort nicht an
-              andere Nutzer weiter.
+              Wir zeigen Warnungen, deren Warnkreis deinen Suchbereich berührt – und geben deinen
+              genauen Standort nicht an andere Nutzer weiter.
             </p>
           </section>
         ) : query.isPending ? (

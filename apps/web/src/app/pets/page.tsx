@@ -380,7 +380,12 @@ export default function PetsPage() {
         <p className="mt-3 text-lg text-on-surface-variant">
           Alle wichtigen Informationen zu deinen Tieren an einem Ort.
         </p>
-        <button type="button" className="btn-primary mt-5" onClick={() => setEditingPet(null)}>
+        <button
+          id="neues-tier"
+          type="button"
+          className="btn-primary mt-5 scroll-mt-24"
+          onClick={() => setEditingPet(null)}
+        >
           Neues Tier anlegen
         </button>
         {editingPet !== undefined ? (

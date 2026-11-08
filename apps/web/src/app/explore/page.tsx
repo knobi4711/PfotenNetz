@@ -9,15 +9,19 @@ import {
   userReportErrorMessage,
   useCreateUserReport,
   useNearbyHelpers,
+  useOwnProfile,
   type UserReportReason,
   type BookingType,
   type NearbyHelper,
 } from '@pfotennetz/supabase';
 import {
   BOOKING_TYPE_LABELS,
+  HELPER_SEARCH_RADII,
+  helperSearchRadiusFromKiez,
   reverseGeocodeOpenStreetMap,
   searchOpenStreetMap,
   type GeocodingResult,
+  type HelperSearchRadiusKm,
 } from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -28,8 +32,8 @@ import {
   getCurrentBrowserLocation,
   type BrowserLocation,
 } from '../../lib/location';
+import { MAP_TILE_ATTRIBUTION, MAP_TILE_URL } from '../../lib/map-tiles';
 
-const RADII = [1.5, 3, 5, 10] as const;
 const SPECIES = [
   ['dog', 'Hund'],
   ['cat', 'Katze'],
@@ -143,9 +147,9 @@ function OSMMap({
       layersRef.current.clearLayers();
       if (isNewMap) {
         leaflet
-          .tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+          .tileLayer(MAP_TILE_URL, {
             maxZoom: 19,
-            attribution: '© OpenStreetMap-Mitwirkende',
+            attribution: MAP_TILE_ATTRIBUTION,
           })
           .addTo(map);
       }
@@ -229,7 +233,9 @@ function HelperCard({
 export default function ExplorePage() {
   const router = useRouter();
   const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [radiusKm, setRadiusKm] = useState<(typeof RADII)[number]>(3);
+  const [radiusOverride, setRadiusOverride] = useState<HelperSearchRadiusKm | null>(null);
+  const profileQuery = useOwnProfile();
+  const radiusKm = radiusOverride ?? helperSearchRadiusFromKiez(profileQuery.data?.kiez_radius_km);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationCandidate, setLocationCandidate] = useState<LocationCandidate | null>(null);
@@ -316,11 +322,11 @@ export default function ExplorePage() {
           <button type="button" onClick={handleLocate} className="btn-primary">
             {center ? 'Standort aktualisieren' : 'Standort verwenden'}
           </button>
-          {RADII.map((radius) => (
+          {HELPER_SEARCH_RADII.map((radius) => (
             <button
               key={radius}
               type="button"
-              onClick={() => setRadiusKm(radius)}
+              onClick={() => setRadiusOverride(radius)}
               className={`rounded-full border px-4 py-2 text-sm font-bold ${radius === radiusKm ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant text-on-surface hover:bg-surface-container'}`}
             >
               {radius.toString().replace('.', ',')} km

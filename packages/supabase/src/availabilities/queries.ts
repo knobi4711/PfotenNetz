@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { MAX_HELPER_DISTANCE_KM } from '@pfotennetz/shared';
 import type { Database } from '../types/database';
 import type { BookingType } from '../bookings/creation';
 
@@ -82,9 +83,9 @@ export function validateAvailabilityInput(input: UpsertAvailabilityInput): strin
   if (
     !Number.isFinite(input.maxDistanceKm) ||
     input.maxDistanceKm <= 0 ||
-    input.maxDistanceKm > 50
+    input.maxDistanceKm > MAX_HELPER_DISTANCE_KM
   ) {
-    return 'Der Maximalradius muss zwischen 0 und 50 km liegen.';
+    return `Der Maximalradius muss zwischen 0 und ${MAX_HELPER_DISTANCE_KM} km liegen.`;
   }
   return null;
 }
@@ -303,9 +304,9 @@ export async function updateAvailability(
     if (
       !Number.isFinite(input.maxDistanceKm) ||
       input.maxDistanceKm <= 0 ||
-      input.maxDistanceKm > 50
+      input.maxDistanceKm > MAX_HELPER_DISTANCE_KM
     ) {
-      throw new Error('Der Maximalradius muss zwischen 0 und 50 km liegen.');
+      throw new Error(`Der Maximalradius muss zwischen 0 und ${MAX_HELPER_DISTANCE_KM} km liegen.`);
     }
     patch.max_distance_km = input.maxDistanceKm;
   }

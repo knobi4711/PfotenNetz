@@ -327,8 +327,10 @@ export default function BookingDetailPage() {
                   {value.status === 'requested' && isOpenRequest ? (
                     <>
                       <p className="rounded-xl bg-secondary-container p-3 text-sm text-on-secondary-container">
-                        Die Anfrage liegt in deinem registrierten Gebiet oder im Suchradius des
-                        Anbieters. Die genaue Adresse wird erst nach Bestätigung geteilt.
+                        Die Anfrage liegt in deinem Gebiet: gleiche Postleitzahl oder innerhalb des
+                        Nachbarschafts-Radius der anfragenden Person – und in deiner
+                        Reisebereitschaft für diese Betreuungsart. Die genaue Adresse wird erst nach
+                        Bestätigung geteilt.
                       </p>
                       <button
                         className="btn-primary w-full"

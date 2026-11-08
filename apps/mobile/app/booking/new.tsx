@@ -22,6 +22,7 @@ import {
   type BookingType,
   type CareLocation,
 } from '@pfotennetz/supabase';
+import { maxDistanceForBookingType } from '@pfotennetz/shared';
 import { bookingTypeLabels } from '../../lib/booking';
 import {
   parseGermanDateTime,
@@ -204,6 +205,19 @@ export default function NewBookingScreen() {
       if (!covered) {
         setFormHint(
           'Der gewählte Zeitraum liegt außerhalb der Verfügbarkeit dieses Helpers. Passe Zeit oder Leistung an – oder sende die Anfrage ohne Helper.'
+        );
+        return;
+      }
+
+      const maxDistanceKm = maxDistanceForBookingType(helper.slots, bookingType);
+      if (
+        !isEditMode &&
+        maxDistanceKm !== null &&
+        helper.distance_km !== null &&
+        Number(helper.distance_km) > maxDistanceKm
+      ) {
+        setFormHint(
+          'Der Helfer bietet diese Betreuungsart nicht in deiner Entfernung an. Wähle einen anderen Helfer oder sende die Anfrage ohne Helper.'
         );
         return;
       }

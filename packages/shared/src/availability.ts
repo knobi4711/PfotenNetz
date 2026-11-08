@@ -334,6 +334,24 @@ export function formatAvailabilityDays(days: readonly number[]): string {
   return labels.join(', ');
 }
 
+/**
+ * Toggles one weekday in a multi-day selection and returns it Monday-first.
+ * The first entry stays the primary day (the slot's own weekday), so
+ * deselecting it promotes the next selected day. At least one day remains.
+ */
+export function toggleAvailabilityDaySelection(
+  days: readonly number[],
+  dayOfWeek: number
+): number[] {
+  const unique = new Set(days);
+  if (!unique.has(dayOfWeek)) {
+    unique.add(dayOfWeek);
+  } else if (unique.size > 1) {
+    unique.delete(dayOfWeek);
+  }
+  return AVAILABILITY_WEEKDAYS.filter((day) => unique.has(day.value)).map((day) => day.value);
+}
+
 /** Total time per week covered by active slots, e.g. "12,5 Std.". */
 export function formatAvailabilityDuration(minutes: number): string {
   const hours = Math.round((minutes / 60) * 10) / 10;

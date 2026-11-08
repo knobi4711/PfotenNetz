@@ -1,22 +1,24 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  DEFAULT_TRACKING_RADIUS_M,
+  MAX_TRACKING_RADIUS_M,
+  MIN_TRACKING_RADIUS_M,
+} from '@pfotennetz/shared';
 import type { Database } from '../types/database';
 import type { Booking } from './queries';
+
+export {
+  DEFAULT_TRACKING_RADIUS_M,
+  MAX_TRACKING_RADIUS_M,
+  MIN_TRACKING_RADIUS_M,
+  TRACKING_RADIUS_OPTIONS,
+} from '@pfotennetz/shared';
 
 export type BookingType = Database['public']['Enums']['booking_type'];
 export type BookingCurrency = Database['public']['Enums']['currency'];
 export type CareLocation = Database['public']['Tables']['bookings']['Row']['care_location'];
 
 export const BOOKING_TYPES: BookingType[] = ['walk', 'feeding', 'vacation', 'daycare', 'ride'];
-
-/**
- * Radii (in meters) offered when configuring the per-booking safety zone.
- * The helper's device monitors this radius around the tracking start point.
- * Longer walks and rides need more room than the earlier 250/500 m presets.
- */
-export const TRACKING_RADIUS_OPTIONS = [1000, 2000, 4000] as const;
-export const DEFAULT_TRACKING_RADIUS_M = 1000;
-export const MIN_TRACKING_RADIUS_M = 100;
-export const MAX_TRACKING_RADIUS_M = 10000;
 
 /** Short German label for a safety-zone radius, e.g. `500 m`, `2 km` or `1,5 km`. */
 export function formatTrackingRadius(meters: number): string {
