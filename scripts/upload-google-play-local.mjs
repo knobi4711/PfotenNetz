@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu in 0.3.4: Die Nachbarschaftskarte spricht jetzt vom Tier-Zuhause – bei einem Tier mit dessen Namen (z. B. „Bello-Zuhause“), bei zwei Tieren mit beiden Namen. Suche und Helfer-Zähler richten sich am gespeicherten Ort aus dem Profil aus, ohne Standortabfrage.';
+  'Neu in 0.3.5: Buchungsvorlagen – speichere Tiere, Leistung, Vergütung und Hinweise am Ende des Buchungsformulars unter einem Namen und übernimm sie bei der nächsten Anfrage mit einem Klick. Außerdem zeigen Kennenlernanfragen jetzt präzisere Fehlermeldungen.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';
