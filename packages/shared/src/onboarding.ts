@@ -59,7 +59,7 @@ export function buildOnboardingSteps(facts: OnboardingFacts): OnboardingStep[] {
       kind: 'task',
       title: 'Dein Profil',
       summary:
-        'Name, Telefon und dein Vermittlungsstandort. Die genaue Adresse wird nie öffentlich ' +
+        'Name, Telefon und der Ort, an dem deine Tiere zu Hause sind. Die genaue Adresse wird nie öffentlich ' +
         'angezeigt – sie dient nur der Nachbarschaftssuche.',
       actionLabel: facts.hasAddress ? 'Profildaten bearbeiten' : 'Adresse festlegen',
       target: facts.hasAddress ? 'profile-edit' : 'profile-address',

@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu in 0.3.3: Die Nachbarschaftskarte richtet sich jetzt am Vermittlungsstandort aus dem Profil aus und ist sofort da – ohne Standortabfrage. Angezeigt werden nur Helfer, deren eigene Reisebereitschaft deinen Vermittlungsstandort erreicht.';
+  'Neu in 0.3.4: Die Nachbarschaftskarte spricht jetzt vom Tier-Zuhause – bei einem Tier mit dessen Namen (z. B. „Bello-Zuhause“), bei zwei Tieren mit beiden Namen. Suche und Helfer-Zähler richten sich am gespeicherten Ort aus dem Profil aus, ohne Standortabfrage.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';

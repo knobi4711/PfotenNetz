@@ -10,11 +10,12 @@ import {
   useCreateUserReport,
   useHelperSearchOrigin,
   useNearbyHelpers,
+  useOwnPets,
   type UserReportReason,
   type BookingType,
   type NearbyHelper,
 } from '@pfotennetz/supabase';
-import { BOOKING_TYPE_LABELS, MAX_HELPER_DISTANCE_KM } from '@pfotennetz/shared';
+import { BOOKING_TYPE_LABELS, MAX_HELPER_DISTANCE_KM, petHomeLabel } from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useEffect, useRef } from 'react';
@@ -102,10 +103,12 @@ function mapZoomForHelpers(helpers: MapHelper[]): number {
 function OSMMap({
   center,
   helpers,
+  centerLabel,
   onSelect,
 }: {
   center: { latitude: number; longitude: number };
   helpers: MapHelper[];
+  centerLabel: string;
   onSelect: (id: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -141,7 +144,7 @@ function OSMMap({
       leaflet
         .marker([center.latitude, center.longitude])
         .addTo(layersRef.current as LeafletLayerGroup)
-        .bindPopup('Dein Vermittlungsstandort')
+        .bindPopup(`Dein ${centerLabel}`)
         .on('click', () => undefined);
       helpers.forEach((helper) => {
         leaflet
@@ -156,7 +159,7 @@ function OSMMap({
     return () => {
       disposed = true;
     };
-  }, [center, helpers, onSelect]);
+  }, [center, helpers, centerLabel, onSelect]);
 
   useEffect(() => () => mapRef.current?.remove(), []);
 
@@ -228,6 +231,8 @@ export default function ExplorePage() {
   const createContact = useCreateContactRequest();
   const createReport = useCreateUserReport();
   const originQuery = useHelperSearchOrigin();
+  const petsQuery = useOwnPets();
+  const homeLabel = petHomeLabel(petsQuery.data ?? []);
   const center = originQuery.data ?? null;
   const search =
     center === null
@@ -254,24 +259,22 @@ export default function ExplorePage() {
             Helfer:innen in der Nachbarschaft
           </h1>
           <p className="mt-3 max-w-2xl text-lg text-on-surface-variant">
-            Verifizierte Unterstützung rund um deinen Vermittlungsstandort – ohne zusätzliche
-            Standortfreigabe.
+            {`Verifizierte Unterstützung rund um dein ${homeLabel} – ohne zusätzliche Standortfreigabe.`}
           </p>
         </div>
         {center !== null ? (
           <>
             <div className="mb-6 rounded-2xl bg-surface-container-low p-4">
-              <p className="text-sm font-bold">Rund um deinen Vermittlungsstandort</p>
+              <p className="text-sm font-bold">{`Rund um dein ${homeLabel}`}</p>
               <p className="mt-2 text-sm text-on-surface-variant">
-                Angezeigt werden Helfer:innen, deren eigene Reisebereitschaft deinen
-                Vermittlungsstandort erreicht. Ein zusätzlicher km-Radius ist nicht nötig.
+                {`Angezeigt werden Helfer:innen, deren eigene Reisebereitschaft dein ${homeLabel} erreicht. Ein zusätzlicher km-Radius ist nicht nötig.`}
               </p>
               <button
                 type="button"
                 className="btn-secondary mt-3"
                 onClick={() => router.push('/profile')}
               >
-                Vermittlungsstandort ändern
+                {`${homeLabel} ändern`}
               </button>
             </div>
             <div className="mb-6 space-y-3 rounded-2xl bg-surface-container-low p-4">
@@ -338,20 +341,18 @@ export default function ExplorePage() {
         ) : null}
         {originQuery.isPending ? (
           <p className="py-12 text-center text-on-surface-variant">
-            Vermittlungsstandort wird geladen …
+            {`${homeLabel} wird geladen …`}
           </p>
         ) : originQuery.isError ? (
           <p role="alert" className="rounded-xl bg-error-container p-4 text-error">
-            Vermittlungsstandort konnte nicht geladen werden:{' '}
-            {nearbyHelperErrorMessage(originQuery.error)}
+            {`${homeLabel} konnte nicht geladen werden: ${nearbyHelperErrorMessage(originQuery.error)}`}
           </p>
         ) : center === null ? (
           <section className="card p-12 text-center">
             <p className="text-5xl">📍</p>
-            <h2 className="mt-4 text-2xl font-extrabold">Vermittlungsstandort fehlt</h2>
+            <h2 className="mt-4 text-2xl font-extrabold">{`${homeLabel} fehlt`}</h2>
             <p className="mx-auto mt-2 max-w-md text-on-surface-variant">
-              Lege deinen Vermittlungsstandort einmalig im Profil fest. Danach zeigt die Karte
-              sofort alle Helfer:innen, deren Reisebereitschaft dich erreicht.
+              {`Lege dein ${homeLabel} einmalig im Profil fest. Danach zeigt die Karte sofort alle Helfer:innen, deren Reisebereitschaft dich erreicht.`}
             </p>
             <button
               type="button"
@@ -365,7 +366,12 @@ export default function ExplorePage() {
           <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             <div>
               <div className="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-[var(--shadow-level-1)]">
-                <OSMMap center={center} helpers={helpers} onSelect={setSelectedId} />
+                <OSMMap
+                  center={center}
+                  helpers={helpers}
+                  centerLabel={homeLabel}
+                  onSelect={setSelectedId}
+                />
               </div>
             </div>
             <div className="space-y-3">
@@ -380,18 +386,14 @@ export default function ExplorePage() {
               ) : (
                 <>
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-extrabold">
-                      Im Umkreis deines Vermittlungsstandorts
-                    </h2>
+                    <h2 className="text-2xl font-extrabold">{`Rund um dein ${homeLabel}`}</h2>
                     <span className="text-sm font-bold text-secondary">
                       {helpers.length} Treffer
                     </span>
                   </div>
                   {helpers.length === 0 ? (
                     <div className="card p-6 text-sm text-on-surface-variant">
-                      Aktuell erreicht keine verifizierte Helferin und kein verifizierter Helfer
-                      deinen Vermittlungsstandort. Sobald jemand die eigene Reisebereitschaft
-                      erweitert, erscheint die Person hier automatisch.
+                      {`Aktuell erreicht keine verifizierte Helferin und kein verifizierter Helfer dein ${homeLabel}. Sobald jemand die eigene Reisebereitschaft erweitert, erscheint die Person hier automatisch.`}
                     </div>
                   ) : (
                     helpers.map((helper) => (

@@ -16,7 +16,7 @@ export interface NearbyHelperSearch {
   dayOfWeek?: number | null | undefined;
 }
 
-/** The caller's own Vermittlungsstandort, used to center the helper map. */
+/** The caller's own stored pet home location, used to center the helper map. */
 export interface HelperSearchOrigin {
   latitude: number;
   longitude: number;
@@ -67,7 +67,7 @@ export function validateNearbyHelperSearch(input: NearbyHelperSearch): string | 
   return null;
 }
 
-/** The caller's own Vermittlungsstandort; null when none has been stored yet. */
+/** The caller's own pet home location; null when none has been stored yet. */
 export async function fetchHelperSearchOrigin(
   client: SupabaseClient<Database>
 ): Promise<HelperSearchOrigin | null> {

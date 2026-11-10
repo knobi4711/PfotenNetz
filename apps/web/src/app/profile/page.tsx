@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  useOwnPets,
   useOwnProfile,
   useTimebankAccount,
   useTimebankTransactions,
@@ -12,6 +13,7 @@ import {
   type NotificationPreferences,
 } from '@pfotennetz/supabase';
 import {
+  petHomeLabel,
   reverseGeocodeOpenStreetMap,
   searchOpenStreetMap,
   timebankTransactionDescription,
@@ -43,6 +45,8 @@ function buildProfileAddress(
 
 export default function ProfilePage() {
   const profile = useOwnProfile();
+  const petsQuery = useOwnPets();
+  const homeLabel = petHomeLabel(petsQuery.data ?? []);
   const account = useTimebankAccount();
   const transactions = useTimebankTransactions();
   const updateProfile = useUpdateOwnProfile();
@@ -97,13 +101,13 @@ export default function ProfilePage() {
     setProfileSaved(false);
     if (!/^\d{5}$/.test(value?.postal_code ?? '')) {
       setProfileFormError(
-        'Für dein Profil fehlt noch eine vollständige Adresse. Bitte lege deinen Vermittlungsstandort rechts per GPS oder Ortssuche fest.'
+        `Für dein Profil fehlt noch eine vollständige Adresse. Bitte lege dein ${homeLabel} rechts per GPS oder Ortssuche fest.`
       );
       return;
     }
     if (!(value?.private_address ?? '').trim()) {
       setProfileFormError(
-        'Für dein Profil fehlt noch eine vollständige Adresse. Bitte lege deinen Vermittlungsstandort rechts per GPS oder Ortssuche fest.'
+        `Für dein Profil fehlt noch eine vollständige Adresse. Bitte lege dein ${homeLabel} rechts per GPS oder Ortssuche fest.`
       );
       return;
     }
@@ -111,7 +115,7 @@ export default function ProfilePage() {
     setProfileSavePending(true);
     try {
       // Die Adresse wird bewusst unverändert übernommen – sie wird ausschließlich
-      // im Vermittlungsstandort (GPS/Ortssuche) gesetzt, damit es nur eine Quelle gibt.
+      // im Tier-Zuhause (GPS/Ortssuche) gesetzt, damit es nur eine Quelle gibt.
       await updateProfile.mutateAsync({
         displayName,
         phone,
@@ -235,7 +239,7 @@ export default function ProfilePage() {
         if (!confirmedAddress) {
           clearLocationCandidate();
           setLocationError(
-            'Der Vermittlungsstandort wurde gespeichert, aber die Profiladresse ist noch unvollständig. Bitte bestimme den Standort erneut oder wähle den Ort über die Ortssuche.'
+            `Das ${homeLabel} wurde gespeichert, aber die Profiladresse ist noch unvollständig. Bitte bestimme den Standort erneut oder wähle den Ort über die Ortssuche.`
           );
           return;
         }
@@ -252,7 +256,7 @@ export default function ProfilePage() {
           });
         } catch {
           setLocationError(
-            'Der Vermittlungsstandort wurde gespeichert, aber die Profiladresse konnte nicht übernommen werden. Bitte versuche es erneut.'
+            `Das ${homeLabel} wurde gespeichert, aber die Profiladresse konnte nicht übernommen werden. Bitte versuche es erneut.`
           );
           return;
         }
@@ -400,15 +404,14 @@ export default function ProfilePage() {
                 ) : null}
                 {profileSaved ? (
                   <p role="status" className="mt-2 text-sm font-semibold text-green-700">
-                    Profil gespeichert. Deine Adresse verwaltest du in der Karte
-                    „Vermittlungsstandort“.
+                    {`Profil gespeichert. Deine Adresse verwaltest du in der Karte „${homeLabel}“.`}
                   </p>
                 ) : null}
               </div>
             </section>
             <div className="space-y-6">
-              <section id="vermittlungsstandort" className="card scroll-mt-24 p-7">
-                <h2 className="text-xl font-extrabold text-on-surface">Vermittlungsstandort</h2>
+              <section id="tier-zuhause" className="card scroll-mt-24 p-7">
+                <h2 className="text-xl font-extrabold text-on-surface">{homeLabel}</h2>
                 <p className="mt-2 text-sm text-on-surface-variant">
                   Wird automatisch aus deiner Profiladresse ermittelt. Alternativ kannst du hier
                   deinen aktuellen Standort per GPS bestimmen oder einen abweichenden Ort auswählen.
@@ -495,7 +498,7 @@ export default function ProfilePage() {
                     </p>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <input
-                        aria-label="Ort oder PLZ für den privaten Vermittlungsstandort"
+                        aria-label={`Ort oder PLZ für dein ${homeLabel}`}
                         className="min-w-0 flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
                         placeholder="z. B. Leipzig oder 04109"
                         value={locationQuery}

@@ -4,6 +4,7 @@ export * from './availability';
 export * from './routes';
 export * from './geocoding';
 export * from './onboarding';
+export * from './petHome';
 export * from './routing';
 export * from './timebank';
 export * from './utils';

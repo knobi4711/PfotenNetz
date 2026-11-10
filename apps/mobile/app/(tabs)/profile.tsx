@@ -13,6 +13,7 @@ import {
   deletePasskey,
   listPasskeys,
   signOut,
+  useOwnPets,
   useOwnProfile,
   useOwnContactRequests,
   type ContactRequestWithProfiles,
@@ -26,11 +27,16 @@ import {
   type KiezRadius,
   type TimebankTransaction,
 } from '@pfotennetz/supabase';
-import { formatDate, formatTimebankHours, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
+import {
+  formatDate,
+  formatTimebankHours,
+  formatTimebankHoursMagnitude,
+  petHomeLabel,
+} from '@pfotennetz/shared';
 import { timebankTxDescription, timebankTxTypeLabels } from '../../lib/booking';
 import { AvailabilityManager } from '../../components/helper-availability';
 import { HelperStatusCard } from '../../components/helper-status';
-import { VermittlungsstandortCard } from '../../components/helper-location';
+import { PetHomeCard } from '../../components/helper-location';
 import { openOnboarding } from '../../lib/onboarding';
 import { useTheme, type ThemeMode } from '../../providers/theme';
 import {
@@ -213,6 +219,8 @@ export default function ProfileScreen() {
   const pendingSection = useRef<string | null>(null);
   const handledDeepLink = useRef<string | null>(null);
   const profileQuery = useOwnProfile();
+  const petsQuery = useOwnPets();
+  const homeLabel = petHomeLabel(petsQuery.data ?? []);
   const updateProfile = useUpdateOwnProfile();
   const uploadAvatar = useUploadOwnAvatar();
   const accountQuery = useTimebankAccount();
@@ -454,7 +462,7 @@ export default function ProfileScreen() {
     if (profile === null) return;
     if (!/^\d{5}$/.test(profile.postal_code ?? '') || !(profile.private_address ?? '').trim()) {
       setFormHint(
-        'Es ist noch keine Adresse vorhanden. Lege zuerst deinen Vermittlungsstandort im Profil fest und bearbeite es danach erneut – die Adresse wird hier nicht geändert.'
+        `Es ist noch keine Adresse vorhanden. Lege zuerst dein ${homeLabel} im Profil fest und bearbeite es danach erneut – die Adresse wird hier nicht geändert.`
       );
       return;
     }
@@ -462,7 +470,7 @@ export default function ProfileScreen() {
       {
         displayName: displayName.trim(),
         phone,
-        // Adresse bewusst unverändert: sie wird ausschließlich im Vermittlungsstandort gesetzt.
+        // Adresse bewusst unverändert: sie wird ausschließlich im Tier-Zuhause gesetzt.
         postalCode: profile.postal_code ?? '',
         privateAddress: profile.private_address ?? '',
         profileBio,
@@ -579,7 +587,7 @@ export default function ProfileScreen() {
               />
               <Text style={[styles.hint, { color: c.onSurfaceVariant }]}>
                 Postleitzahl und Wohnadresse werden nicht mehr hier eingegeben: Du legst sie
-                einmalig im Abschnitt „Vermittlungsstandort“ fest und änderst sie dort auch.
+                einmalig im Abschnitt „{homeLabel}“ fest und änderst sie dort auch.
               </Text>
               <Text style={[styles.label, { color: c.onSurface }]}>Kurzvorstellung (optional)</Text>
               <TextInput
@@ -790,7 +798,7 @@ export default function ProfileScreen() {
                 rememberSection('standort', event.nativeEvent.layout.y);
               }}
             >
-              <VermittlungsstandortCard profile={profile} />
+              <PetHomeCard profile={profile} />
             </View>
             <View
               onLayout={(event) => {

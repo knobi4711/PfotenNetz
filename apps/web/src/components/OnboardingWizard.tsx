@@ -21,7 +21,7 @@ import {
 
 const TARGET_HREFS: Record<OnboardingTarget, string> = {
   'profile-edit': '/profile',
-  'profile-address': '/profile#vermittlungsstandort',
+  'profile-address': '/profile#tier-zuhause',
   'pet-new': '/pets#neues-tier',
   'profile-helper': '/profile#verfuegbarkeiten',
 };

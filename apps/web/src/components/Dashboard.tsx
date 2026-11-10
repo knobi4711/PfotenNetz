@@ -19,7 +19,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
-import { bookingTypeLabel } from '@pfotennetz/shared';
+import { bookingTypeLabel, petHomeLabel } from '@pfotennetz/shared';
 import { PasskeyPanel } from './PasskeyPanel';
 import { WebHeader } from './WebHeader';
 import { getCurrentBrowserLocation } from '../lib/location';
@@ -189,6 +189,7 @@ export function Dashboard() {
   const router = useRouter();
   const profile = useOwnProfile();
   const pets = useOwnPets();
+  const homeLabel = petHomeLabel(pets.data ?? []);
   const bookings = useBookings();
   const account = useTimebankAccount();
   const unread = useUnreadCount();
@@ -546,7 +547,7 @@ export function Dashboard() {
                         ? 'Wird geladen …'
                         : nearbyHelpers.data === null
                           ? 'Standort im Profil festlegen'
-                          : `Verifiziert rund um deinen Vermittlungsstandort.`}
+                          : `Verifiziert rund um dein ${homeLabel}.`}
                   </p>
                   <span className="mt-2 inline-block text-xs font-bold text-primary">
                     Zur Nachbarschaftskarte

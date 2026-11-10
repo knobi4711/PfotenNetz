@@ -15,7 +15,7 @@ export const DEFAULT_KIEZ_RADIUS: KiezRadius = 1.5;
  * Server-Grenzen der Helfersuche.
  *
  * Die Helfersuche hat keinen frei wählbaren Radius mehr: Sichtbar ist, wessen
- * eigene Reisebereitschaft den Vermittlungsstandort erreicht. Der obere
+ * eigene Reisebereitschaft das Tier-Zuhause erreicht. Der obere
  * Server-Grenzwert entspricht deshalb der größten zulässigen Reisebereitschaft
  * (MAX_HELPER_DISTANCE_KM) und dient nur noch als Sicherheitsgrenze.
  */

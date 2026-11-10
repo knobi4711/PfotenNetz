@@ -11,7 +11,7 @@ import {
   type NearbyHelperSearch,
 } from './queries';
 
-/** The caller's own Vermittlungsstandort for centering the neighbourhood map. */
+/** The caller's own pet home location for centering the neighbourhood map. */
 export function useHelperSearchOrigin(): UseQueryResult<HelperSearchOrigin | null, Error> {
   const client = getSupabaseClient();
   return useQuery({

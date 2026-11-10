@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Location from 'expo-location';
 import {
   KIEZ_RADIUS_OPTIONS,
+  useOwnPets,
   useUpdateOwnLocation,
   useUpdateOwnProfile,
   type KiezRadius,
@@ -10,6 +11,7 @@ import {
   type Profile,
 } from '@pfotennetz/supabase';
 import {
+  petHomeLabel,
   reverseGeocodeOpenStreetMap,
   searchOpenStreetMap,
   type GeocodingAddress,
@@ -47,12 +49,14 @@ function readNotificationPrefs(profile: Profile): NotificationPreferences {
 }
 
 /**
- * Vermittlungsstandort: die einzige Stelle, an der GPS-Position und Profiladresse
+ * Tier-Zuhause: die einzige Stelle, an der GPS-Position und Profiladresse
  * gesetzt werden. Hyperlokale Koordinaten bleiben privat, die Adresse wird nur
  * bei bestätigter Betreuung geteilt.
  */
-export function VermittlungsstandortCard({ profile }: { profile: Profile }) {
+export function PetHomeCard({ profile }: { profile: Profile }) {
   const c = usePalette();
+  const petsQuery = useOwnPets();
+  const homeLabel = petHomeLabel(petsQuery.data ?? []);
   const updateLocation = useUpdateOwnLocation();
   const updateProfile = useUpdateOwnProfile();
   const [candidate, setCandidate] = useState<LocationCandidate | null>(null);
@@ -167,7 +171,7 @@ export function VermittlungsstandortCard({ profile }: { profile: Profile }) {
         if (confirmedAddress === null) {
           setCandidate(null);
           setError(
-            'Der Vermittlungsstandort wurde gespeichert, aber die Profiladresse ist noch unvollständig. Bitte bestimme den Standort erneut oder wähle den Ort über die Ortssuche.'
+            `Das ${homeLabel} wurde gespeichert, aber die Profiladresse ist noch unvollständig. Bitte bestimme den Standort erneut oder wähle den Ort über die Ortssuche.`
           );
           return;
         }
@@ -200,7 +204,7 @@ export function VermittlungsstandortCard({ profile }: { profile: Profile }) {
 
   return (
     <Card>
-      <SectionTitle>Vermittlungsstandort</SectionTitle>
+      <SectionTitle>{homeLabel}</SectionTitle>
       <Text style={[styles.description, { color: c.onSurfaceVariant }]}>
         Bestimme deine Position per GPS oder wähle einen Ort aus. Standort und Profiladresse werden
         gemeinsam gespeichert – an dieser Stelle und nirgendwo sonst.
@@ -275,7 +279,7 @@ export function VermittlungsstandortCard({ profile }: { profile: Profile }) {
 
       <View style={styles.searchRow}>
         <TextInput
-          accessibilityLabel="Ort oder PLZ für den privaten Vermittlungsstandort"
+          accessibilityLabel={`Ort oder PLZ für dein ${homeLabel}`}
           editable={!pending || !searchPending}
           onChangeText={setSearchQuery}
           placeholder="Ort manuell: z. B. Leipzig oder 04109"

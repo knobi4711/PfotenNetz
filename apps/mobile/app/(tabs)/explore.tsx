@@ -9,10 +9,11 @@ import {
   nearbyHelperErrorMessage,
   useHelperSearchOrigin,
   useNearbyHelpers,
+  useOwnPets,
   type NearbyHelper,
   type BookingType,
 } from '@pfotennetz/supabase';
-import { MAX_HELPER_DISTANCE_KM } from '@pfotennetz/shared';
+import { MAX_HELPER_DISTANCE_KM, petHomeLabel } from '@pfotennetz/shared';
 import {
   ActionButton,
   AppHeader,
@@ -71,7 +72,7 @@ function projectionRadiusKm(helpers: NearbyHelper[]): number {
   return Math.max(0.5, maxDistanceKm * 1.15);
 }
 
-function osmMapHtml(center: MapCoordinate, helpers: NearbyHelper[]): string {
+function osmMapHtml(center: MapCoordinate, helpers: NearbyHelper[], centerLabel: string): string {
   const markers = helpers.map((helper) => ({
     id: helper.helper_id,
     name: helper.display_name,
@@ -79,17 +80,19 @@ function osmMapHtml(center: MapCoordinate, helpers: NearbyHelper[]): string {
     longitude: helper.longitude,
     distance: `${Number(helper.distance_km).toLocaleString('de-DE')} km entfernt`,
   }));
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${zoomForHelpers(helpers)});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.marker(center).addTo(map).bindPopup('Dein Vermittlungsstandort');${JSON.stringify(markers)}.forEach(h=>L.marker([h.latitude,h.longitude]).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.distance).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${zoomForHelpers(helpers)});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.marker(center).addTo(map).bindPopup(${JSON.stringify(`Dein ${centerLabel}`)});${JSON.stringify(markers)}.forEach(h=>L.marker([h.latitude,h.longitude]).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.distance).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
 }
 
 function NeighborhoodMap({
   center,
   helpers,
+  centerLabel,
   selectedId,
   onSelect,
 }: {
   center: MapCoordinate;
   helpers: NearbyHelper[];
+  centerLabel: string;
   selectedId: string | null;
   onSelect: (helperId: string) => void;
 }) {
@@ -106,7 +109,7 @@ function NeighborhoodMap({
           javaScriptEnabled
           onMessage={handleMapMessage}
           originWhitelist={['*']}
-          source={{ html: osmMapHtml(center, helpers) }}
+          source={{ html: osmMapHtml(center, helpers, centerLabel) }}
           style={StyleSheet.absoluteFill}
         />
       </View>
@@ -161,7 +164,7 @@ function NeighborhoodMap({
         );
       })}
       <Text style={[styles.north, { color: c.onSurfaceVariant }]}>N</Text>
-      <Text style={[styles.mapCaption, { color: c.onSurfaceVariant }]}>Vermittlungsstandort</Text>
+      <Text style={[styles.mapCaption, { color: c.onSurfaceVariant }]}>{centerLabel}</Text>
     </View>
   );
 }
@@ -241,6 +244,8 @@ export default function ExploreScreen() {
   const [petSpecies, setPetSpecies] = useState<string | null>(null);
   const [dayOfWeek, setDayOfWeek] = useState<number | null>(null);
   const originQuery = useHelperSearchOrigin();
+  const petsQuery = useOwnPets();
+  const homeLabel = petHomeLabel(petsQuery.data ?? []);
   const center = originQuery.data ?? null;
   const helpersQuery = useNearbyHelpers(
     center === null
@@ -265,17 +270,17 @@ export default function ExploreScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <AppHeader
           title="Helfer:innen in der Nachbarschaft"
-          subtitle="Verifizierte Unterstützung rund um deinen Vermittlungsstandort."
+          subtitle={`Verifizierte Unterstützung rund um dein ${homeLabel}.`}
           onNotifications={() => {
             router.push('/(tabs)/tracking');
           }}
         />
 
         {originQuery.isPending ? (
-          <LoadingView label="Vermittlungsstandort wird geladen …" />
+          <LoadingView label={`${homeLabel} wird geladen …`} />
         ) : originQuery.isError ? (
           <ErrorBox
-            message={`Vermittlungsstandort konnte nicht geladen werden: ${nearbyHelperErrorMessage(originQuery.error)}`}
+            message={`${homeLabel} konnte nicht geladen werden: ${nearbyHelperErrorMessage(originQuery.error)}`}
             onRetry={() => {
               void originQuery.refetch();
             }}
@@ -283,18 +288,15 @@ export default function ExploreScreen() {
         ) : center === null ? (
           <Card>
             <EmptyText>
-              Für deine Suche fehlt noch dein Vermittlungsstandort. Lege ihn einmalig im Profil fest
-              – danach zeigt die Karte sofort alle Helfer:innen, deren Reisebereitschaft dich
-              erreicht.
+              {`Für deine Suche fehlt noch dein ${homeLabel}. Lege es einmalig im Profil fest – danach zeigt die Karte sofort alle Helfer:innen, deren Reisebereitschaft dich erreicht.`}
             </EmptyText>
-            <ActionButton title="Vermittlungsstandort festlegen" onPress={changeLocation} />
+            <ActionButton title={`${homeLabel} festlegen`} onPress={changeLocation} />
           </Card>
         ) : (
           <>
             <View style={styles.filterSection}>
               <Text style={[styles.filterHint, { color: c.onSurfaceVariant }]}>
-                Angezeigt werden Helfer:innen, deren eigene Reisebereitschaft deinen
-                Vermittlungsstandort erreicht. Ein zusätzlicher km-Radius ist nicht nötig.
+                {`Angezeigt werden Helfer:innen, deren eigene Reisebereitschaft dein ${homeLabel} erreicht. Ein zusätzlicher km-Radius ist nicht nötig.`}
               </Text>
               <Text style={[styles.filterLabel, { color: c.onSurface }]}>Betreuungsart</Text>
               <ChipRow>
@@ -345,7 +347,7 @@ export default function ExploreScreen() {
                 ))}
               </ChipRow>
               <ActionButton
-                title="Vermittlungsstandort ändern"
+                title={`${homeLabel} ändern`}
                 variant="secondary"
                 onPress={changeLocation}
               />
@@ -354,6 +356,7 @@ export default function ExploreScreen() {
             <NeighborhoodMap
               center={center}
               helpers={helpers}
+              centerLabel={homeLabel}
               selectedId={selectedId}
               onSelect={setSelectedId}
             />
@@ -369,7 +372,7 @@ export default function ExploreScreen() {
             ) : (
               <>
                 <View style={styles.resultHeading}>
-                  <SectionTitle>Im Umkreis deines Vermittlungsstandorts</SectionTitle>
+                  <SectionTitle>{`Rund um dein ${homeLabel}`}</SectionTitle>
                   <Text style={[styles.resultCount, { color: c.secondary }]}>
                     {helpers.length === 1 ? '1 Treffer' : `${helpers.length} Treffer`}
                   </Text>
@@ -377,9 +380,7 @@ export default function ExploreScreen() {
                 {helpers.length === 0 ? (
                   <Card>
                     <EmptyText>
-                      Aktuell erreicht keine verifizierte Helferin und kein verifizierter Helfer
-                      deinen Vermittlungsstandort. Sobald jemand seine Reisebereitschaft erweitert,
-                      erscheint die Person hier automatisch.
+                      {`Aktuell erreicht keine verifizierte Helferin und kein verifizierter Helfer dein ${homeLabel}. Sobald jemand seine Reisebereitschaft erweitert, erscheint die Person hier automatisch.`}
                     </EmptyText>
                   </Card>
                 ) : (

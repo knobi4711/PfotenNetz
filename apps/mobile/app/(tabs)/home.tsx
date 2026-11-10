@@ -9,13 +9,19 @@ import {
   useBookings,
   groupBookingsByRequest,
   useNearbyHelperCount,
+  useOwnPets,
   useOwnProfile,
   useRegisteredUserCount,
   useTimebankAccount,
   useUnreadCount,
   type BookingWithRelations,
 } from '@pfotennetz/supabase';
-import { formatDate, formatTimebankHours, formatTimebankHoursMagnitude } from '@pfotennetz/shared';
+import {
+  formatDate,
+  formatTimebankHours,
+  formatTimebankHoursMagnitude,
+  petHomeLabel,
+} from '@pfotennetz/shared';
 import { bookingTypeLabels } from '../../lib/booking';
 import { petSpeciesEmoji } from '../../lib/pets';
 import {
@@ -232,6 +238,8 @@ export default function HomeScreen() {
   const unreadQuery = useUnreadCount();
   const statsQuery = useRegisteredUserCount();
   const nearbyHelperStats = useNearbyHelperCount();
+  const petsQuery = useOwnPets();
+  const homeLabel = petHomeLabel(petsQuery.data ?? []);
   const [refreshing, setRefreshing] = useState(false);
 
   const bookings = bookingsQuery.data ?? [];
@@ -337,7 +345,7 @@ export default function HomeScreen() {
                     ? 'Wird geladen …'
                     : nearbyHelperStats.data === null
                       ? 'Standort im Profil festlegen.'
-                      : `Verifiziert rund um deinen Vermittlungsstandort.`}
+                      : `Verifiziert rund um dein ${homeLabel}.`}
               </Text>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={22} color={c.outline} />
