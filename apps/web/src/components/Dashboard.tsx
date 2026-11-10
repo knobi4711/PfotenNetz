@@ -227,7 +227,6 @@ export function Dashboard() {
 
   const displayName = profile.data?.display_name ?? 'Nachbarin oder Nachbar';
   const visibleBookings = groupBookingsByRequest(bookings.data ?? []).slice(0, 4);
-  const helperRadiusKm = Number(profile.data?.kiez_radius_km) || 1.5;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -528,7 +527,12 @@ export function Dashboard() {
                   <p className="text-sm font-bold text-on-surface">PfotenNetz-Mitglieder</p>
                   <p className="text-xs text-on-surface-variant">Alle registrierten Konten</p>
                 </div>
-                <div className="rounded-xl bg-surface-container-low p-4">
+                <button
+                  type="button"
+                  className="group rounded-xl bg-surface-container-low p-4 text-left transition hover:bg-surface-container"
+                  onClick={() => router.push('/explore')}
+                  aria-label="Helfer:innen in der Umgebung auf der Nachbarschaftskarte anzeigen"
+                >
                   <p className="text-3xl font-extrabold text-primary">
                     {nearbyHelpers.data === undefined || nearbyHelpers.data === null
                       ? '–'
@@ -542,9 +546,18 @@ export function Dashboard() {
                         ? 'Wird geladen …'
                         : nearbyHelpers.data === null
                           ? 'Standort im Profil festlegen'
-                          : `Verifiziert in deinem Nachbarschafts-Radius (${helperRadiusKm.toLocaleString('de-DE')} km)`}
+                          : `Verifiziert rund um deinen Vermittlungsstandort.`}
                   </p>
-                </div>
+                  <span className="mt-2 inline-block text-xs font-bold text-primary">
+                    Zur Nachbarschaftskarte
+                    <span
+                      aria-hidden="true"
+                      className="ml-1 inline-block transition group-hover:translate-x-0.5"
+                    >
+                      →
+                    </span>
+                  </span>
+                </button>
               </div>
               <button
                 type="button"

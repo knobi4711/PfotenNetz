@@ -2,14 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_HAZARD_RADAR_RADIUS_KM,
   DEFAULT_HELPER_MAX_DISTANCE_KM,
-  DEFAULT_HELPER_SEARCH_RADIUS_KM,
   DEFAULT_KIEZ_RADIUS,
   DEFAULT_TRACKING_RADIUS_M,
   HAZARD_RADAR_RADII,
   HAZARD_WARNING_RADIUS_KM,
   hazardWarningRadiusKm,
-  HELPER_SEARCH_RADII,
-  helperSearchRadiusFromKiez,
   KIEZ_RADIUS_OPTIONS,
   MAX_HAZARD_RADAR_RADIUS_KM,
   MAX_HAZARD_WARNING_RADIUS_KM,
@@ -28,16 +25,11 @@ import {
 describe('geo constants', () => {
   it('keeps every default inside its selectable range', () => {
     expect(KIEZ_RADIUS_OPTIONS).toContain(DEFAULT_KIEZ_RADIUS);
-    expect(HELPER_SEARCH_RADII).toContain(DEFAULT_HELPER_SEARCH_RADIUS_KM);
     expect(HAZARD_RADAR_RADII).toContain(DEFAULT_HAZARD_RADAR_RADIUS_KM);
     expect(TRACKING_RADIUS_OPTIONS).toContain(DEFAULT_TRACKING_RADIUS_M);
   });
 
   it('keeps every selectable radius inside its server limit', () => {
-    for (const radius of HELPER_SEARCH_RADII) {
-      expect(radius).toBeGreaterThanOrEqual(MIN_HELPER_SEARCH_RADIUS_KM);
-      expect(radius).toBeLessThanOrEqual(MAX_HELPER_SEARCH_RADIUS_KM);
-    }
     for (const radius of HAZARD_RADAR_RADII) {
       expect(radius).toBeGreaterThanOrEqual(MIN_HAZARD_RADAR_RADIUS_KM);
       expect(radius).toBeLessThanOrEqual(MAX_HAZARD_RADAR_RADIUS_KM);
@@ -52,6 +44,8 @@ describe('geo constants', () => {
     expect(HAZARD_WARNING_RADIUS_KM.default).toBeLessThan(HAZARD_WARNING_RADIUS_KM.critical);
     expect(HAZARD_WARNING_RADIUS_KM.critical).toBeLessThanOrEqual(MAX_HAZARD_WARNING_RADIUS_KM);
     expect(DEFAULT_HELPER_MAX_DISTANCE_KM).toBeLessThanOrEqual(MAX_HELPER_DISTANCE_KM);
+    expect(MAX_HELPER_DISTANCE_KM).toBeLessThanOrEqual(MAX_HELPER_SEARCH_RADIUS_KM);
+    expect(MAX_HELPER_DISTANCE_KM).toBeGreaterThan(MIN_HELPER_SEARCH_RADIUS_KM);
     expect(MISSING_PET_SEARCH_RADIUS_KM).toBeLessThanOrEqual(MAX_MISSING_PET_SEARCH_RADIUS_KM);
   });
 
@@ -59,15 +53,6 @@ describe('geo constants', () => {
     expect(hazardWarningRadiusKm('critical')).toBe(HAZARD_WARNING_RADIUS_KM.critical);
     expect(hazardWarningRadiusKm('high')).toBe(HAZARD_WARNING_RADIUS_KM.default);
     expect(hazardWarningRadiusKm('low')).toBe(HAZARD_WARNING_RADIUS_KM.default);
-  });
-
-  it('maps a neighbourhood radius to the nearest search option', () => {
-    expect(helperSearchRadiusFromKiez(0.5)).toBe(0.5);
-    expect(helperSearchRadiusFromKiez(1)).toBe(1);
-    expect(helperSearchRadiusFromKiez(1.5)).toBe(1.5);
-    expect(helperSearchRadiusFromKiez(3)).toBe(3);
-    expect(helperSearchRadiusFromKiez(null)).toBe(DEFAULT_HELPER_SEARCH_RADIUS_KM);
-    expect(helperSearchRadiusFromKiez(Number.NaN)).toBe(DEFAULT_HELPER_SEARCH_RADIUS_KM);
   });
 
   it('picks the largest travel radius for a booking type', () => {

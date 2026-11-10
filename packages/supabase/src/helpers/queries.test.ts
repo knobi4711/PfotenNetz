@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
 import {
+  fetchHelperSearchOrigin,
   fetchNearbyHelpers,
   nearbyHelperErrorMessage,
   validateNearbyHelperSearch,
@@ -12,7 +13,9 @@ function clientWithRpc(result: unknown) {
   const client = {
     rpc: (name: string, args: unknown) => {
       calls.push({ name, args });
-      return Promise.resolve(result);
+      return Object.assign(Promise.resolve(result), {
+        maybeSingle: () => Promise.resolve(result),
+      });
     },
   } as unknown as SupabaseClient<Database>;
   return { client, calls };
@@ -67,17 +70,39 @@ describe('nearby helper search', () => {
     ).not.toBeNull();
   });
 
+  it('reads the caller-owned search origin', async () => {
+    const { client, calls } = clientWithRpc({
+      data: { latitude: 52.52, longitude: 13.405 },
+      error: null,
+    });
+    await expect(fetchHelperSearchOrigin(client)).resolves.toEqual({
+      latitude: 52.52,
+      longitude: 13.405,
+    });
+    expect(calls).toEqual([{ name: 'helper_search_origin', args: undefined }]);
+  });
+
+  it('returns null when the profile has no stored location', async () => {
+    const { client } = clientWithRpc({ data: null, error: null });
+    await expect(fetchHelperSearchOrigin(client)).resolves.toBeNull();
+  });
+
   it('explains when the remote helper RPC migration is missing', () => {
     expect(
       nearbyHelperErrorMessage(
         new Error('Could not find the function public.find_nearby_helpers in the schema cache')
       )
-    ).toContain('Remote-Migrationen 050 und 051');
+    ).toContain('Remote-Migrationen');
     expect(
       nearbyHelperErrorMessage({
         message: 'Could not find the function public.find_nearby_helpers in the schema cache',
         code: 'PGRST202',
       })
-    ).toContain('Remote-Migrationen 050 und 051');
+    ).toContain('Remote-Migrationen');
+    expect(
+      nearbyHelperErrorMessage(
+        new Error('Could not find the function public.helper_search_origin in the schema cache')
+      )
+    ).toContain('Remote-Migrationen');
   });
 });

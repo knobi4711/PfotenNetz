@@ -11,24 +11,16 @@ export const KIEZ_RADIUS_OPTIONS = [0.5, 1.0, 1.5, 3.0] as const;
 export type KiezRadius = (typeof KIEZ_RADIUS_OPTIONS)[number];
 export const DEFAULT_KIEZ_RADIUS: KiezRadius = 1.5;
 
-/** Auswahl im Explore-Radar (Helfersuche); Server erlaubt 0,5 bis 50 km. */
-export const HELPER_SEARCH_RADII = [0.5, 1, 1.5, 3, 5, 10] as const;
-export type HelperSearchRadiusKm = (typeof HELPER_SEARCH_RADII)[number];
-export const DEFAULT_HELPER_SEARCH_RADIUS_KM: HelperSearchRadiusKm = 3;
+/**
+ * Server-Grenzen der Helfersuche.
+ *
+ * Die Helfersuche hat keinen frei wählbaren Radius mehr: Sichtbar ist, wessen
+ * eigene Reisebereitschaft den Vermittlungsstandort erreicht. Der obere
+ * Server-Grenzwert entspricht deshalb der größten zulässigen Reisebereitschaft
+ * (MAX_HELPER_DISTANCE_KM) und dient nur noch als Sicherheitsgrenze.
+ */
 export const MIN_HELPER_SEARCH_RADIUS_KM = 0.5;
 export const MAX_HELPER_SEARCH_RADIUS_KM = 50;
-
-/** Nächstgelegene Suchradius-Option zu einem Nachbarschafts-Radius. */
-export function helperSearchRadiusFromKiez(km: number | null | undefined): HelperSearchRadiusKm {
-  if (km === null || km === undefined || !Number.isFinite(km)) {
-    return DEFAULT_HELPER_SEARCH_RADIUS_KM;
-  }
-  let best: HelperSearchRadiusKm = HELPER_SEARCH_RADII[0];
-  for (const option of HELPER_SEARCH_RADII) {
-    if (Math.abs(option - km) < Math.abs(best - km)) best = option;
-  }
-  return best;
-}
 
 /** Größte Reisebereitschaft unter den Slots, die eine Betreuungsart anbieten. */
 export function maxDistanceForBookingType(

@@ -2520,6 +2520,13 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      helper_search_origin: {
+        Args: never;
+        Returns: {
+          latitude: number;
+          longitude: number;
+        }[];
+      };
       helper_start_booking: {
         Args: { p_booking_id: string };
         Returns: {

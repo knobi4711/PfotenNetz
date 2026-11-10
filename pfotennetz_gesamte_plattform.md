@@ -237,7 +237,7 @@ beide haben den Release-Build nicht verhindert.
   - Hauptreiter: `Dashboard`, `Nachbarschaftskarte & Helfer`, `Gefahren- & Notfall-Leitstelle`, `Betreuung & Live-Tracking`, `Community & Treff`
   - Community-Untermenü: `Community & Treffen`, `Tauschbörse für Tierbedarf`
   - Profil-Untermenü: `Profileinstellungen`, `Meine Tiere`
-  - Standort-Badge mit frei wählbarem Suchradius
+  - Standort-Badge mit hinterlegtem Vermittlungsstandort
   - Zeitbank-Guthaben Pill (`14,5 Std. Zeitbank`)
   - Profil-Avatar & Schnelleinstieg
 - **Globaler Footer:**
@@ -519,7 +519,7 @@ beide haben den Release-Build nicht verhindert.
 - **Beschreibung:** Großflächige Desktop-Kartenanwendung zur Helfer-Recherche und Tourenplanung.
 - **Komponenten & Features:**
   - **Große interaktive Karte:** Filterbare Marker für Helfer, Gefahrenstellen, Playdates und Notfall-Apotheken.
-  - **Radius-Stepper:** 500m, 1,0 km, 1,5 km, 3,0 km mit sofortiger Marker-Aktualisierung.
+  - **Radius-Stepper:** entfällt – sichtbar sind Helfer:innen, deren eigene Reisebereitschaft den Vermittlungsstandort der suchenden Person erreicht.
   - **Rechtes Buchungs-Panel:** Detaillierte Helfer-Biografie von Jonas K. mit Sachkundenachweis, Terminwahl und verbindlichem Buchungsabschluss.
 
 #### Screen 20: PfotenNetz Web — Gefahren- & Notfall-Leitstelle (Desktop)

@@ -16,6 +16,12 @@ export interface NearbyHelperSearch {
   dayOfWeek?: number | null | undefined;
 }
 
+/** The caller's own Vermittlungsstandort, used to center the helper map. */
+export interface HelperSearchOrigin {
+  latitude: number;
+  longitude: number;
+}
+
 export function nearbyHelperErrorMessage(error: unknown): string {
   const message =
     error instanceof Error
@@ -23,8 +29,11 @@ export function nearbyHelperErrorMessage(error: unknown): string {
       : typeof error === 'object' && error !== null && 'message' in error
         ? String(error.message)
         : String(error);
-  if (message.includes('find_nearby_helpers') && message.includes('schema cache')) {
-    return 'Die Helfersuche ist auf dem Server noch nicht aktiviert. Bitte die Remote-Migrationen 050 und 051 anwenden.';
+  if (
+    (message.includes('find_nearby_helpers') || message.includes('helper_search_origin')) &&
+    message.includes('schema cache')
+  ) {
+    return 'Die Helfersuche ist auf dem Server noch nicht aktualisiert. Bitte die Remote-Migrationen anwenden.';
   }
   return message;
 }
@@ -56,6 +65,16 @@ export function validateNearbyHelperSearch(input: NearbyHelperSearch): string | 
   )
     return 'Ungültiger Wochentag.';
   return null;
+}
+
+/** The caller's own Vermittlungsstandort; null when none has been stored yet. */
+export async function fetchHelperSearchOrigin(
+  client: SupabaseClient<Database>
+): Promise<HelperSearchOrigin | null> {
+  const { data, error } = await client.rpc('helper_search_origin').maybeSingle();
+  if (error) throw error;
+  if (data === null) return null;
+  return { latitude: Number(data.latitude), longitude: Number(data.longitude) };
 }
 
 /** Calls the authenticated, privacy-preserving nearby-helper RPC. */

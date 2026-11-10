@@ -242,7 +242,6 @@ export default function HomeScreen() {
   const disputed = bookings.find((booking) => booking.status === 'disputed') ?? null;
   const firstName = profileQuery.data?.display_name.trim().split(/\s+/)[0] ?? '';
   const avatarLabel = firstName.slice(0, 1).toUpperCase() || '🐾';
-  const helperRadiusKm = Number(profileQuery.data?.kiez_radius_km) || 1.5;
 
   const refresh = async () => {
     setRefreshing(true);
@@ -306,13 +305,19 @@ export default function HomeScreen() {
               </Text>
             </View>
           </View>
-          <View
-            style={[
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Helfer:innen in der Umgebung auf der Nachbarschaftskarte anzeigen"
+            onPress={() => {
+              router.push('/(tabs)/explore');
+            }}
+            style={({ pressed }) => [
               styles.statsRow,
               {
                 borderTopColor: c.outlineVariant,
                 borderTopWidth: StyleSheet.hairlineWidth,
                 paddingTop: 14,
+                opacity: pressed ? 0.7 : 1,
               },
             ]}
           >
@@ -332,10 +337,18 @@ export default function HomeScreen() {
                     ? 'Wird geladen …'
                     : nearbyHelperStats.data === null
                       ? 'Standort im Profil festlegen.'
-                      : `Verifiziert in deinem Nachbarschafts-Radius (${helperRadiusKm.toLocaleString('de-DE')} km).`}
+                      : `Verifiziert rund um deinen Vermittlungsstandort.`}
               </Text>
             </View>
-          </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={c.outline} />
+          </Pressable>
+          <ActionButton
+            title="Helfer:innen entdecken"
+            variant="secondary"
+            onPress={() => {
+              router.push('/(tabs)/explore');
+            }}
+          />
         </Card>
 
         <View style={styles.sectionHeading}>

@@ -8,30 +8,17 @@ import {
   USER_REPORT_REASON_LABELS,
   userReportErrorMessage,
   useCreateUserReport,
+  useHelperSearchOrigin,
   useNearbyHelpers,
-  useOwnProfile,
   type UserReportReason,
   type BookingType,
   type NearbyHelper,
 } from '@pfotennetz/supabase';
-import {
-  BOOKING_TYPE_LABELS,
-  HELPER_SEARCH_RADII,
-  helperSearchRadiusFromKiez,
-  reverseGeocodeOpenStreetMap,
-  searchOpenStreetMap,
-  type GeocodingResult,
-  type HelperSearchRadiusKm,
-} from '@pfotennetz/shared';
+import { BOOKING_TYPE_LABELS, MAX_HELPER_DISTANCE_KM } from '@pfotennetz/shared';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useEffect, useRef } from 'react';
 import { WebHeader } from '../../components/WebHeader';
-import {
-  formatBrowserAccuracy,
-  getCurrentBrowserLocation,
-  type BrowserLocation,
-} from '../../lib/location';
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_URL } from '../../lib/map-tiles';
 
 const SPECIES = [
@@ -52,8 +39,6 @@ type MapHelper = Pick<
   'helper_id' | 'display_name' | 'latitude' | 'longitude' | 'distance_km'
 >;
 
-type LocationCandidate = BrowserLocation & { displayName: string };
-
 type LeafletMap = {
   setView: (center: [number, number], zoom: number) => LeafletMap;
   remove: () => void;
@@ -71,10 +56,6 @@ type LeafletApi = {
     options: { maxZoom: number; attribution: string }
   ) => { addTo: (map: LeafletMap) => void };
   layerGroup: () => LeafletLayerGroup;
-  circle: (
-    center: [number, number],
-    options: Record<string, number | string>
-  ) => { addTo: (map: LeafletMap) => void };
   marker: (center: [number, number]) => {
     addTo: (target: LeafletLayerGroup) => {
       bindPopup: (content: string) => { on: (event: string, callback: () => void) => void };
@@ -109,14 +90,21 @@ function loadLeaflet(): Promise<LeafletApi> {
   });
 }
 
+function mapZoomForHelpers(helpers: MapHelper[]): number {
+  const maxDistanceKm = helpers.reduce(
+    (max, helper) => Math.max(max, Number(helper.distance_km) || 0),
+    0
+  );
+  if (maxDistanceKm <= 0) return 14;
+  return Math.max(10, Math.min(15, Math.round(15 - Math.log2(Math.max(maxDistanceKm, 0.5)))));
+}
+
 function OSMMap({
   center,
-  radiusKm,
   helpers,
   onSelect,
 }: {
   center: { latitude: number; longitude: number };
-  radiusKm: number;
   helpers: MapHelper[];
   onSelect: (id: string) => void;
 }) {
@@ -139,10 +127,7 @@ function OSMMap({
       const isNewMap = !mapRef.current;
       const map = mapRef.current ?? leaflet.map(containerRef.current);
       mapRef.current = map;
-      map.setView(
-        [center.latitude, center.longitude],
-        Math.max(10, Math.round(15 - Math.log2(radiusKm)))
-      );
+      map.setView([center.latitude, center.longitude], mapZoomForHelpers(helpers));
       if (!layersRef.current) layersRef.current = leaflet.layerGroup().addTo(map);
       layersRef.current.clearLayers();
       if (isNewMap) {
@@ -154,13 +139,10 @@ function OSMMap({
           .addTo(map);
       }
       leaflet
-        .circle([center.latitude, center.longitude], {
-          radius: radiusKm * 1000,
-          color: '#e26d46',
-          fillColor: '#e26d46',
-          fillOpacity: 0.12,
-        })
-        .addTo(map);
+        .marker([center.latitude, center.longitude])
+        .addTo(layersRef.current as LeafletLayerGroup)
+        .bindPopup('Dein Vermittlungsstandort')
+        .on('click', () => undefined);
       helpers.forEach((helper) => {
         leaflet
           .marker([helper.latitude, helper.longitude])
@@ -174,7 +156,7 @@ function OSMMap({
     return () => {
       disposed = true;
     };
-  }, [center, radiusKm, helpers, onSelect]);
+  }, [center, helpers, onSelect]);
 
   useEffect(() => () => mapRef.current?.remove(), []);
 
@@ -232,16 +214,7 @@ function HelperCard({
 
 export default function ExplorePage() {
   const router = useRouter();
-  const [center, setCenter] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [radiusOverride, setRadiusOverride] = useState<HelperSearchRadiusKm | null>(null);
-  const profileQuery = useOwnProfile();
-  const radiusKm = radiusOverride ?? helperSearchRadiusFromKiez(profileQuery.data?.kiez_radius_km);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [locationCandidate, setLocationCandidate] = useState<LocationCandidate | null>(null);
-  const [placeQuery, setPlaceQuery] = useState('');
-  const [placeResults, setPlaceResults] = useState<GeocodingResult[]>([]);
-  const [placeSearchPending, setPlaceSearchPending] = useState(false);
   const [bookingType, setBookingType] = useState<BookingType | null>(null);
   const [petSpecies, setPetSpecies] = useState<string | null>(null);
   const [dayOfWeek, setDayOfWeek] = useState<number | null>(null);
@@ -254,56 +227,22 @@ export default function ExplorePage() {
   const [reportDetails, setReportDetails] = useState('');
   const createContact = useCreateContactRequest();
   const createReport = useCreateUserReport();
+  const originQuery = useHelperSearchOrigin();
+  const center = originQuery.data ?? null;
   const search =
-    center === null ? null : { ...center, radiusKm, bookingType, petSpecies, dayOfWeek };
+    center === null
+      ? null
+      : {
+          ...center,
+          radiusKm: MAX_HELPER_DISTANCE_KM,
+          limit: 50,
+          bookingType,
+          petSpecies,
+          dayOfWeek,
+        };
   const helpersQuery = useNearbyHelpers(search);
   const helpers = helpersQuery.data ?? [];
   const selected = helpers.find((helper) => helper.helper_id === selectedId) ?? null;
-
-  const handleLocate = () => {
-    setLocationError(null);
-    void getCurrentBrowserLocation()
-      .then(async (point) => {
-        let displayName = `Koordinaten ${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}`;
-        try {
-          const address = await reverseGeocodeOpenStreetMap(point.latitude, point.longitude);
-          displayName = address.displayName;
-        } catch {
-          // The coordinates can still be confirmed if reverse geocoding is temporarily unavailable.
-        }
-        setLocationCandidate({ ...point, displayName });
-      })
-      .catch((error: unknown) =>
-        setLocationError(
-          error instanceof Error ? error.message : 'Standort konnte nicht bestimmt werden.'
-        )
-      );
-  };
-
-  const confirmBrowserLocation = () => {
-    if (!locationCandidate) return;
-    setCenter({ latitude: locationCandidate.latitude, longitude: locationCandidate.longitude });
-    setSelectedId(null);
-    setLocationCandidate(null);
-  };
-
-  const handlePlaceSearch = () => {
-    setLocationError(null);
-    setLocationCandidate(null);
-    setPlaceSearchPending(true);
-    void searchOpenStreetMap(placeQuery)
-      .then((results) => {
-        setPlaceResults(results);
-        if (results.length === 0) setLocationError('Kein passender Ort gefunden.');
-      })
-      .catch((error: unknown) => {
-        setPlaceResults([]);
-        setLocationError(
-          error instanceof Error ? error.message : 'Ort konnte nicht gesucht werden.'
-        );
-      })
-      .finally(() => setPlaceSearchPending(false));
-  };
 
   return (
     <main className="min-h-screen bg-surface">
@@ -315,211 +254,162 @@ export default function ExplorePage() {
             Helfer:innen in der Nachbarschaft
           </h1>
           <p className="mt-3 max-w-2xl text-lg text-on-surface-variant">
-            Finde verifizierte Unterstützung in deiner Nähe und lerne deine Nachbarschaft kennen.
+            Verifizierte Unterstützung rund um deinen Vermittlungsstandort – ohne zusätzliche
+            Standortfreigabe.
           </p>
         </div>
-        <div className="mb-6 flex flex-wrap items-center gap-3">
-          <button type="button" onClick={handleLocate} className="btn-primary">
-            {center ? 'Standort aktualisieren' : 'Standort verwenden'}
-          </button>
-          {HELPER_SEARCH_RADII.map((radius) => (
-            <button
-              key={radius}
-              type="button"
-              onClick={() => setRadiusOverride(radius)}
-              className={`rounded-full border px-4 py-2 text-sm font-bold ${radius === radiusKm ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant text-on-surface hover:bg-surface-container'}`}
-            >
-              {radius.toString().replace('.', ',')} km
-            </button>
-          ))}
-        </div>
-        {locationCandidate ? (
-          <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 p-4">
-            <p className="text-sm font-bold">Bitte erkannten Standort prüfen</p>
-            <p className="mt-2 text-sm text-on-surface-variant">
-              Der Browser meldet: <strong>{locationCandidate.displayName}</strong>. Angegebene
-              Genauigkeit: {formatBrowserAccuracy(locationCandidate.accuracy)}.
-            </p>
-            <p className="mt-2 text-sm text-on-surface-variant">
-              Die Browser-Ortung kann trotz Freigabe falsch liegen. Übernimm den Standort nur, wenn
-              der angezeigte Ort stimmt.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" className="btn-primary" onClick={confirmBrowserLocation}>
-                Standort bestätigen
-              </button>
+        {center !== null ? (
+          <>
+            <div className="mb-6 rounded-2xl bg-surface-container-low p-4">
+              <p className="text-sm font-bold">Rund um deinen Vermittlungsstandort</p>
+              <p className="mt-2 text-sm text-on-surface-variant">
+                Angezeigt werden Helfer:innen, deren eigene Reisebereitschaft deinen
+                Vermittlungsstandort erreicht. Ein zusätzlicher km-Radius ist nicht nötig.
+              </p>
               <button
                 type="button"
-                className="rounded-full border border-outline-variant px-4 py-2 text-sm font-bold"
-                onClick={() => setLocationCandidate(null)}
+                className="btn-secondary mt-3"
+                onClick={() => router.push('/profile')}
               >
-                Verwerfen und Ort suchen
+                Vermittlungsstandort ändern
               </button>
             </div>
-          </div>
-        ) : null}
-        <div className="mb-6 rounded-2xl bg-surface-container-low p-4">
-          <label className="mb-2 block text-sm font-bold" htmlFor="place-search">
-            Ort oder PLZ manuell wählen
-          </label>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              id="place-search"
-              className="min-w-0 flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-sm"
-              placeholder="z. B. 37581 oder Berlin"
-              value={placeQuery}
-              onChange={(event) => setPlaceQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') handlePlaceSearch();
-              }}
-            />
-            <button
-              type="button"
-              className="btn-secondary"
-              disabled={placeSearchPending || placeQuery.trim().length < 3}
-              onClick={handlePlaceSearch}
-            >
-              {placeSearchPending ? 'Suche …' : 'Ort suchen'}
-            </button>
-          </div>
-          {placeResults.length > 0 ? (
-            <div className="mt-3 space-y-2">
-              {placeResults.map((result) => (
+            <div className="mb-6 space-y-3 rounded-2xl bg-surface-container-low p-4">
+              <p className="text-sm font-bold">Filter</p>
+              <div className="flex flex-wrap gap-2">
                 <button
-                  key={`${result.latitude}-${result.longitude}`}
                   type="button"
-                  className="block w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-left text-sm hover:bg-surface-container"
-                  onClick={() => {
-                    setCenter({ latitude: result.latitude, longitude: result.longitude });
-                    setSelectedId(null);
-                    setPlaceResults([]);
-                    setPlaceQuery(result.displayName);
-                  }}
+                  onClick={() => setBookingType(null)}
+                  className={`chip ${bookingType === null ? 'chip-selected' : ''}`}
                 >
-                  {result.displayName}
+                  Alle Betreuungsarten
                 </button>
-              ))}
+                {BOOKING_TYPES.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setBookingType(type)}
+                    className={`chip ${bookingType === type ? 'chip-selected' : ''}`}
+                  >
+                    {BOOKING_TYPE_LABELS[type]}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPetSpecies(null)}
+                  className={`chip ${petSpecies === null ? 'chip-selected' : ''}`}
+                >
+                  Alle Tierarten
+                </button>
+                {SPECIES.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPetSpecies(value)}
+                    className={`chip ${petSpecies === value ? 'chip-selected' : ''}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDayOfWeek(null)}
+                  className={`chip ${dayOfWeek === null ? 'chip-selected' : ''}`}
+                >
+                  Jeder Tag
+                </button>
+                {DAYS.map((day, index) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setDayOfWeek(index)}
+                    className={`chip ${dayOfWeek === index ? 'chip-selected' : ''}`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
             </div>
-          ) : null}
-        </div>
-        <div className="mb-6 space-y-3 rounded-2xl bg-surface-container-low p-4">
-          <p className="text-sm font-bold">Filter</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setBookingType(null)}
-              className={`chip ${bookingType === null ? 'chip-selected' : ''}`}
-            >
-              Alle Betreuungsarten
-            </button>
-            {BOOKING_TYPES.map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setBookingType(type)}
-                className={`chip ${bookingType === type ? 'chip-selected' : ''}`}
-              >
-                {BOOKING_TYPE_LABELS[type]}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setPetSpecies(null)}
-              className={`chip ${petSpecies === null ? 'chip-selected' : ''}`}
-            >
-              Alle Tierarten
-            </button>
-            {SPECIES.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setPetSpecies(value)}
-                className={`chip ${petSpecies === value ? 'chip-selected' : ''}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setDayOfWeek(null)}
-              className={`chip ${dayOfWeek === null ? 'chip-selected' : ''}`}
-            >
-              Jeder Tag
-            </button>
-            {DAYS.map((day, index) => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => setDayOfWeek(index)}
-                className={`chip ${dayOfWeek === index ? 'chip-selected' : ''}`}
-              >
-                {day}
-              </button>
-            ))}
-          </div>
-        </div>
-        {locationError ? (
-          <p
-            role="alert"
-            className="mb-5 rounded-xl bg-error-container p-4 text-sm font-semibold text-on-error-container"
-          >
-            {locationError}
-          </p>
+          </>
         ) : null}
-        {center === null ? (
+        {originQuery.isPending ? (
+          <p className="py-12 text-center text-on-surface-variant">
+            Vermittlungsstandort wird geladen …
+          </p>
+        ) : originQuery.isError ? (
+          <p role="alert" className="rounded-xl bg-error-container p-4 text-error">
+            Vermittlungsstandort konnte nicht geladen werden:{' '}
+            {nearbyHelperErrorMessage(originQuery.error)}
+          </p>
+        ) : center === null ? (
           <section className="card p-12 text-center">
             <p className="text-5xl">📍</p>
-            <h2 className="mt-4 text-2xl font-extrabold">Standort aktivieren</h2>
+            <h2 className="mt-4 text-2xl font-extrabold">Vermittlungsstandort fehlt</h2>
             <p className="mx-auto mt-2 max-w-md text-on-surface-variant">
-              Erlaube deinen Standort, um Helfer:innen in deiner Nähe zu sehen.
+              Lege deinen Vermittlungsstandort einmalig im Profil fest. Danach zeigt die Karte
+              sofort alle Helfer:innen, deren Reisebereitschaft dich erreicht.
             </p>
+            <button
+              type="button"
+              className="btn-primary mt-4"
+              onClick={() => router.push('/profile')}
+            >
+              Zum Profil
+            </button>
           </section>
-        ) : helpersQuery.isPending ? (
-          <p className="py-12 text-center text-on-surface-variant">Helfer:innen werden gesucht …</p>
-        ) : helpersQuery.isError ? (
-          <p role="alert" className="rounded-xl bg-error-container p-4 text-error">
-            Suche fehlgeschlagen: {nearbyHelperErrorMessage(helpersQuery.error)}
-          </p>
         ) : (
           <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             <div>
               <div className="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-[var(--shadow-level-1)]">
-                <OSMMap
-                  center={center}
-                  radiusKm={radiusKm}
-                  helpers={helpers}
-                  onSelect={setSelectedId}
-                />
+                <OSMMap center={center} helpers={helpers} onSelect={setSelectedId} />
               </div>
             </div>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-extrabold">In deiner Nähe</h2>
-                <span className="text-sm font-bold text-secondary">{helpers.length} Treffer</span>
-              </div>
-              {helpers.length === 0 ? (
-                <div className="card p-6 text-sm text-on-surface-variant">
-                  Keine verifizierten Helfer:innen in diesem Radius.
-                </div>
+              {helpersQuery.isPending ? (
+                <p className="py-12 text-center text-on-surface-variant">
+                  Helfer:innen werden gesucht …
+                </p>
+              ) : helpersQuery.isError ? (
+                <p role="alert" className="rounded-xl bg-error-container p-4 text-error">
+                  Suche fehlgeschlagen: {nearbyHelperErrorMessage(helpersQuery.error)}
+                </p>
               ) : (
-                helpers.map((helper) => (
-                  <HelperCard
-                    key={helper.helper_id}
-                    helper={helper}
-                    selected={helper.helper_id === selectedId}
-                    onSelect={() => {
-                      setSelectedId(helper.helper_id);
-                      setContactSent(false);
-                      createContact.reset();
-                      setReportOpen(false);
-                      createReport.reset();
-                    }}
-                  />
-                ))
+                <>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-extrabold">
+                      Im Umkreis deines Vermittlungsstandorts
+                    </h2>
+                    <span className="text-sm font-bold text-secondary">
+                      {helpers.length} Treffer
+                    </span>
+                  </div>
+                  {helpers.length === 0 ? (
+                    <div className="card p-6 text-sm text-on-surface-variant">
+                      Aktuell erreicht keine verifizierte Helferin und kein verifizierter Helfer
+                      deinen Vermittlungsstandort. Sobald jemand die eigene Reisebereitschaft
+                      erweitert, erscheint die Person hier automatisch.
+                    </div>
+                  ) : (
+                    helpers.map((helper) => (
+                      <HelperCard
+                        key={helper.helper_id}
+                        helper={helper}
+                        selected={helper.helper_id === selectedId}
+                        onSelect={() => {
+                          setSelectedId(helper.helper_id);
+                          setContactSent(false);
+                          createContact.reset();
+                          setReportOpen(false);
+                          createReport.reset();
+                        }}
+                      />
+                    ))
+                  )}
+                </>
               )}
               {selected ? (
                 <div className="card border-primary/40 bg-primary-fixed/30 p-5">

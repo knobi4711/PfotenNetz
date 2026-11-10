@@ -2,22 +2,17 @@ import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import * as Location from 'expo-location';
 import { bookingTypeLabels } from '../../lib/booking';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import {
   BOOKING_TYPES,
   nearbyHelperErrorMessage,
+  useHelperSearchOrigin,
   useNearbyHelpers,
-  useOwnProfile,
   type NearbyHelper,
   type BookingType,
 } from '@pfotennetz/supabase';
-import {
-  HELPER_SEARCH_RADII,
-  helperSearchRadiusFromKiez,
-  type HelperSearchRadiusKm,
-} from '@pfotennetz/shared';
+import { MAX_HELPER_DISTANCE_KM } from '@pfotennetz/shared';
 import {
   ActionButton,
   AppHeader,
@@ -57,7 +52,26 @@ function helperInitial(name: string): string {
   return name.trim().slice(0, 1).toUpperCase() || '🐾';
 }
 
-function osmMapHtml(center: MapCoordinate, radiusKm: number, helpers: NearbyHelper[]): string {
+/** Zoom that keeps every visible helper on screen without a search radius. */
+function zoomForHelpers(helpers: NearbyHelper[]): number {
+  const maxDistanceKm = helpers.reduce(
+    (max, helper) => Math.max(max, Number(helper.distance_km) || 0),
+    0
+  );
+  if (maxDistanceKm <= 0) return 14;
+  return Math.max(10, Math.min(15, Math.round(15 - Math.log2(Math.max(maxDistanceKm, 0.5)))));
+}
+
+/** Radius used only to project helper coordinates onto the schematic web map. */
+function projectionRadiusKm(helpers: NearbyHelper[]): number {
+  const maxDistanceKm = helpers.reduce(
+    (max, helper) => Math.max(max, Number(helper.distance_km) || 0),
+    0
+  );
+  return Math.max(0.5, maxDistanceKm * 1.15);
+}
+
+function osmMapHtml(center: MapCoordinate, helpers: NearbyHelper[]): string {
   const markers = helpers.map((helper) => ({
     id: helper.helper_id,
     name: helper.display_name,
@@ -65,18 +79,16 @@ function osmMapHtml(center: MapCoordinate, radiusKm: number, helpers: NearbyHelp
     longitude: helper.longitude,
     distance: `${Number(helper.distance_km).toLocaleString('de-DE')} km entfernt`,
   }));
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${Math.max(10, Math.round(15 - Math.log2(radiusKm)))});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.circle(center,{radius:${radiusKm * 1000},color:'#e26d46',fillColor:'#e26d46',fillOpacity:.12}).addTo(map);L.marker(center).addTo(map).bindPopup('Dein Standort');${JSON.stringify(markers)}.forEach(h=>L.marker([h.latitude,h.longitude]).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.distance).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${zoomForHelpers(helpers)});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.marker(center).addTo(map).bindPopup('Dein Vermittlungsstandort');${JSON.stringify(markers)}.forEach(h=>L.marker([h.latitude,h.longitude]).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.distance).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
 }
 
 function NeighborhoodMap({
   center,
-  radiusKm,
   helpers,
   selectedId,
   onSelect,
 }: {
   center: MapCoordinate;
-  radiusKm: number;
   helpers: NearbyHelper[];
   selectedId: string | null;
   onSelect: (helperId: string) => void;
@@ -94,12 +106,13 @@ function NeighborhoodMap({
           javaScriptEnabled
           onMessage={handleMapMessage}
           originWhitelist={['*']}
-          source={{ html: osmMapHtml(center, radiusKm, helpers) }}
+          source={{ html: osmMapHtml(center, helpers) }}
           style={StyleSheet.absoluteFill}
         />
       </View>
     );
   }
+  const radiusKm = projectionRadiusKm(helpers);
   return (
     <View
       accessibilityLabel={`Kartenübersicht der Nachbarschaft mit ${helpers.length} Helferinnen und Helfern`}
@@ -110,7 +123,6 @@ function NeighborhoodMap({
     >
       <View style={[styles.mapGridHorizontal, { borderColor: c.outlineVariant }]} />
       <View style={[styles.mapGridVertical, { borderColor: c.outlineVariant }]} />
-      <View style={[styles.radiusCircle, { borderColor: c.primary }]} />
       <View style={[styles.userMarker, { backgroundColor: c.secondary, borderColor: c.surface }]}>
         <Text style={[styles.userMarkerText, { color: c.onSecondary }]}>Du</Text>
       </View>
@@ -149,7 +161,7 @@ function NeighborhoodMap({
         );
       })}
       <Text style={[styles.north, { color: c.onSurfaceVariant }]}>N</Text>
-      <Text style={[styles.mapCaption, { color: c.onSurfaceVariant }]}>Radius {radiusKm} km</Text>
+      <Text style={[styles.mapCaption, { color: c.onSurfaceVariant }]}>Vermittlungsstandort</Text>
     </View>
   );
 }
@@ -224,51 +236,28 @@ function HelperCard({
 
 export default function ExploreScreen() {
   const c = usePalette();
-  const [center, setCenter] = useState<MapCoordinate | null>(null);
-  const [radiusOverride, setRadiusOverride] = useState<HelperSearchRadiusKm | null>(null);
-  const profileQuery = useOwnProfile();
-  const radiusKm = radiusOverride ?? helperSearchRadiusFromKiez(profileQuery.data?.kiez_radius_km);
-  const [locationPending, setLocationPending] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [bookingType, setBookingType] = useState<BookingType | null>(null);
   const [petSpecies, setPetSpecies] = useState<string | null>(null);
   const [dayOfWeek, setDayOfWeek] = useState<number | null>(null);
+  const originQuery = useHelperSearchOrigin();
+  const center = originQuery.data ?? null;
   const helpersQuery = useNearbyHelpers(
-    center === null ? null : { ...center, radiusKm, bookingType, petSpecies, dayOfWeek }
+    center === null
+      ? null
+      : {
+          ...center,
+          radiusKm: MAX_HELPER_DISTANCE_KM,
+          limit: 50,
+          bookingType,
+          petSpecies,
+          dayOfWeek,
+        }
   );
   const helpers = helpersQuery.data ?? [];
 
-  const locate = () => {
-    setLocationPending(true);
-    setLocationError(null);
-    void (async () => {
-      try {
-        const permission = await Location.requestForegroundPermissionsAsync();
-        if (!permission.granted) {
-          setLocationError('Standortfreigabe wurde nicht erteilt.');
-          return;
-        }
-        const position = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        }).catch(async () => {
-          const fallback = await Location.getLastKnownPositionAsync({
-            maxAge: 5 * 60 * 1000,
-            requiredAccuracy: 1000,
-          });
-          if (fallback === null) throw new Error('Standort konnte nicht bestimmt werden.');
-          return fallback;
-        });
-        setCenter({ latitude: position.coords.latitude, longitude: position.coords.longitude });
-        setSelectedId(null);
-      } catch (error: unknown) {
-        setLocationError(
-          error instanceof Error ? error.message : 'Standort konnte nicht bestimmt werden.'
-        );
-      } finally {
-        setLocationPending(false);
-      }
-    })();
+  const changeLocation = () => {
+    router.push({ pathname: '/(tabs)/profile', params: { section: 'standort' } });
   };
 
   return (
@@ -276,139 +265,145 @@ export default function ExploreScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <AppHeader
           title="Helfer:innen in der Nachbarschaft"
-          subtitle="Verifizierte Unterstützung direkt in deiner Nähe."
+          subtitle="Verifizierte Unterstützung rund um deinen Vermittlungsstandort."
           onNotifications={() => {
             router.push('/(tabs)/tracking');
           }}
         />
 
-        <View style={styles.filterSection}>
-          <ChipRow>
-            {HELPER_SEARCH_RADII.map((radius) => {
-              const selected = radius === radiusKm;
-              return (
-                <Chip
-                  key={radius}
-                  label={`${radius.toString().replace('.', ',')} km`}
-                  selected={selected}
-                  icon="map-marker-radius"
-                  onPress={() => {
-                    setRadiusOverride(radius);
-                    setSelectedId(null);
-                  }}
-                />
-              );
-            })}
-          </ChipRow>
-          <Text style={[styles.filterLabel, { color: c.onSurface }]}>Betreuungsart</Text>
-          <ChipRow>
-            <Chip
-              label="Alle"
-              selected={bookingType === null}
-              onPress={() => setBookingType(null)}
-            />
-            {BOOKING_TYPES.map((type) => (
-              <Chip
-                key={type}
-                label={bookingTypeLabels[type]}
-                selected={bookingType === type}
-                onPress={() => setBookingType(type)}
-              />
-            ))}
-          </ChipRow>
-          <Text style={[styles.filterLabel, { color: c.onSurface }]}>Tierart</Text>
-          <ChipRow>
-            <Chip label="Alle" selected={petSpecies === null} onPress={() => setPetSpecies(null)} />
-            {SPECIES.map(([value, label]) => (
-              <Chip
-                key={value}
-                label={label}
-                selected={petSpecies === value}
-                onPress={() => setPetSpecies(value)}
-              />
-            ))}
-          </ChipRow>
-          <Text style={[styles.filterLabel, { color: c.onSurface }]}>Verfügbar am</Text>
-          <ChipRow>
-            <Chip
-              label="Jeder Tag"
-              selected={dayOfWeek === null}
-              onPress={() => setDayOfWeek(null)}
-            />
-            {DAYS.map((label, index) => (
-              <Chip
-                key={label}
-                label={label}
-                selected={dayOfWeek === index}
-                onPress={() => setDayOfWeek(index)}
-              />
-            ))}
-          </ChipRow>
-          <ActionButton
-            title={center === null ? 'Standort verwenden' : 'Standort aktualisieren'}
-            pending={locationPending}
-            onPress={locate}
-          />
-          {locationError !== null ? <ErrorBox message={locationError} /> : null}
-        </View>
-
-        {center === null ? (
-          <Card>
-            <EmptyText>
-              Aktiviere deinen Standort, um Helfer:innen in deiner Nähe zu suchen.
-            </EmptyText>
-          </Card>
-        ) : helpersQuery.isPending ? (
-          <LoadingView label="Helfer:innen werden gesucht …" />
-        ) : helpersQuery.isError ? (
+        {originQuery.isPending ? (
+          <LoadingView label="Vermittlungsstandort wird geladen …" />
+        ) : originQuery.isError ? (
           <ErrorBox
-            message={`Suche fehlgeschlagen: ${nearbyHelperErrorMessage(helpersQuery.error)}`}
+            message={`Vermittlungsstandort konnte nicht geladen werden: ${nearbyHelperErrorMessage(originQuery.error)}`}
             onRetry={() => {
-              void helpersQuery.refetch();
+              void originQuery.refetch();
             }}
           />
+        ) : center === null ? (
+          <Card>
+            <EmptyText>
+              Für deine Suche fehlt noch dein Vermittlungsstandort. Lege ihn einmalig im Profil fest
+              – danach zeigt die Karte sofort alle Helfer:innen, deren Reisebereitschaft dich
+              erreicht.
+            </EmptyText>
+            <ActionButton title="Vermittlungsstandort festlegen" onPress={changeLocation} />
+          </Card>
         ) : (
           <>
+            <View style={styles.filterSection}>
+              <Text style={[styles.filterHint, { color: c.onSurfaceVariant }]}>
+                Angezeigt werden Helfer:innen, deren eigene Reisebereitschaft deinen
+                Vermittlungsstandort erreicht. Ein zusätzlicher km-Radius ist nicht nötig.
+              </Text>
+              <Text style={[styles.filterLabel, { color: c.onSurface }]}>Betreuungsart</Text>
+              <ChipRow>
+                <Chip
+                  label="Alle"
+                  selected={bookingType === null}
+                  onPress={() => setBookingType(null)}
+                />
+                {BOOKING_TYPES.map((type) => (
+                  <Chip
+                    key={type}
+                    label={bookingTypeLabels[type]}
+                    selected={bookingType === type}
+                    onPress={() => setBookingType(type)}
+                  />
+                ))}
+              </ChipRow>
+              <Text style={[styles.filterLabel, { color: c.onSurface }]}>Tierart</Text>
+              <ChipRow>
+                <Chip
+                  label="Alle"
+                  selected={petSpecies === null}
+                  onPress={() => setPetSpecies(null)}
+                />
+                {SPECIES.map(([value, label]) => (
+                  <Chip
+                    key={value}
+                    label={label}
+                    selected={petSpecies === value}
+                    onPress={() => setPetSpecies(value)}
+                  />
+                ))}
+              </ChipRow>
+              <Text style={[styles.filterLabel, { color: c.onSurface }]}>Verfügbar am</Text>
+              <ChipRow>
+                <Chip
+                  label="Jeder Tag"
+                  selected={dayOfWeek === null}
+                  onPress={() => setDayOfWeek(null)}
+                />
+                {DAYS.map((label, index) => (
+                  <Chip
+                    key={label}
+                    label={label}
+                    selected={dayOfWeek === index}
+                    onPress={() => setDayOfWeek(index)}
+                  />
+                ))}
+              </ChipRow>
+              <ActionButton
+                title="Vermittlungsstandort ändern"
+                variant="secondary"
+                onPress={changeLocation}
+              />
+            </View>
+
             <NeighborhoodMap
               center={center}
-              radiusKm={radiusKm}
               helpers={helpers}
               selectedId={selectedId}
               onSelect={setSelectedId}
             />
-            <View style={styles.resultHeading}>
-              <SectionTitle>In deiner Nähe</SectionTitle>
-              <Text style={[styles.resultCount, { color: c.secondary }]}>
-                {helpers.length === 1 ? '1 Treffer' : `${helpers.length} Treffer`}
-              </Text>
-            </View>
-            {helpers.length === 0 ? (
-              <Card>
-                <EmptyText>
-                  In diesem Radius wurden keine verifizierten Helfer:innen gefunden. Vergrößere den
-                  Suchradius und versuche es erneut.
-                </EmptyText>
-              </Card>
+            {helpersQuery.isPending ? (
+              <LoadingView label="Helfer:innen werden gesucht …" />
+            ) : helpersQuery.isError ? (
+              <ErrorBox
+                message={`Suche fehlgeschlagen: ${nearbyHelperErrorMessage(helpersQuery.error)}`}
+                onRetry={() => {
+                  void helpersQuery.refetch();
+                }}
+              />
             ) : (
-              helpers.map((helper) => (
-                <HelperCard
-                  key={helper.helper_id}
-                  helper={helper}
-                  selected={selectedId === helper.helper_id}
-                  onSelect={() => {
-                    setSelectedId(helper.helper_id);
-                  }}
-                  onOpenDetail={() => {
-                    router.push({ pathname: '/helper/[id]', params: { id: helper.helper_id } });
-                  }}
-                  onRequest={() => {
-                    router.push({
-                      pathname: '/booking/new',
-                      params: { helperId: helper.helper_id },
-                    });
-                  }}
-                />
-              ))
+              <>
+                <View style={styles.resultHeading}>
+                  <SectionTitle>Im Umkreis deines Vermittlungsstandorts</SectionTitle>
+                  <Text style={[styles.resultCount, { color: c.secondary }]}>
+                    {helpers.length === 1 ? '1 Treffer' : `${helpers.length} Treffer`}
+                  </Text>
+                </View>
+                {helpers.length === 0 ? (
+                  <Card>
+                    <EmptyText>
+                      Aktuell erreicht keine verifizierte Helferin und kein verifizierter Helfer
+                      deinen Vermittlungsstandort. Sobald jemand seine Reisebereitschaft erweitert,
+                      erscheint die Person hier automatisch.
+                    </EmptyText>
+                  </Card>
+                ) : (
+                  helpers.map((helper) => (
+                    <HelperCard
+                      key={helper.helper_id}
+                      helper={helper}
+                      selected={selectedId === helper.helper_id}
+                      onSelect={() => {
+                        setSelectedId(helper.helper_id);
+                      }}
+                      onOpenDetail={() => {
+                        router.push({ pathname: '/helper/[id]', params: { id: helper.helper_id } });
+                      }}
+                      onRequest={() => {
+                        router.push({
+                          pathname: '/booking/new',
+                          params: { helperId: helper.helper_id },
+                        });
+                      }}
+                    />
+                  ))
+                )}
+              </>
             )}
           </>
         )}
@@ -421,6 +416,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 40 },
   filterSection: { marginBottom: 16 },
+  filterHint: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginBottom: 8 },
   filterLabel: { fontFamily: appFonts.bold, fontSize: 13, marginTop: 10, marginBottom: 4 },
   map: {
     height: 280,
@@ -429,15 +425,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     overflow: 'hidden',
     position: 'relative',
-  },
-  mapAttribution: {
-    position: 'absolute',
-    right: 8,
-    bottom: 6,
-    backgroundColor: '#ffffffcc',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    fontSize: 10,
   },
   mapGridHorizontal: {
     position: 'absolute',
@@ -452,16 +439,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: '50%',
     borderLeftWidth: 1,
-  },
-  radiusCircle: {
-    position: 'absolute',
-    left: '5%',
-    top: '5%',
-    width: '90%',
-    height: '90%',
-    borderRadius: 999,
-    borderWidth: 1,
-    opacity: 0.45,
   },
   userMarker: {
     position: 'absolute',
@@ -498,7 +475,7 @@ const styles = StyleSheet.create({
   },
   mapCaption: {
     position: 'absolute',
-    right: 10,
+    left: 10,
     bottom: 8,
     fontFamily: appFonts.regular,
     fontSize: 11,
