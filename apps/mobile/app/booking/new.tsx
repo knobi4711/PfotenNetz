@@ -1,6 +1,6 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -13,12 +13,17 @@ import {
   parseTrackingRadiusKm,
   useBooking,
   useBookingGroup,
+  useBookingTemplates,
   useCreateBooking,
+  useDeleteBookingTemplate,
   useHelperDetail,
   useOwnPets,
+  useSaveBookingTemplate,
   useUpdateBookingRequest,
   validateBookingPetCompatibility,
+  validateBookingTemplateName,
   type BookingCurrency,
+  type BookingTemplate,
   type BookingType,
   type CareLocation,
 } from '@pfotennetz/supabase';
@@ -45,6 +50,33 @@ const CURRENCIES: { value: BookingCurrency; label: string }[] = [
   { value: 'EUR', label: 'Euro' },
   { value: 'PER_VISIT', label: 'Pro Besuch' },
 ];
+
+const CURRENCY_LABELS: Record<BookingCurrency, string> = {
+  KIEZ_HOURS: 'Nachbarschafts-Stunden',
+  EUR: 'Euro',
+  PER_VISIT: 'Pro Besuch',
+};
+
+function templatePrice(template: BookingTemplate): string {
+  return template.currency === 'KIEZ_HOURS'
+    ? String(Number(template.price_kiez_hours))
+    : (template.price_eur_cents / 100).toFixed(2).replace('.', ',');
+}
+
+/** Compact one-line summary shown below a template name. */
+function templateSummary(template: BookingTemplate, petNames: string[]): string {
+  const price =
+    template.currency === 'KIEZ_HOURS'
+      ? `${templatePrice(template)} Std.`
+      : `${templatePrice(template)} €`;
+  return [
+    bookingTypeLabels[template.type],
+    petNames.join(', '),
+    `${CURRENCY_LABELS[template.currency]}: ${price}`,
+  ]
+    .filter((part) => part !== '')
+    .join(' · ');
+}
 
 function formatDateInput(date: Date): string {
   return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
@@ -87,6 +119,9 @@ export default function NewBookingScreen() {
   const petsQuery = useOwnPets();
   const createBooking = useCreateBooking();
   const updateBooking = useUpdateBookingRequest();
+  const templatesQuery = useBookingTemplates();
+  const saveTemplate = useSaveBookingTemplate();
+  const deleteTemplate = useDeleteBookingTemplate();
   const initializedBooking = useRef<string | null>(null);
 
   const [petIds, setPetIds] = useState<string[]>([]);
@@ -106,6 +141,10 @@ export default function NewBookingScreen() {
   const [isUrgent, setIsUrgent] = useState(false);
   const [safetyConfirmed, setSafetyConfirmed] = useState(false);
   const [formHint, setFormHint] = useState<string | null>(null);
+  const [templateName, setTemplateName] = useState('');
+  const [templateNotice, setTemplateNotice] = useState<string | null>(null);
+  const [templateSaveFeedback, setTemplateSaveFeedback] = useState<string | null>(null);
+  const [templateSaveError, setTemplateSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     const booking = bookingQuery.data;
@@ -145,6 +184,95 @@ export default function NewBookingScreen() {
       if (datePicker === 'end') setEndDate(formatDateInput(selectedDate));
     }
     setDatePicker(null);
+  };
+
+  /** Copies a saved template into the form; the care period stays untouched. */
+  const applyTemplate = (template: BookingTemplate) => {
+    setTemplateNotice(null);
+    setTemplateSaveFeedback(null);
+    setTemplateSaveError(null);
+    const availablePetIds = template.pet_ids.filter((id) => pets.some((pet) => pet.id === id));
+    if (availablePetIds.length === 0) {
+      setTemplateNotice(
+        'Die Tiere dieser Vorlage sind nicht mehr aktiv. Bitte wähle deine Tiere manuell.'
+      );
+      return;
+    }
+    setPetIds(availablePetIds);
+    setBookingType(template.type);
+    setCareLocation(template.care_location as CareLocation);
+    setCurrency(template.currency);
+    setPrice(templatePrice(template));
+    setMeetingAddress(template.meeting_address ?? '');
+    setCareNotes(template.care_notes ?? '');
+    setIsUrgent(template.is_urgent);
+    if ((TRACKING_RADIUS_OPTIONS as readonly number[]).includes(template.tracking_radius_m)) {
+      setTrackingRadius(template.tracking_radius_m);
+      setCustomRadius('');
+    } else {
+      setCustomRadius(String(template.tracking_radius_m / 1000).replace('.', ','));
+    }
+    setFormHint(null);
+    setTemplateNotice(`Vorlage „${template.name}“ übernommen. Ergänze noch den Zeitraum.`);
+  };
+
+  /** Stores the current form values as a reusable template (no care period). */
+  const saveCurrentAsTemplate = () => {
+    setTemplateSaveFeedback(null);
+    setTemplateSaveError(null);
+    const nameError = validateBookingTemplateName(templateName);
+    if (nameError !== null) {
+      setTemplateSaveError(nameError);
+      return;
+    }
+    if (petIds.length === 0) {
+      setTemplateSaveError(
+        'Bitte wähle mindestens ein Tier aus, bevor du eine Vorlage speicherst.'
+      );
+      return;
+    }
+    const normalizedPrice = price.trim().replace(',', '.');
+    const priceValue = normalizedPrice === '' ? 0 : Number(normalizedPrice);
+    if (!Number.isFinite(priceValue) || priceValue < 0) {
+      setTemplateSaveError('Bitte gib einen gültigen Preis an.');
+      return;
+    }
+    saveTemplate.mutate(
+      {
+        name: templateName,
+        petIds,
+        type: bookingType,
+        careLocation,
+        currency,
+        priceEurCents:
+          currency === 'EUR' || currency === 'PER_VISIT' ? Math.round(priceValue * 100) : 0,
+        priceKiezHours: currency === 'KIEZ_HOURS' ? priceValue : 0,
+        meetingAddress: meetingAddress.trim() || null,
+        careNotes: careNotes.trim() || null,
+        isUrgent,
+        trackingRadiusM: parseTrackingRadiusKm(customRadius) ?? trackingRadius,
+      },
+      {
+        onSuccess: (template) => {
+          setTemplateSaveFeedback(`Vorlage „${template.name}“ gespeichert.`);
+          setTemplateName('');
+        },
+      }
+    );
+  };
+
+  const removeTemplate = (template: BookingTemplate) => {
+    Alert.alert('Vorlage löschen', `„${template.name}“ wirklich löschen?`, [
+      { text: 'Abbrechen', style: 'cancel' },
+      {
+        text: 'Löschen',
+        style: 'destructive',
+        onPress: () => {
+          setTemplateNotice(null);
+          deleteTemplate.mutate(template.id);
+        },
+      },
+    ]);
   };
 
   const handleCreate = () => {
@@ -310,6 +438,63 @@ export default function NewBookingScreen() {
                   blockiert.
                 </Text>
               </>
+            ) : null}
+          </Card>
+        ) : null}
+
+        {!isEditMode && (templatesQuery.data ?? []).length > 0 ? (
+          <Card>
+            <SectionTitle>Aus Vorlage übernehmen</SectionTitle>
+            <Text style={[styles.helperMeta, { color: c.onSurfaceVariant }]}>
+              Übernimm Tiere, Leistung, Vergütung und Hinweise einer gespeicherten Vorlage. Den
+              Zeitraum wählst du danach neu.
+            </Text>
+            <View style={styles.templateList}>
+              {(templatesQuery.data ?? []).map((template) => (
+                <View
+                  key={template.id}
+                  style={[styles.templateRow, { backgroundColor: c.surfaceContainerHigh }]}
+                >
+                  <Pressable
+                    accessibilityLabel={`Vorlage ${template.name} übernehmen`}
+                    accessibilityRole="button"
+                    disabled={pending}
+                    onPress={() => applyTemplate(template)}
+                    style={styles.templateSelect}
+                  >
+                    <Text style={[styles.templateName, { color: c.onSurface }]}>
+                      {template.name}
+                    </Text>
+                    <Text style={[styles.templateMeta, { color: c.onSurfaceVariant }]}>
+                      {templateSummary(
+                        template,
+                        template.pet_ids.map(
+                          (petId) => pets.find((pet) => pet.id === petId)?.name ?? 'Tier'
+                        )
+                      )}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityLabel={`Vorlage ${template.name} löschen`}
+                    accessibilityRole="button"
+                    disabled={deleteTemplate.isPending}
+                    onPress={() => removeTemplate(template)}
+                    style={styles.templateDelete}
+                  >
+                    <Text style={[styles.templateDeleteText, { color: c.onSurfaceVariant }]}>
+                      ✕
+                    </Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+            {templateNotice !== null ? (
+              <Text style={[styles.hint, { color: c.secondary }]}>{templateNotice}</Text>
+            ) : null}
+            {deleteTemplate.isError ? (
+              <Text style={[styles.hint, { color: c.error }]}>
+                Vorlage konnte nicht gelöscht werden: {deleteTemplate.error.message}
+              </Text>
             ) : null}
           </Card>
         ) : null}
@@ -787,6 +972,52 @@ export default function NewBookingScreen() {
           </Pressable>
         </Card>
 
+        {!isEditMode ? (
+          <Card>
+            <SectionTitle>Als Vorlage speichern</SectionTitle>
+            <Text style={[styles.helperMeta, { color: c.onSurfaceVariant }]}>
+              Speichere deine Eingaben unter einem Namen, um sie bei der nächsten Anfrage mit einem
+              Klick zu übernehmen. Der Zeitraum wird nicht gespeichert.
+            </Text>
+            <Text style={[styles.label, { color: c.onSurface }]}>Name der Vorlage</Text>
+            <TextInput
+              editable={!saveTemplate.isPending}
+              maxLength={60}
+              onChangeText={setTemplateName}
+              placeholder="z. B. Gassi am Nachmittag"
+              placeholderTextColor={c.outline}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: c.surfaceContainerLow,
+                  borderColor: c.outlineVariant,
+                  color: c.onSurface,
+                },
+              ]}
+              value={templateName}
+            />
+            <Text style={[styles.templateMeta, { color: c.onSurfaceVariant }]}>
+              Ein bereits verwendeter Name aktualisiert die vorhandene Vorlage.
+            </Text>
+            <View style={styles.templateSaveButton}>
+              <ActionButton
+                title="Vorlage speichern"
+                variant="secondary"
+                pending={saveTemplate.isPending}
+                onPress={saveCurrentAsTemplate}
+              />
+            </View>
+            {templateSaveFeedback !== null ? (
+              <Text style={[styles.hint, { color: c.secondary }]}>{templateSaveFeedback}</Text>
+            ) : null}
+            {templateSaveError !== null || saveTemplate.isError ? (
+              <Text style={[styles.hint, { color: c.error }]}>
+                {templateSaveError ?? saveTemplate.error?.message}
+              </Text>
+            ) : null}
+          </Card>
+        ) : null}
+
         {formHint !== null ? (
           <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
         ) : null}
@@ -863,6 +1094,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   selectionText: { fontFamily: appFonts.semibold, fontSize: 14, lineHeight: 20 },
+  templateList: { gap: 8, marginTop: 12 },
+  templateRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 16 },
+  templateSelect: { flex: 1, paddingHorizontal: 14, paddingVertical: 10 },
+  templateName: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
+  templateMeta: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginTop: 2 },
+  templateDelete: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  templateDeleteText: { fontSize: 16, lineHeight: 20 },
+  templateSaveButton: { marginTop: 12 },
   twoColumns: { flexDirection: 'row', gap: 12 },
   column: { flex: 1 },
 });

@@ -26,6 +26,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - OpenStreetMap-/Leaflet-Karten für Helfer:innen-Suche, Gefahrenradar und Tracking-Flows
 - Buchungsworkflow inklusive Statuswechseln, Zeitbank und Benachrichtigungen
 - Mehrtier-Betreuungsanträge: Im Web-Dropdown und in Mobile-Checkboxen lassen sich mehrere aktive Tiere oder „Alle Tiere“ auswählen; sie werden als ein gemeinsamer Antrag gruppiert, während separat gestartete Anträge unabhängig bleiben
+- Wiederverwendbare Buchungsvorlagen: Am Ende des Buchungsformulars lassen sich Tiere, Leistung, Vergütung, Treffpunkt und Hinweise unter einem Namen speichern und bei der nächsten Anfrage mit einem Klick übernehmen; der Zeitraum bleibt pro Buchung individuell
 - Buchungs-Chat mit Nachrichtenliste und Realtime-Grundlage
 - Privater Kennenlern-Chat für offene und angenommene Kontaktanfragen; separate `contact_messages`-Tabelle, ursprüngliche Anfrage automatisch als erste Nachricht, Zugriff ausschließlich für die beiden Beteiligten
 - Gefahrenmeldung, Gefahrenradar, Foto-Upload, Zeit-/Dringlichkeitsfilter, Realtime-Aktualisierung und Moderationsansicht
@@ -464,6 +465,16 @@ beide haben den Release-Build nicht verhindert.
   - Zeitraum, Betreuungsnotizen, Vergütung und Sicherheitsbestätigung bleiben Teil derselben Buchungsanfrage.
   - Der Betreuungsort wird als serverseitig geprüfte Eigenschaft (`care_location`) gespeichert und in Web-/Mobile-Buchungsdetails angezeigt; der temporäre Einzug ist dabei eine ausdrückliche Opt-in-Auswahl.
   - Persönliches Kennenlernen, geschützter Chat sowie Hinweise zu Haftung und Versicherung vor der ersten Betreuung.
+
+#### Buchungsvorlagen — wiederkehrende Anfragen beschleunigen (Mobile & Web)
+
+- **Route:** `/booking/new`
+- **Beschreibung:** Wer regelmäßig dieselbe Betreuung anfragt, kann die aktuellen Formularwerte am Seitenende unter einem Namen als private Vorlage speichern.
+- **Komponenten & Features:**
+  - „Als Vorlage speichern“ übernimmt Tiere, Betreuungsart, Betreuungsort, Vergütung, Treffpunkt, Hinweise, Dringlichkeit und Sicherheitszone; Start und Ende werden bewusst nicht gespeichert.
+  - Vorhandene Vorlagen erscheinen oben im Formular als Auswahlliste mit Kurzusammenfassung und lassen sich mit einem Klick übernehmen; nicht mehr aktive Tiere werden dabei übersprungen.
+  - Ein erneutes Speichern unter demselben Namen aktualisiert die Vorlage. Löschen ist direkt in der Auswahlliste möglich.
+  - Vorlagen sind privat (`booking_templates`, RLS nur für den/die Eigentümer:in) und nur beim Anlegen neuer Anfragen sichtbar, nicht beim Bearbeiten bestehender Anträge.
 
 #### Betreuungsanfragen — regionale Freigabe und Adressschutz (Mobile & Web)
 

@@ -37,6 +37,68 @@ export type Database = {
           },
         ];
       };
+      booking_templates: {
+        Row: {
+          care_location: string;
+          care_notes: string | null;
+          created_at: string;
+          currency: Database['public']['Enums']['currency'];
+          id: string;
+          is_urgent: boolean;
+          meeting_address: string | null;
+          name: string;
+          owner_id: string;
+          pet_ids: string[];
+          price_eur_cents: number;
+          price_kiez_hours: number;
+          tracking_radius_m: number;
+          type: Database['public']['Enums']['booking_type'];
+          updated_at: string;
+        };
+        Insert: {
+          care_location?: string;
+          care_notes?: string | null;
+          created_at?: string;
+          currency?: Database['public']['Enums']['currency'];
+          id?: string;
+          is_urgent?: boolean;
+          meeting_address?: string | null;
+          name: string;
+          owner_id: string;
+          pet_ids: string[];
+          price_eur_cents?: number;
+          price_kiez_hours?: number;
+          tracking_radius_m?: number;
+          type: Database['public']['Enums']['booking_type'];
+          updated_at?: string;
+        };
+        Update: {
+          care_location?: string;
+          care_notes?: string | null;
+          created_at?: string;
+          currency?: Database['public']['Enums']['currency'];
+          id?: string;
+          is_urgent?: boolean;
+          meeting_address?: string | null;
+          name?: string;
+          owner_id?: string;
+          pet_ids?: string[];
+          price_eur_cents?: number;
+          price_kiez_hours?: number;
+          tracking_radius_m?: number;
+          type?: Database['public']['Enums']['booking_type'];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'booking_templates_owner_id_fkey';
+            columns: ['owner_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       bookings: {
         Row: {
           booking_group_id: string | null;

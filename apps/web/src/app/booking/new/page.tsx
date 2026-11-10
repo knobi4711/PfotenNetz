@@ -9,12 +9,17 @@ import {
   parseTrackingRadiusKm,
   useBooking,
   useBookingGroup,
+  useBookingTemplates,
   useCreateBooking,
+  useDeleteBookingTemplate,
   useHelperDetail,
   useOwnPets,
+  useSaveBookingTemplate,
   useUpdateBookingRequest,
   validateBookingPetCompatibility,
+  validateBookingTemplateName,
   type BookingCurrency,
+  type BookingTemplate,
   type BookingType,
   type CareLocation,
 } from '@pfotennetz/supabase';
@@ -27,6 +32,33 @@ function toDateTimeLocal(value: string): string {
   const date = new Date(value);
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+const CURRENCY_LABELS: Record<BookingCurrency, string> = {
+  KIEZ_HOURS: 'Nachbarschafts-Stunden',
+  EUR: 'Euro',
+  PER_VISIT: 'Pro Besuch',
+};
+
+function templatePrice(template: BookingTemplate): string {
+  return template.currency === 'KIEZ_HOURS'
+    ? String(Number(template.price_kiez_hours))
+    : (template.price_eur_cents / 100).toFixed(2);
+}
+
+/** Compact one-line summary shown below a template name. */
+function templateSummary(template: BookingTemplate, petNames: string[]): string {
+  const price =
+    template.currency === 'KIEZ_HOURS'
+      ? `${templatePrice(template)} Std.`
+      : `${templatePrice(template).replace('.', ',')} €`;
+  return [
+    BOOKING_TYPE_LABELS[template.type],
+    petNames.join(', '),
+    `${CURRENCY_LABELS[template.currency]}: ${price}`,
+  ]
+    .filter((part) => part !== '')
+    .join(' · ');
 }
 
 function NewBookingForm() {
@@ -42,6 +74,9 @@ function NewBookingForm() {
   const pets = useOwnPets();
   const create = useCreateBooking();
   const update = useUpdateBookingRequest();
+  const templates = useBookingTemplates();
+  const saveTemplate = useSaveBookingTemplate();
+  const deleteTemplate = useDeleteBookingTemplate();
   const initializedBooking = useRef<string | null>(null);
   const [petIds, setPetIds] = useState<string[]>([]);
   const [petsOpen, setPetsOpen] = useState(false);
@@ -58,6 +93,10 @@ function NewBookingForm() {
   const [urgent, setUrgent] = useState(false);
   const [safety, setSafety] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [templateName, setTemplateName] = useState('');
+  const [templateNotice, setTemplateNotice] = useState<string | null>(null);
+  const [templateSaveFeedback, setTemplateSaveFeedback] = useState<string | null>(null);
+  const [templateSaveError, setTemplateSaveError] = useState<string | null>(null);
   const activePets = (pets.data ?? []).filter((pet) => pet.is_active && !pet.is_deceased);
 
   useEffect(() => {
@@ -81,6 +120,82 @@ function NewBookingForm() {
     setSafety(true);
     initializedBooking.current = value.id;
   }, [booking.data, bookingGroup.data, isEditMode]);
+
+  /** Copies a saved template into the form; the care period stays untouched. */
+  const applyTemplate = (template: BookingTemplate) => {
+    setTemplateNotice(null);
+    setTemplateSaveFeedback(null);
+    setTemplateSaveError(null);
+    const availablePetIds = template.pet_ids.filter((id) =>
+      activePets.some((pet) => pet.id === id)
+    );
+    if (availablePetIds.length === 0) {
+      setTemplateNotice(
+        'Die Tiere dieser Vorlage sind nicht mehr aktiv. Bitte wähle deine Tiere manuell.'
+      );
+      return;
+    }
+    setPetIds(availablePetIds);
+    setType(template.type);
+    setCareLocation(template.care_location as CareLocation);
+    setCurrency(template.currency);
+    setPrice(templatePrice(template));
+    setAddress(template.meeting_address ?? '');
+    setNotes(template.care_notes ?? '');
+    setUrgent(template.is_urgent);
+    if ((TRACKING_RADIUS_OPTIONS as readonly number[]).includes(template.tracking_radius_m)) {
+      setTrackingRadius(template.tracking_radius_m);
+      setCustomRadius('');
+    } else {
+      setCustomRadius(String(template.tracking_radius_m / 1000).replace('.', ','));
+    }
+    setPetsOpen(false);
+    setFormError(null);
+    setTemplateNotice(`Vorlage „${template.name}“ übernommen. Ergänze noch den Zeitraum.`);
+  };
+
+  /** Stores the current form values as a reusable template (no care period). */
+  const saveCurrentAsTemplate = () => {
+    setTemplateSaveFeedback(null);
+    setTemplateSaveError(null);
+    const nameError = validateBookingTemplateName(templateName);
+    if (nameError !== null) return setTemplateSaveError(nameError);
+    if (petIds.length === 0)
+      return setTemplateSaveError(
+        'Bitte wähle mindestens ein Tier aus, bevor du eine Vorlage speicherst.'
+      );
+    const amount = Number(price.replace(',', '.'));
+    if (!Number.isFinite(amount) || amount < 0)
+      return setTemplateSaveError('Bitte gib einen gültigen Preis an.');
+    saveTemplate.mutate(
+      {
+        name: templateName,
+        petIds,
+        type,
+        careLocation,
+        currency,
+        priceEurCents:
+          currency === 'EUR' || currency === 'PER_VISIT' ? Math.round(amount * 100) : 0,
+        priceKiezHours: currency === 'KIEZ_HOURS' ? amount : 0,
+        meetingAddress: address.trim() || null,
+        careNotes: notes.trim() || null,
+        isUrgent: urgent,
+        trackingRadiusM: parseTrackingRadiusKm(customRadius) ?? trackingRadius,
+      },
+      {
+        onSuccess: (template) => {
+          setTemplateSaveFeedback(`Vorlage „${template.name}“ gespeichert.`);
+          setTemplateName('');
+        },
+      }
+    );
+  };
+
+  const removeTemplate = (template: BookingTemplate) => {
+    if (!window.confirm(`Vorlage „${template.name}“ löschen?`)) return;
+    setTemplateNotice(null);
+    deleteTemplate.mutate(template.id);
+  };
 
   const submit = () => {
     setFormError(null);
@@ -194,6 +309,53 @@ function NewBookingForm() {
           </p>
         ) : null}
         <div className="mt-8 space-y-6">
+          {!isEditMode && (templates.data ?? []).length > 0 ? (
+            <section className="card p-7">
+              <h2 className="text-xl font-extrabold">Aus Vorlage übernehmen</h2>
+              <p className="mt-2 text-sm leading-6 text-on-surface-variant">
+                Übernimm Tiere, Leistung, Vergütung und Hinweise einer gespeicherten Vorlage. Den
+                Zeitraum wählst du danach neu.
+              </p>
+              <ul className="mt-4 space-y-2">
+                {(templates.data ?? []).map((template) => (
+                  <li key={template.id} className="flex items-stretch gap-2">
+                    <button
+                      type="button"
+                      className="flex-1 rounded-2xl bg-surface-container px-4 py-3 text-left transition-colors hover:bg-surface-container-high"
+                      onClick={() => applyTemplate(template)}
+                    >
+                      <span className="block text-sm font-bold">{template.name}</span>
+                      <span className="mt-0.5 block text-xs text-on-surface-variant">
+                        {templateSummary(
+                          template,
+                          template.pet_ids.map(
+                            (petId) => activePets.find((pet) => pet.id === petId)?.name ?? 'Tier'
+                          )
+                        )}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Vorlage ${template.name} löschen`}
+                      className="rounded-2xl px-3 text-on-surface-variant transition-colors hover:bg-error-container hover:text-on-error-container"
+                      disabled={deleteTemplate.isPending}
+                      onClick={() => removeTemplate(template)}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {templateNotice !== null ? (
+                <p className="mt-3 text-sm text-secondary">{templateNotice}</p>
+              ) : null}
+              {deleteTemplate.isError ? (
+                <p role="alert" className="mt-3 text-sm text-error">
+                  Vorlage konnte nicht gelöscht werden: {deleteTemplate.error.message}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
           <section className="card p-7">
             <h2 className="text-xl font-extrabold">Tier und Leistung</h2>
             {pets.isError ? (
@@ -493,6 +655,44 @@ function NewBookingForm() {
               Ich habe die Hinweise gelesen.
             </label>
           </section>
+          {!isEditMode ? (
+            <section className="card p-7">
+              <h2 className="text-xl font-extrabold">Als Vorlage speichern</h2>
+              <p className="mt-2 text-sm leading-6 text-on-surface-variant">
+                Speichere deine Eingaben unter einem Namen, um sie bei der nächsten Anfrage mit
+                einem Klick zu übernehmen. Der Zeitraum wird nicht gespeichert.
+              </p>
+              <label className="mt-4 block text-sm font-bold">
+                Name der Vorlage
+                <input
+                  className="input mt-1"
+                  maxLength={60}
+                  placeholder="z. B. Gassi am Nachmittag"
+                  value={templateName}
+                  onChange={(event) => setTemplateName(event.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn-secondary mt-4 w-full"
+                disabled={saveTemplate.isPending}
+                onClick={saveCurrentAsTemplate}
+              >
+                {saveTemplate.isPending ? 'Wird gespeichert …' : 'Vorlage speichern'}
+              </button>
+              <p className="mt-2 text-xs text-on-surface-variant">
+                Ein bereits verwendeter Name aktualisiert die vorhandene Vorlage.
+              </p>
+              {templateSaveFeedback !== null ? (
+                <p className="mt-3 text-sm text-secondary">{templateSaveFeedback}</p>
+              ) : null}
+              {templateSaveError !== null || saveTemplate.isError ? (
+                <p role="alert" className="mt-3 text-sm text-error">
+                  {templateSaveError ?? saveTemplate.error?.message}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
           {formError || create.isError || update.isError ? (
             <p role="alert" className="rounded-xl bg-error-container p-4 text-on-error-container">
               {formError ?? update.error?.message ?? create.error?.message}
