@@ -18,4 +18,21 @@ describe('contact requests', () => {
     expect(contactRequestErrorMessage({ code: '23505' })).toContain('bereits');
     expect(contactRequestErrorMessage(new Error('Netzwerkfehler'))).toBe('Netzwerkfehler');
   });
+
+  it('keeps server messages from plain postgrest-like errors', () => {
+    expect(contactRequestErrorMessage({ code: '23514', message: 'check constraint failed' })).toBe(
+      'check constraint failed'
+    );
+    expect(contactRequestErrorMessage({ message: 'permission denied' })).toBe('permission denied');
+  });
+
+  it('explains blocked and missing recipients', () => {
+    expect(contactRequestErrorMessage({ code: '42501', message: 'rls' })).toContain('derzeit');
+    expect(contactRequestErrorMessage({ code: '23503', message: 'fk' })).toContain('existiert');
+  });
+
+  it('only answers "Unbekannter Fehler." when nothing usable is left', () => {
+    expect(contactRequestErrorMessage(null)).toBe('Unbekannter Fehler.');
+    expect(contactRequestErrorMessage({ message: '   ' })).toBe('Unbekannter Fehler.');
+  });
 });

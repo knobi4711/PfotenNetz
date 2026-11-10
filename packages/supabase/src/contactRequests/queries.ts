@@ -31,11 +31,37 @@ export interface CreateContactRequestInput {
   message: string;
 }
 
+function postgrestCode(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return null;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : null;
+}
+
+function errorMessage(error: unknown): string | null {
+  // Supabase errors are Error instances, but plain objects/codes also reach the UI
+  // (e.g. after a rejected request). Never fall back to "Unbekannter Fehler" when
+  // the server sent something usable.
+  if (typeof error === 'string' && error.trim() !== '') return error.trim();
+  if (typeof error !== 'object' || error === null) return null;
+  if ('message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim() !== '') return message.trim();
+  }
+  return null;
+}
+
 export function contactRequestErrorMessage(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'code' in error && error.code === '23505') {
+  const code = postgrestCode(error);
+  if (code === '23505') {
     return 'Für diesen Helfer gibt es bereits eine offene Kennenlernanfrage.';
   }
-  return error instanceof Error ? error.message : 'Unbekannter Fehler.';
+  if (code === '42501') {
+    return 'Diese Person kann derzeit keine Kennenlernanfragen empfangen.';
+  }
+  if (code === '23503') {
+    return 'Dieses Profil existiert nicht mehr.';
+  }
+  return errorMessage(error) ?? 'Unbekannter Fehler.';
 }
 
 export function validateContactRequest(input: CreateContactRequestInput): string | null {
