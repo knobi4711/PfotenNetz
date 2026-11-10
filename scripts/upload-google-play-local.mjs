@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu in 0.3.2: Offene Anfragen sind für Admins klar als Admin-Ansicht gekennzeichnet. Annehmen ist außerhalb des eigenen Nachbarschafts-Radius gesperrt – auch für Admins. Enthalten sind außerdem die einheitlichen Radien und die Einführung aus 0.3.1.';
+  'Neu in 0.3.3: Die Nachbarschaftskarte richtet sich jetzt am Vermittlungsstandort aus dem Profil aus und ist sofort da – ohne Standortabfrage. Angezeigt werden nur Helfer, deren eigene Reisebereitschaft deinen Vermittlungsstandort erreicht.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';
