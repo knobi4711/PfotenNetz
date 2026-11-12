@@ -310,17 +310,18 @@ Zusätzlich den Hintergrund in `inert` setzen (`<div inert={open}>`), damit Scre
 **Nicht im Detail geprüft (Code existiert, aber nicht gelesen):**
 Mobile: `marketplace.tsx`, `community.tsx`, `missing.tsx`, `missing/radar.tsx`, `hazard/report.tsx`, `hazard/[id].tsx`, `hazard/moderation.tsx`, `admin/verifications.tsx`, `helper/[id].tsx`, `legal/*`, `forgot-password.tsx`, `pet/[petId]/emergency.tsx` (nur grep).
 Web: `community/*`, `marketplace`, `hazard/radar|report|[id]|moderation`, `missing/*`, `tracking`, `profile`, `bookings`, `chat/*`, `admin/*`, `legal/*`, `reset-password`, `account/delete`, `kinderschutz`, `pets/[petId]`.
-Diese Bereiche sind **nicht bewertet**; die Befunde oben sind repräsentativ, aber nicht abschließend für sie.
+Diese Bereiche wurden bei den Korrekturen punktuell geprüft (u. a. Marktplatz, Community, Vermisstensuche, Gefahrenmeldungen, Profil, Buchungen), aber **nicht vollständig Zeile für Zeile auditiert**. Die Befunde oben sind repräsentativ, nicht abschließend für jeden Flow.
 
 ### 4.1 Verifikation automatisierter Tests
 
-| Prüfung                                             | Ergebnis                                                                                                                             |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `eslint-plugin-jsx-a11y`                            | nicht installiert (`package.json:18-23` nur next/react/hooks/prettier) → keine statischen A11y-Regeln.                               |
-| axe / `@axe-core/playwright` / `toHaveNoViolations` | nicht vorhanden; `apps/web/e2e/smoke.spec.ts` prüft nur Rendering, Navigation, Offline-Cache und Flows (Zeilen 45, 58, 67, 77, 110). |
-| Mobile Unit-Tests (vitest)                          | keine Assertions zu Rollen/Labels gefunden.                                                                                          |
-| Android/iOS A11y-Checks                             | kein Espresso/Compose-Test, kein `AccessibilityScanner`/XCUITest-Audit.                                                              |
-| Kontrast-Automatisierung                            | keine Tokens-Prüfung; Farben sind manuell gepflegt (`colors.ts`, `globals.css`) und bereits auseinandergelaufen (H-02).              |
+| Prüfung                                             | Ergebnis                                                                                                                               |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `eslint-plugin-jsx-a11y`                            | nicht installiert (`package.json:18-23` nur next/react/hooks/prettier) → keine statischen A11y-Regeln.                                 |
+| axe / `@axe-core/playwright` / `toHaveNoViolations` | nicht vorhanden; `apps/web/e2e/smoke.spec.ts` prüft nur Rendering, Navigation, Offline-Cache und Flows (Zeilen 45, 58, 67, 77, 110).   |
+| Mobile Unit-Tests (vitest)                          | keine Assertions zu Rollen/Labels gefunden.                                                                                            |
+| Android/iOS A11y-Checks                             | kein Espresso/Compose-Test, kein `AccessibilityScanner`/XCUITest-Audit.                                                                |
+| Kontrast-Automatisierung                            | **vorhanden:** `packages/design-system/src/tokens/colors.test.ts` prüft 21 Farbpaare in Light/Dark gegen 4,5:1 (Teil von `pnpm test`). |
+| Seitentitel-Test                                    | **vorhanden:** `apps/web/src/lib/page-titles.test.ts` prüft 17 Pfad→Titel-Zuordnungen.                                                 |
 
 ---
 
