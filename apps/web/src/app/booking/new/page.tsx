@@ -689,7 +689,9 @@ function NewBookingForm() {
                 Ein bereits verwendeter Name aktualisiert die vorhandene Vorlage.
               </p>
               {templateSaveFeedback !== null ? (
-                <p className="mt-3 text-sm text-secondary">{templateSaveFeedback}</p>
+                <p role="status" className="mt-3 text-sm text-secondary">
+                  {templateSaveFeedback}
+                </p>
               ) : null}
               {templateSaveError !== null || saveTemplate.isError ? (
                 <p role="alert" className="mt-3 text-sm text-error">

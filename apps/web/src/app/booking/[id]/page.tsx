@@ -109,7 +109,7 @@ function RatingForm({
           disabled={pending}
           onChange={(event) => setReview(event.target.value)}
           placeholder="Was lief besonders gut?"
-          className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
+          className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary"
         />
         <p className="mt-1 text-right text-xs text-on-surface-variant">{review.length}/500</p>
       </div>

@@ -217,7 +217,7 @@ export default function HazardReportScreen() {
       {step === 3 ? (
         <Card>
           <SectionTitle>Prüfen und veröffentlichen</SectionTitle>
-          <Text style={[styles.summaryTitle, { color: c.onSurface }]}>
+          <Text accessibilityRole="header" style={[styles.summaryTitle, { color: c.onSurface }]}>
             {HAZARD_TYPE_LABELS[type]}
           </Text>
           <Text style={[styles.summary, { color: c.onSurfaceVariant }]}>

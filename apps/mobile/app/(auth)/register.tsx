@@ -61,7 +61,9 @@ export default function RegisterScreen() {
         <Card>
           {confirmationRequired ? (
             <>
-              <Text style={[styles.successTitle, { color: c.success }]}>Fast geschafft!</Text>
+              <Text accessibilityRole="header" style={[styles.successTitle, { color: c.success }]}>
+                Fast geschafft!
+              </Text>
               <Text style={[styles.successText, { color: c.onSurfaceVariant }]}>
                 Bitte bestätige die Nachricht an {email.trim().toLowerCase()}. Danach kannst du dich
                 anmelden.

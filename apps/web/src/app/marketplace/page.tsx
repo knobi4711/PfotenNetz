@@ -265,7 +265,9 @@ function ListingCard({
                 {inquiry.isPending ? 'Wird gesendet …' : 'Nachricht geschützt senden'}
               </button>
               {inquiry.isSuccess ? (
-                <p className="mt-2 text-sm font-bold text-secondary">Nachricht gesendet.</p>
+                <p role="status" className="mt-2 text-sm font-bold text-secondary">
+                  Nachricht gesendet.
+                </p>
               ) : null}
               {inquiry.isError ? (
                 <p role="alert" className="mt-2 text-sm text-error">

@@ -522,7 +522,7 @@ export default function ExplorePage() {
                         </p>
                       ) : null}
                       {createReport.isSuccess ? (
-                        <p className="mt-3 text-sm font-bold text-secondary">
+                        <p role="status" className="mt-3 text-sm font-bold text-secondary">
                           Danke, deine Meldung wurde übermittelt.
                         </p>
                       ) : (

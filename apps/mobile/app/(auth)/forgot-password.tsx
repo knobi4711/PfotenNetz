@@ -33,7 +33,10 @@ export default function ForgotPasswordScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 48 }}>
-      <Text style={{ color: c.onSurface, fontFamily: appFonts.extrabold, fontSize: 28 }}>
+      <Text
+        accessibilityRole="header"
+        style={{ color: c.onSurface, fontFamily: appFonts.extrabold, fontSize: 28 }}
+      >
         Passwort vergessen?
       </Text>
       <Text

@@ -113,6 +113,24 @@ Ergebnis: **9 weitere Punkte** (3 Mittel, 6 Niedrig). Keine Regression der bishe
 
 Positiv bestätigt: 0 Bilder ohne Label, 0 `Pressable` ohne Rolle, 55/55 `TextInput` beschriftet, 40/40 `<main>` mit Sprungziel, keine verschachtelten Buttons/Pressables, keine fehlenden `alt`-Attribute, alle Modals mit `accessibilityViewIsModal`.
 
+### 1.5 Behebung der dritten Prüfung (12.11.2026)
+
+Alle neun Befunde aus 1.4 sind umgesetzt:
+
+| ID   | Status      | Umsetzung                                                                                                                                                                                                                                                                   |
+| ---- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T-01 | **behoben** | `ErrorBox` nutzt einen eigenen Retry-Button: `error` auf `surfaceContainerLowest` = **6,46:1** (Dark 11,21:1), Mindesthöhe 44 px.                                                                                                                                           |
+| T-02 | **behoben** | Die vier Erfolgsmeldungen (Vorlage, Nachricht, Meldung, Rückmeldung) tragen `role="status"`.                                                                                                                                                                                |
+| T-03 | **behoben** | Der mobile Chat sagt neue fremde Nachrichten per `AccessibilityInfo.announceForAccessibility` an (Bild-/Sprachnachricht typisiert); die erste Ladung bleibt stumm.                                                                                                          |
+| T-04 | **behoben** | Die Web-Gefahrenkarte ist `role="region"` mit Label inklusive Anzahl der Gefahren.                                                                                                                                                                                          |
+| T-05 | **behoben** | Vier weitere Titel mit `accessibilityRole="header"`: Passwort-vergessen, Registrierungs-Erfolg, Schritt-Zusammenfassung, Buchungsnummer.                                                                                                                                    |
+| T-06 | **behoben** | `aria-controls` wird nur bei geöffnetem Menü gesetzt.                                                                                                                                                                                                                       |
+| T-07 | **behoben** | Der Benachrichtigungs-Button nennt bei ungelesenen Mitteilungen „…, ungelesene Mitteilungen vorhanden“.                                                                                                                                                                     |
+| T-08 | **behoben** | Statt clientseitigem `document.title` exportieren **30 Routen-Layouts** `metadata`; das Root-Layout nutzt `title.template`. Die Titel stehen jetzt im serverseitigen HTML (geprüft für Explore, Tauschbörse, Gefahr melden). `DocumentTitle`/`page-titles` wurden entfernt. |
+| T-09 | **behoben** | Das Bewertungs-Textarea hat zusätzlich `focus:ring-2 focus:ring-primary`.                                                                                                                                                                                                   |
+
+Verifikation: `typecheck` web/mobile grün, `lint` web 0 Fehler (1 vorbestehende `<img>`-Warnung), mobile 0; `next build` erfolgreich; Mobile-Vitest 96/96. Serverseitige Titel in den prerenderten HTML-Dateien geprüft.
+
 ---
 
 ## 2. Befunde

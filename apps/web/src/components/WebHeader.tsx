@@ -66,7 +66,7 @@ function NavDropdown({
         ref={buttonRef}
         type="button"
         aria-expanded={open}
-        aria-controls={panelId}
+        aria-controls={open ? panelId : undefined}
         onClick={onToggle}
         className={`rounded-full px-3 py-2 text-sm font-semibold whitespace-nowrap ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
       >

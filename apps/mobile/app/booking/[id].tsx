@@ -378,7 +378,10 @@ export default function BookingDetailScreen() {
           <>
             <View style={styles.header}>
               <View style={styles.headerMain}>
-                <Text style={[styles.bookingNumber, { color: c.onSurface }]}>
+                <Text
+                  accessibilityRole="header"
+                  style={[styles.bookingNumber, { color: c.onSurface }]}
+                >
                   {booking.booking_number}
                 </Text>
                 {groupedBookings.length > 1 ? (

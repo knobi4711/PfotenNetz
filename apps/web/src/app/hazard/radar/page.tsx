@@ -146,8 +146,9 @@ function OSMHazardMap({
   return (
     <div
       ref={ref}
+      role="region"
       className="h-[560px] w-full rounded-3xl"
-      aria-label="OpenStreetMap-Gefahrenkarte"
+      aria-label={`OpenStreetMap-Gefahrenkarte mit ${hazards.length} Gefahren`}
     />
   );
 }

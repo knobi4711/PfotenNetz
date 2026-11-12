@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Image } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import {
   AudioModule,
@@ -115,6 +115,30 @@ export default function ChatScreen() {
 
   const booking = bookingQuery.data ?? null;
   const messages = messagesQuery.data ?? [];
+
+  // T-03: neue fremde Nachrichten ansagen; die erste Ladung bleibt stumm.
+  const announcedMessages = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const list = messagesQuery.data;
+    if (list === undefined) return;
+    if (announcedMessages.current === null) {
+      announcedMessages.current = new Set(list.map((message) => message.id));
+      return;
+    }
+    const announced = announcedMessages.current;
+    const fresh = list.filter((message) => !announced.has(message.id));
+    for (const message of fresh) announced.add(message.id);
+    const latest = fresh.filter((message) => message.sender_id !== userQuery.data?.id).pop();
+    if (latest === undefined) return;
+    const label =
+      latest.type === 'image'
+        ? 'Neue Bildnachricht'
+        : latest.type === 'voice'
+          ? 'Neue Sprachnachricht'
+          : `Neue Nachricht: ${latest.content ?? ''}`;
+    AccessibilityInfo.announceForAccessibility(label);
+  }, [messagesQuery.data, userQuery.data?.id]);
+
   const otherPerson = useMemo(() => {
     if (booking === null || userQuery.data?.id === undefined) return null;
     return booking.seeker_id === userQuery.data.id ? booking.helperProfile : booking.seekerProfile;

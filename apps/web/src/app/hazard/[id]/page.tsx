@@ -117,7 +117,7 @@ export default function WebHazardDetailPage() {
             </button>
           </div>
           {sighting.isSuccess ? (
-            <p className="mt-4 font-semibold text-secondary">
+            <p role="status" className="mt-4 font-semibold text-secondary">
               Danke, deine Rückmeldung wurde gespeichert.
             </p>
           ) : null}

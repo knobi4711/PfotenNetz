@@ -172,7 +172,16 @@ export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () =
       <Text style={[styles.errorText, { color: c.onErrorContainer }]}>{message}</Text>
       {onRetry !== undefined ? (
         <View style={styles.retryWrap}>
-          <ActionButton title="Erneut versuchen" variant="secondary" onPress={onRetry} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={onRetry}
+            style={[
+              styles.retryButton,
+              { backgroundColor: c.surfaceContainerLowest, borderColor: c.error },
+            ]}
+          >
+            <Text style={[styles.retryButtonText, { color: c.error }]}>Erneut versuchen</Text>
+          </Pressable>
         </View>
       ) : null}
     </View>
@@ -232,7 +241,11 @@ export function AppHeader({
           {onNotifications !== undefined ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Benachrichtigungen öffnen"
+              accessibilityLabel={
+                hasNotifications === true
+                  ? 'Benachrichtigungen öffnen, ungelesene Mitteilungen vorhanden'
+                  : 'Benachrichtigungen öffnen'
+              }
               onPress={onNotifications}
               style={[styles.bellButton, { backgroundColor: c.surfaceContainerLow }]}
             >
@@ -454,6 +467,17 @@ const styles = StyleSheet.create({
   },
   retryWrap: {
     marginTop: 4,
+  },
+  retryButton: {
+    minHeight: 44,
+    justifyContent: 'center',
+    borderRadius: 999,
+    borderWidth: 1.5,
+    paddingHorizontal: 16,
+  },
+  retryButtonText: {
+    fontFamily: appFonts.bold,
+    fontSize: 14,
   },
   empty: {
     fontFamily: appFonts.regular,
