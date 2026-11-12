@@ -117,6 +117,7 @@ export default function HelperDetailScreen() {
                 dabei geschützt; eine Buchung ist damit noch nicht verbunden.
               </Text>
               <TextInput
+                accessibilityLabel="Nachricht zur Kennenlernanfrage"
                 editable={!createContact.isPending && !contactSent}
                 multiline
                 onChangeText={setContactMessage}
@@ -231,12 +232,13 @@ export default function HelperDetailScreen() {
                   ))}
                 </View>
                 <TextInput
+                  accessibilityLabel="Zusätzliche Informationen zur Meldung, optional"
                   editable={!createReport.isPending}
                   multiline
                   maxLength={2000}
                   onChangeText={setReportDetails}
                   placeholder="Zusätzliche Informationen (optional)"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.messageInput,
                     {

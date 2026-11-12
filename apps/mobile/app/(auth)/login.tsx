@@ -142,7 +142,9 @@ export default function LoginScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Image accessibilityLabel="PfotenNetz Logo" source={logo} style={styles.logo} />
-        <Text style={[styles.title, { color: c.onSurface }]}>PfotenNetz</Text>
+        <Text accessibilityRole="header" style={[styles.title, { color: c.onSurface }]}>
+          PfotenNetz
+        </Text>
         <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
           Melde dich an, um deine Buchungen und deine Nachbarschafts-Stunden zu sehen.
         </Text>
@@ -150,14 +152,15 @@ export default function LoginScreen() {
         <Card>
           <Text style={[styles.label, { color: c.onSurface }]}>E-Mail</Text>
           <TextInput
+            accessibilityLabel="E-Mail-Adresse"
+            accessibilityHint="Zum Anmelden erforderlich"
             autoCapitalize="none"
-            autoComplete="email"
             autoCorrect={false}
             editable={!signIn.isPending}
             keyboardType="email-address"
             onChangeText={setEmail}
             placeholder="name@beispiel.de"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             returnKeyType="next"
             style={[
               styles.input,
@@ -172,13 +175,15 @@ export default function LoginScreen() {
 
           <Text style={[styles.label, { color: c.onSurface }]}>Passwort</Text>
           <TextInput
+            accessibilityLabel="Passwort"
+            accessibilityHint="Zum Anmelden erforderlich"
             autoCapitalize="none"
             autoCorrect={false}
             editable={!signIn.isPending}
             onChangeText={setPassword}
             onSubmitEditing={handleSignIn}
             placeholder="Passwort"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             returnKeyType="go"
             secureTextEntry={!showPassword}
             style={[
@@ -205,7 +210,13 @@ export default function LoginScreen() {
           </Pressable>
 
           {formHint !== null ? (
-            <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
+            <Text
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+              style={[styles.hint, { color: c.warningText }]}
+            >
+              {formHint}
+            </Text>
           ) : null}
           {signIn.isError ? <ErrorBox message={friendlyAuthError(signIn.error, 'signin')} /> : null}
 

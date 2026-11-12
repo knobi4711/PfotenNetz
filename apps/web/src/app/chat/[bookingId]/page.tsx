@@ -63,7 +63,7 @@ export default function BookingChatPage() {
   };
 
   return (
-    <main className="min-h-screen bg-surface">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader backHref={`/booking/${bookingId}`} backLabel="Betreuung" />
       <div className="mx-auto max-w-4xl px-6 pt-8">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">

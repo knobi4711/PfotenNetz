@@ -44,7 +44,7 @@ export async function startBackgroundTracking(sessionId: string): Promise<void> 
     foregroundService: {
       notificationTitle: 'PfotenNetz Live-Tracking',
       notificationBody: 'Die aktive Betreuung wird sicher begleitet.',
-      notificationColor: '#e26d46',
+      notificationColor: '#b34a28',
       killServiceOnDestroy: false,
     },
   });

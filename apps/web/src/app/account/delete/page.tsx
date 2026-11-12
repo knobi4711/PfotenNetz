@@ -25,7 +25,11 @@ export default function DeleteAccountPage() {
 
   if (deleted) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface px-6 py-10">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex min-h-screen items-center justify-center bg-surface px-6 py-10"
+      >
         <section className="card w-full max-w-xl p-8 text-center">
           <h1 className="text-3xl font-extrabold">Account gelöscht</h1>
           <p className="mt-4 text-on-surface-variant">
@@ -40,7 +44,7 @@ export default function DeleteAccountPage() {
   }
 
   return (
-    <main className="min-h-screen bg-surface px-6 py-10">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface px-6 py-10">
       <div className="mx-auto max-w-xl">
         <div className="mb-8 flex items-center gap-3">
           <Image src="/pfotennetz-logo.png" alt="" width={48} height={48} className="rounded-xl" />

@@ -292,7 +292,7 @@ export default function MarketplacePage() {
     ...(search ? { search } : {}),
   });
   return (
-    <main className="min-h-screen bg-surface">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader backHref="/" backLabel="Dashboard" />
       <div className="mx-auto max-w-6xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">

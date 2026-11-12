@@ -97,7 +97,11 @@ export function Card({ children, accentColor }: { children: ReactNode; accentCol
 
 export function SectionTitle({ children }: { children: ReactNode }) {
   const c = usePalette();
-  return <Text style={[styles.sectionTitle, { color: c.onSurface }]}>{children}</Text>;
+  return (
+    <Text accessibilityRole="header" style={[styles.sectionTitle, { color: c.onSurface }]}>
+      {children}
+    </Text>
+  );
 }
 
 export function InfoRow({ label, value }: { label: string; value: string }) {
@@ -252,7 +256,9 @@ export function AppHeader({
         </View>
       </View>
       <View style={styles.appHeaderMain}>
-        <Text style={[styles.appHeaderTitle, { color: c.onSurface }]}>{title}</Text>
+        <Text accessibilityRole="header" style={[styles.appHeaderTitle, { color: c.onSurface }]}>
+          {title}
+        </Text>
         {subtitle !== undefined ? (
           <Text style={[styles.appHeaderSubtitle, { color: c.onSurfaceVariant }]}>{subtitle}</Text>
         ) : null}
@@ -309,6 +315,8 @@ export function Chip({
           size={16}
           color={isSelected ? c.onPrimary : c.onSurfaceVariant}
         />
+      ) : isSelected ? (
+        <MaterialCommunityIcons name="check" size={14} color={c.onPrimary} />
       ) : null}
       <Text style={[styles.chipText, { color: isSelected ? c.onPrimary : c.onSurface }]}>
         {label}

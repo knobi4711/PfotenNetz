@@ -40,6 +40,7 @@ import {
   normalizeAvailabilityRange,
   shiftAvailabilityRange,
   snapAvailabilityMinutes,
+  timeToMinutes,
   toggleAvailabilityDaySelection,
   type AvailabilityDay,
   type AvailabilityWeek,
@@ -204,6 +205,7 @@ function DayTrack({
   day,
   week,
   selectedId,
+  defaultRange,
   onCreate,
   onUpdateRange,
   onSelect,
@@ -212,6 +214,7 @@ function DayTrack({
   day: AvailabilityDay<Availability>;
   week: AvailabilityWeek<Availability>;
   selectedId: string | null;
+  defaultRange: { startMinutes: number; endMinutes: number };
   onCreate: (dayOfWeek: number, startMinutes: number, endMinutes: number) => void;
   onUpdateRange: (id: string, startMinutes: number, endMinutes: number) => void;
   onSelect: (slot: Availability) => void;
@@ -226,12 +229,22 @@ function DayTrack({
     day,
     week,
     selectedId,
+    defaultRange,
     onCreate,
     onUpdateRange,
     onSelect,
     onOpenActions,
   });
-  current.current = { day, week, selectedId, onCreate, onUpdateRange, onSelect, onOpenActions };
+  current.current = {
+    day,
+    week,
+    selectedId,
+    defaultRange,
+    onCreate,
+    onUpdateRange,
+    onSelect,
+    onOpenActions,
+  };
 
   const cancelLongPress = () => {
     if (longPressTimer.current !== null) {
@@ -429,8 +442,14 @@ function DayTrack({
         accessible
         accessibilityRole="button"
         accessibilityLabel={`${day.long}: Zeitfenster wählen oder per Ziehen anlegen`}
-        accessibilityHint="Waagerechtes Ziehen legt ein Zeitfenster an. Tippen wählt ein Zeitfenster aus. Langes Drücken auf ein Zeitfenster öffnet Aktionen wie Löschen. Mit der Bedienungshilfen-Aktion wird ein Zeitfenster von 9 bis 10 Uhr angelegt."
-        onAccessibilityTap={() => current.current.onCreate(day.dayOfWeek, 9 * 60, 10 * 60)}
+        accessibilityHint={`Waagerechtes Ziehen legt ein Zeitfenster an. Tippen wählt ein Zeitfenster aus. Langes Drücken auf ein Zeitfenster öffnet Aktionen wie Löschen. Mit der Bedienungshilfen-Aktion wird das im Formular eingestellte Zeitfenster ${minutesToTime(defaultRange.startMinutes)} bis ${minutesToTime(defaultRange.endMinutes)} Uhr angelegt.`}
+        onAccessibilityTap={() =>
+          current.current.onCreate(
+            day.dayOfWeek,
+            current.current.defaultRange.startMinutes,
+            current.current.defaultRange.endMinutes
+          )
+        }
         onLayout={(event) => {
           trackWidth.current = event.nativeEvent.layout.width;
         }}
@@ -569,6 +588,23 @@ function WeeklyEditor({
   const span = Math.max(1, week.endMinutes - week.startMinutes);
   const percent = (minutes: number) => ((minutes - week.startMinutes) / span) * 100;
   const activeCount = slots.filter((slot) => slot.is_active !== false).length;
+  // H-06: tastatur-/screenreaderfähiger Weg abseits der Ziehgeste.
+  const [addDay, setAddDay] = useState(1);
+  const [addStart, setAddStart] = useState('09:00');
+  const [addEnd, setAddEnd] = useState('10:00');
+  const [addError, setAddError] = useState<string | null>(null);
+  const defaultRange = {
+    startMinutes: timeToMinutes(addStart),
+    endMinutes: timeToMinutes(addEnd),
+  };
+  const addSlot = () => {
+    if (addStart >= addEnd) {
+      setAddError('Das Ende muss nach dem Beginn liegen.');
+      return;
+    }
+    setAddError(null);
+    onCreate(addDay, defaultRange.startMinutes, defaultRange.endMinutes);
+  };
   const majorTicks = week.hourTicks.filter(
     (tick) =>
       tick.minutes === week.startMinutes ||
@@ -594,11 +630,66 @@ function WeeklyEditor({
         </Text>
       </View>
       <Text style={[styles.graphHint, { color: c.onSurfaceVariant }]}>
-        Ziehe waagerecht über einen Tag, um ein Zeitfenster anzulegen. Tippen wählt ein Fenster aus,
-        langes Drücken öffnet Löschen und Pausieren. Im Editor lässt sich dasselbe Zeitfenster für
-        mehrere Tage speichern.
+        Ziehe waagerecht über einen Tag, um ein Zeitfenster anzulegen. Alternativ nutzt du das
+        Formular „Zeitfenster ohne Zeigegeste anlegen“. Tippen wählt ein Fenster aus, langes Drücken
+        öffnet Löschen und Pausieren. Im Editor lässt sich dasselbe Zeitfenster für mehrere Tage
+        speichern.
         {slots.some((slot) => slot.is_active === false) ? ' Graue Zeitfenster sind pausiert.' : ''}
       </Text>
+
+      <View
+        style={[
+          styles.addForm,
+          { borderColor: c.outlineVariant, backgroundColor: c.surfaceContainerLowest },
+        ]}
+      >
+        <Text style={[styles.addTitle, { color: c.onSurface }]}>
+          Zeitfenster ohne Zeigegeste anlegen
+        </Text>
+        <Text style={[styles.addHint, { color: c.onSurfaceVariant }]}>
+          Wähle Wochentag, Beginn und Ende und füge das Fenster über die Schaltfläche hinzu.
+        </Text>
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Wochentag"
+          style={styles.addDayRow}
+        >
+          {AVAILABILITY_WEEKDAYS.map((day) => {
+            const selected = addDay === day.value;
+            return (
+              <Pressable
+                key={day.value}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                accessibilityLabel={day.long}
+                onPress={() => setAddDay(day.value)}
+                style={[
+                  styles.addDayChip,
+                  {
+                    backgroundColor: selected ? c.primary : c.surfaceContainerHigh,
+                    borderColor: selected ? c.primary : c.outlineVariant,
+                  },
+                ]}
+              >
+                <Text style={[styles.addDayText, { color: selected ? c.onPrimary : c.onSurface }]}>
+                  {selected ? '✓ ' : ''}
+                  {day.short}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={styles.addTimeRow}>
+          <TimeField label="Von" value={addStart} disabled={false} onChange={setAddStart} />
+          <TimeField label="Bis" value={addEnd} disabled={false} onChange={setAddEnd} />
+        </View>
+        <ActionButton title="Zeitfenster hinzufügen" onPress={addSlot} />
+        {addError !== null ? (
+          <Text accessibilityRole="alert" style={[styles.addError, { color: c.error }]}>
+            {addError}
+          </Text>
+        ) : null}
+      </View>
 
       <View style={styles.graphBody}>
         {week.days.map((day) => (
@@ -607,6 +698,7 @@ function WeeklyEditor({
             day={day}
             week={week}
             selectedId={selectedId}
+            defaultRange={defaultRange}
             onCreate={onCreate}
             onUpdateRange={onUpdateRange}
             onSelect={onSelect}
@@ -862,8 +954,8 @@ export function AvailabilityManager() {
 
             {slots.length === 0 ? (
               <EmptyText>
-                Noch keine Zeitfenster. Ziehe waagerecht über einen Tag, um dein erstes Zeitfenster
-                anzulegen.
+                Noch keine Zeitfenster. Nutze das Formular „Zeitfenster ohne Zeigegeste anlegen“
+                oder ziehe waagerecht über einen Tag.
               </EmptyText>
             ) : (
               <View style={styles.chooserRow}>
@@ -887,6 +979,9 @@ export function AvailabilityManager() {
                         },
                       ]}
                     >
+                      {selected ? (
+                        <MaterialCommunityIcons name="check" size={14} color={c.onPrimary} />
+                      ) : null}
                       <Text
                         style={[
                           styles.chooserChipText,
@@ -1046,13 +1141,14 @@ export function AvailabilityManager() {
 
                 <Text style={[styles.label, { color: c.onSurface }]}>Maximalradius (km)</Text>
                 <TextInput
+                  accessibilityLabel="Maximalradius in Kilometern"
                   editable={!busy}
                   keyboardType="decimal-pad"
                   onChangeText={(radius) =>
                     setDraft((current) => (current === null ? current : { ...current, radius }))
                   }
                   placeholder={String(DEFAULT_HELPER_MAX_DISTANCE_KM)}
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     {
@@ -1297,6 +1393,22 @@ const styles = StyleSheet.create({
   graphTitle: { fontFamily: appFonts.extrabold, fontSize: 14, lineHeight: 20 },
   graphStat: { fontFamily: appFonts.bold, fontSize: 10, lineHeight: 15 },
   graphHint: { fontFamily: appFonts.regular, fontSize: 10, lineHeight: 15, marginTop: 2 },
+  addForm: { borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 12, gap: 8 },
+  addTitle: { fontFamily: appFonts.extrabold, fontSize: 13, lineHeight: 18 },
+  addHint: { fontFamily: appFonts.regular, fontSize: 10, lineHeight: 15 },
+  addDayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  addDayChip: {
+    minWidth: 40,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+  },
+  addDayText: { fontFamily: appFonts.bold, fontSize: 12, lineHeight: 16 },
+  addTimeRow: { flexDirection: 'row', gap: 12 },
+  addError: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 18 },
   graphBody: { marginTop: 10, gap: 4 },
   graphRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   graphDay: { width: 24, fontFamily: appFonts.extrabold, fontSize: 11, lineHeight: 15 },
@@ -1358,7 +1470,14 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   chooserRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
-  chooserChip: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  chooserChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   chooserChipText: { fontFamily: appFonts.semibold, fontSize: 11, lineHeight: 16 },
   sheetRoot: { flex: 1, justifyContent: 'flex-end' },
   sheetBackdrop: {

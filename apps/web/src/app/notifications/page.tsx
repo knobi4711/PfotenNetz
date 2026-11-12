@@ -16,7 +16,7 @@ export default function NotificationsPage() {
   const data = notifications.data ?? [];
 
   return (
-    <main className="min-h-screen bg-surface">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader backHref="/" backLabel="Dashboard" />
       <div className="mx-auto max-w-3xl px-6 py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">

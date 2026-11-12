@@ -51,11 +51,13 @@ export default function ForgotPasswordScreen() {
           E-Mail
         </Text>
         <TextInput
+          accessibilityLabel="E-Mail-Adresse"
+          accessibilityHint="Wir senden einen Link zur Passwortvergabe"
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
           placeholder="name@beispiel.de"
-          placeholderTextColor={c.outline}
+          placeholderTextColor={c.placeholder}
           value={email}
           onChangeText={setEmail}
           style={{

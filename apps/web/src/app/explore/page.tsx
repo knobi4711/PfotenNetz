@@ -163,13 +163,7 @@ function OSMMap({
 
   useEffect(() => () => mapRef.current?.remove(), []);
 
-  return (
-    <div
-      ref={containerRef}
-      className="h-[520px] w-full rounded-3xl"
-      aria-label="OpenStreetMap-Karte"
-    />
-  );
+  return <div ref={containerRef} className="h-[520px] w-full rounded-3xl" />;
 }
 
 function HelperCard({
@@ -184,6 +178,7 @@ function HelperCard({
   return (
     <button
       type="button"
+      aria-pressed={selected}
       onClick={onSelect}
       className={`w-full rounded-2xl border p-5 text-left transition ${selected ? 'border-primary bg-primary-fixed/40 shadow-[var(--shadow-level-1)]' : 'border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low'}`}
     >
@@ -211,6 +206,11 @@ function HelperCard({
           {helper.total_walks} Einsätze
         </span>
       </div>
+      {selected ? (
+        <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-bold text-on-primary">
+          ✓ Ausgewählt
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -250,7 +250,7 @@ export default function ExplorePage() {
   const selected = helpers.find((helper) => helper.helper_id === selectedId) ?? null;
 
   return (
-    <main className="min-h-screen bg-surface">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader backHref="/" backLabel="Dashboard" />
       <div className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">
         <div className="mb-8">
@@ -283,6 +283,7 @@ export default function ExplorePage() {
                 <button
                   type="button"
                   onClick={() => setBookingType(null)}
+                  aria-pressed={bookingType === null}
                   className={`chip ${bookingType === null ? 'chip-selected' : ''}`}
                 >
                   Alle Betreuungsarten
@@ -292,6 +293,7 @@ export default function ExplorePage() {
                     key={type}
                     type="button"
                     onClick={() => setBookingType(type)}
+                    aria-pressed={bookingType === type}
                     className={`chip ${bookingType === type ? 'chip-selected' : ''}`}
                   >
                     {BOOKING_TYPE_LABELS[type]}
@@ -302,6 +304,7 @@ export default function ExplorePage() {
                 <button
                   type="button"
                   onClick={() => setPetSpecies(null)}
+                  aria-pressed={petSpecies === null}
                   className={`chip ${petSpecies === null ? 'chip-selected' : ''}`}
                 >
                   Alle Tierarten
@@ -311,6 +314,7 @@ export default function ExplorePage() {
                     key={value}
                     type="button"
                     onClick={() => setPetSpecies(value)}
+                    aria-pressed={petSpecies === value}
                     className={`chip ${petSpecies === value ? 'chip-selected' : ''}`}
                   >
                     {label}
@@ -321,6 +325,7 @@ export default function ExplorePage() {
                 <button
                   type="button"
                   onClick={() => setDayOfWeek(null)}
+                  aria-pressed={dayOfWeek === null}
                   className={`chip ${dayOfWeek === null ? 'chip-selected' : ''}`}
                 >
                   Jeder Tag
@@ -330,6 +335,7 @@ export default function ExplorePage() {
                     key={day}
                     type="button"
                     onClick={() => setDayOfWeek(index)}
+                    aria-pressed={dayOfWeek === index}
                     className={`chip ${dayOfWeek === index ? 'chip-selected' : ''}`}
                   >
                     {day}
@@ -365,7 +371,16 @@ export default function ExplorePage() {
         ) : (
           <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             <div>
-              <div className="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-[var(--shadow-level-1)]">
+              <p className="mb-2 text-xs text-on-surface-variant">
+                {helpers.length === 0
+                  ? 'Die Karte zeigt aktuell keine Helfer:innen in deiner Nähe.'
+                  : `Die Karte zeigt ${helpers.length === 1 ? 'eine Helferin bzw. einen Helfer' : `${helpers.length} Helfer:innen`} in deiner Nähe. Namen, Entfernung und Aktionen findest du in der Liste neben der Karte.`}
+              </p>
+              <div
+                role="region"
+                aria-label={`OpenStreetMap-Karte mit ${helpers.length} Helfer:innen in deiner Nähe`}
+                className="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-[var(--shadow-level-1)]"
+              >
                 <OSMMap
                   center={center}
                   helpers={helpers}

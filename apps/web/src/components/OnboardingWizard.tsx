@@ -18,6 +18,8 @@ import {
   openOnboarding,
   subscribeOnboarding,
 } from '../lib/onboarding';
+import { useDialogFocus } from '../lib/dialog-focus';
+import { Portal } from './Portal';
 
 const TARGET_HREFS: Record<OnboardingTarget, string> = {
   'profile-edit': '/profile',
@@ -111,14 +113,8 @@ function OnboardingDialog({ userId }: { userId: string }) {
     router.push(TARGET_HREFS[step.target]);
   };
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Fokus, Tab-Falle, Escape und Hintergrund-Inert übernimmt der Hook.
+  const panelRef = useDialogFocus(true, close);
 
   const safeIndex = Math.min(stepIndex, steps.length - 1);
   const step = steps[safeIndex] ?? steps[0];
@@ -126,120 +122,133 @@ function OnboardingDialog({ userId }: { userId: string }) {
   const isLast = safeIndex === steps.length - 1;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="onboarding-title"
-    >
-      <button
-        type="button"
-        aria-label="Einführung schließen"
-        className="absolute inset-0 h-full w-full cursor-default"
-        onClick={close}
-      />
-      <div className="relative w-full max-w-lg rounded-t-3xl bg-surface-container-low p-6 shadow-2xl sm:rounded-3xl">
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-            Schritt {safeIndex + 1} von {steps.length}
-          </p>
-          <button
-            type="button"
-            className="text-sm font-bold text-on-surface-variant hover:text-on-surface"
-            onClick={close}
-          >
-            Schließen
-          </button>
-        </div>
-
-        <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
-          {steps.map((entry, index) => (
-            <span
-              key={entry.id}
-              className={`h-2 rounded-full ${
-                index === safeIndex
-                  ? 'w-6 bg-primary'
-                  : entry.done
-                    ? 'w-2 bg-secondary'
-                    : 'w-2 bg-surface-container-highest'
-              }`}
-            />
-          ))}
-        </div>
-
-        <div className="mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed text-2xl">
-          <span aria-hidden="true">{STEP_ICONS[step.id]}</span>
-        </div>
-
-        <h2 id="onboarding-title" className="mt-4 text-2xl font-extrabold text-on-surface">
-          {step.title}
-        </h2>
-        <p className="mt-2 text-sm text-on-surface-variant">{step.summary}</p>
-
-        {step.bullets === undefined ? null : (
-          <ul className="mt-4 space-y-2">
-            {step.bullets.map((bullet) => (
-              <li key={bullet} className="flex items-start gap-2 text-sm text-on-surface">
-                <span aria-hidden="true" className="mt-0.5 text-primary">
-                  🐾
-                </span>
-                <span>{bullet}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {step.kind === 'intro' ? null : (
-          <p
-            className={`mt-4 text-xs font-bold ${
-              step.done ? 'text-secondary' : 'text-on-surface-variant'
-            }`}
-          >
-            {step.done
-              ? '✓ Bereits erledigt'
-              : step.optional
-                ? 'Optional – noch offen'
-                : 'Noch offen'}
-          </p>
-        )}
-
+    <Portal>
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="onboarding-title"
+      >
         <button
           type="button"
-          className={`mt-5 w-full ${step.kind === 'task' && step.done ? 'btn-secondary' : 'btn-primary'}`}
-          onClick={() => startStep(step)}
+          aria-label="Einführung schließen"
+          aria-hidden="true"
+          tabIndex={-1}
+          className="absolute inset-0 h-full w-full cursor-default"
+          onClick={close}
+        />
+        <div
+          ref={panelRef}
+          tabIndex={-1}
+          className="relative w-full max-w-lg rounded-t-3xl bg-surface-container-low p-6 shadow-2xl outline-none sm:rounded-3xl"
         >
-          {step.actionLabel}
-        </button>
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+              Schritt {safeIndex + 1} von {steps.length}
+            </p>
+            <button
+              type="button"
+              className="text-sm font-bold text-on-surface-variant hover:text-on-surface"
+              onClick={close}
+            >
+              Schließen
+            </button>
+          </div>
 
-        <div className="mt-3 flex gap-3">
-          {safeIndex > 0 ? (
+          <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
+            {steps.map((entry, index) => (
+              <span
+                key={entry.id}
+                className={`h-2 rounded-full ${
+                  index === safeIndex
+                    ? 'w-6 bg-primary'
+                    : entry.done
+                      ? 'w-2 bg-secondary'
+                      : 'w-2 bg-surface-container-highest'
+                }`}
+              />
+            ))}
+          </div>
+
+          <div className="mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed text-2xl">
+            <span aria-hidden="true">{STEP_ICONS[step.id]}</span>
+          </div>
+
+          <h2
+            id="onboarding-title"
+            data-autofocus
+            tabIndex={-1}
+            className="mt-4 text-2xl font-extrabold text-on-surface outline-none"
+          >
+            {step.title}
+          </h2>
+          <p className="mt-2 text-sm text-on-surface-variant">{step.summary}</p>
+
+          {step.bullets === undefined ? null : (
+            <ul className="mt-4 space-y-2">
+              {step.bullets.map((bullet) => (
+                <li key={bullet} className="flex items-start gap-2 text-sm text-on-surface">
+                  <span aria-hidden="true" className="mt-0.5 text-primary">
+                    🐾
+                  </span>
+                  <span>{bullet}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {step.kind === 'intro' ? null : (
+            <p
+              className={`mt-4 text-xs font-bold ${
+                step.done ? 'text-secondary' : 'text-on-surface-variant'
+              }`}
+            >
+              {step.done
+                ? '✓ Bereits erledigt'
+                : step.optional
+                  ? 'Optional – noch offen'
+                  : 'Noch offen'}
+            </p>
+          )}
+
+          <button
+            type="button"
+            className={`mt-5 w-full ${step.kind === 'task' && step.done ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={() => startStep(step)}
+          >
+            {step.actionLabel}
+          </button>
+
+          <div className="mt-3 flex gap-3">
+            {safeIndex > 0 ? (
+              <button
+                type="button"
+                className="btn-secondary flex-1"
+                onClick={() => {
+                  autoStep.current = false;
+                  setStepIndex(safeIndex - 1);
+                }}
+              >
+                Zurück
+              </button>
+            ) : null}
             <button
               type="button"
               className="btn-secondary flex-1"
               onClick={() => {
+                if (isLast) {
+                  close();
+                  return;
+                }
                 autoStep.current = false;
-                setStepIndex(safeIndex - 1);
+                setStepIndex(safeIndex + 1);
               }}
             >
-              Zurück
+              {isLast ? 'Fertig' : 'Weiter'}
             </button>
-          ) : null}
-          <button
-            type="button"
-            className="btn-secondary flex-1"
-            onClick={() => {
-              if (isLast) {
-                close();
-                return;
-              }
-              autoStep.current = false;
-              setStepIndex(safeIndex + 1);
-            }}
-          >
-            {isLast ? 'Fertig' : 'Weiter'}
-          </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Portal>
   );
 }

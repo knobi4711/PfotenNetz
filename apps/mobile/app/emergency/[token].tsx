@@ -81,7 +81,9 @@ export default function PublicEmergencyScreen() {
       style={[styles.container, { backgroundColor: c.surface }]}
       contentContainerStyle={styles.content}
     >
-      <Text style={[styles.title, { color: c.onSurface }]}>Digitale Notfallkarte</Text>
+      <Text accessibilityRole="header" style={[styles.title, { color: c.onSurface }]}>
+        Digitale Notfallkarte
+      </Text>
       {offline ? (
         <Text
           style={[styles.offline, { color: c.onErrorContainer, backgroundColor: c.errorContainer }]}

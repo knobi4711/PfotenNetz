@@ -81,7 +81,7 @@ export default function EmergencyCardPage() {
   };
 
   return (
-    <main className="min-h-screen bg-surface">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader backHref="/pets" backLabel="Meine Haustiere" />
       <div className="mx-auto max-w-3xl px-6 py-10">
         {pets.isPending ? <p>Notfallkarte wird geladen …</p> : null}

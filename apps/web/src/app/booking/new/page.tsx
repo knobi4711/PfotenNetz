@@ -282,7 +282,7 @@ function NewBookingForm() {
   };
 
   return (
-    <main className="min-h-screen bg-surface">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader backHref="/explore" backLabel="Helfersuche" />
       <div className="mx-auto max-w-3xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">Betreuung</p>
@@ -393,11 +393,8 @@ function NewBookingForm() {
                 <span aria-hidden="true">⌄</span>
               </button>
               {petsOpen ? (
-                <div
-                  role="listbox"
-                  aria-multiselectable="true"
-                  className="absolute left-0 right-0 top-full z-20 mt-2 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]"
-                >
+                <fieldset className="absolute left-0 right-0 top-full z-20 mt-2 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]">
+                  <legend className="sr-only">Tiere auswählen</legend>
                   <label className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold hover:bg-surface-container">
                     <input
                       type="checkbox"
@@ -431,7 +428,7 @@ function NewBookingForm() {
                       {pet.name}
                     </label>
                   ))}
-                </div>
+                </fieldset>
               ) : null}
               <p className="mt-2 text-xs text-on-surface-variant">
                 Mehrere ausgewählte Tiere werden als ein gemeinsamer Antrag gesendet.
@@ -451,6 +448,7 @@ function NewBookingForm() {
                   key={value}
                   type="button"
                   className={`chip ${type === value ? 'chip-selected' : ''}`}
+                  aria-pressed={type === value}
                   onClick={() => setType(value)}
                 >
                   {BOOKING_TYPE_LABELS[value]}
@@ -478,6 +476,7 @@ function NewBookingForm() {
                   <button
                     type="button"
                     className={`chip ${careLocation === 'at_owner_home' ? 'chip-selected' : ''}`}
+                    aria-pressed={careLocation === 'at_owner_home'}
                     onClick={() => setCareLocation('at_owner_home')}
                   >
                     Bei mir zu Hause (Besuche)
@@ -485,6 +484,7 @@ function NewBookingForm() {
                   <button
                     type="button"
                     className={`chip ${careLocation === 'at_owner_home_live_in' ? 'chip-selected' : ''}`}
+                    aria-pressed={careLocation === 'at_owner_home_live_in'}
                     onClick={() => setCareLocation('at_owner_home_live_in')}
                   >
                     Bei mir zu Hause – Helper zieht vorübergehend ein
@@ -492,6 +492,7 @@ function NewBookingForm() {
                   <button
                     type="button"
                     className={`chip ${careLocation === 'at_helper_home' ? 'chip-selected' : ''}`}
+                    aria-pressed={careLocation === 'at_helper_home'}
                     onClick={() => setCareLocation('at_helper_home')}
                   >
                     Beim Helper zu Hause
@@ -538,6 +539,7 @@ function NewBookingForm() {
               <button
                 type="button"
                 className={`chip ${currency === 'KIEZ_HOURS' ? 'chip-selected' : ''}`}
+                aria-pressed={currency === 'KIEZ_HOURS'}
                 onClick={() => setCurrency('KIEZ_HOURS')}
               >
                 Nachbarschafts-Stunden
@@ -545,6 +547,7 @@ function NewBookingForm() {
               <button
                 type="button"
                 className={`chip ${currency === 'PER_VISIT' ? 'chip-selected' : ''}`}
+                aria-pressed={currency === 'PER_VISIT'}
                 onClick={() => setCurrency('PER_VISIT')}
               >
                 Pro Besuch
@@ -552,6 +555,7 @@ function NewBookingForm() {
               <button
                 type="button"
                 className={`chip ${currency === 'EUR' ? 'chip-selected' : ''}`}
+                aria-pressed={currency === 'EUR'}
                 onClick={() => setCurrency('EUR')}
               >
                 Euro
@@ -607,6 +611,7 @@ function NewBookingForm() {
                     className={`chip ${
                       customRadius.trim() === '' && trackingRadius === option ? 'chip-selected' : ''
                     }`}
+                    aria-pressed={customRadius.trim() === '' && trackingRadius === option}
                     onClick={() => {
                       setTrackingRadius(option);
                       setCustomRadius('');
@@ -724,7 +729,11 @@ function NewBookingForm() {
 export default function NewBookingPage() {
   return (
     <Suspense
-      fallback={<main className="min-h-screen bg-surface p-10">Formular wird geladen …</main>}
+      fallback={
+        <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface p-10">
+          Formular wird geladen …
+        </main>
+      }
     >
       <NewBookingForm />
     </Suspense>

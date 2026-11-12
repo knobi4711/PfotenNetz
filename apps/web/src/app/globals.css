@@ -5,8 +5,9 @@
 @layer base {
   :root {
     /* Light Mode - PfotenNetz Design Tokens from Stitch */
-    --color-primary: #e26d46;
-    --color-primary-hover: #c8542f;
+    /* K-01: Primary abgedunkelt für WCAG-AA-Kontrast mit on-primary (5,35:1). */
+    --color-primary: #b34a28;
+    --color-primary-hover: #9c3f21;
     --color-primary-container: #c0532f;
     --color-on-primary: #ffffff;
     --color-on-primary-container: #fffbff;
@@ -170,11 +171,11 @@
   }
 
   .btn-primary {
-    @apply btn bg-primary text-on-primary shadow-[0_4px_16px_rgba(226,109,70,0.3)] hover:bg-primary-hover;
+    @apply btn bg-primary text-on-primary shadow-[0_4px_16px_rgba(179,74,40,0.3)] hover:bg-primary-hover;
   }
 
   .btn-secondary {
-    @apply btn bg-transparent border-2 border-primary text-primary hover:bg-primary;
+    @apply btn bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-on-primary;
   }
 
   .btn-ghost {
@@ -197,6 +198,11 @@
     @apply w-full h-[52px] rounded-lg bg-surface-container-low border border-transparent placeholder:text-on-surface-variant px-4 text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary transition-all;
   }
 
+  /* M-01: erstes fokussierbares Element – nur bei Tastaturfokus sichtbar. */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-on-surface focus:shadow-[var(--shadow-level-2)] focus:outline-none focus:ring-2 focus:ring-primary;
+  }
+
   .chip {
     @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-label-md font-medium transition-all;
   }
@@ -213,8 +219,10 @@
     @apply chip bg-transparent border border-outline-variant text-on-surface-variant hover:bg-surface-container;
   }
 
+  /* H-04: Auswahl darf nicht nur über Farbe transportiert werden –
+     Fettdruck und ein zusätzlicher Ring bleiben auch bei Farbfehlsichtigkeit sichtbar. */
   .chip-selected {
-    @apply bg-primary text-on-primary border-primary;
+    @apply bg-primary text-on-primary border-primary font-bold ring-2 ring-primary ring-offset-2 ring-offset-surface;
   }
 
   .badge {

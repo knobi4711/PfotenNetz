@@ -107,10 +107,11 @@ export default function CommunityScreen() {
         <Card>
           <SectionTitle>Neues Community-Event</SectionTitle>
           <TextInput
+            accessibilityLabel="Titel der Veranstaltung"
             value={title}
             onChangeText={setTitle}
             placeholder="Titel, z. B. Sonntags-Rudelrunde"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
           />
           <View style={styles.typeRow}>
@@ -132,25 +133,29 @@ export default function CommunityScreen() {
             )}
           </View>
           <TextInput
+            accessibilityLabel="Beginn der Veranstaltung"
+            accessibilityHint="Zum Beispiel 2026-10-04T10:00"
             value={startsAt}
             onChangeText={setStartsAt}
             placeholder="Beginn (z. B. 2026-10-04T10:00)"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
           />
           <TextInput
+            accessibilityLabel="Adresse oder Treffpunkt, optional"
             value={address}
             onChangeText={setAddress}
             placeholder="Adresse oder Treffpunkt (optional)"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
           />
           <TextInput
+            accessibilityLabel="Beschreibung, optional"
             multiline
             value={description}
             onChangeText={setDescription}
             placeholder="Beschreibung (optional)"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[styles.textarea, { color: c.onSurface, borderColor: c.outlineVariant }]}
           />
           {formError ? <ErrorBox message={formError} /> : null}
@@ -181,7 +186,9 @@ export default function CommunityScreen() {
                   {new Date(event.starts_at).toLocaleDateString('de-DE')}
                 </Text>
               </View>
-              <Text style={[styles.title, { color: c.onSurface }]}>{event.title}</Text>
+              <Text accessibilityRole="header" style={[styles.title, { color: c.onSurface }]}>
+                {event.title}
+              </Text>
               {event.description ? (
                 <Text style={[styles.description, { color: c.onSurfaceVariant }]}>
                   {event.description}

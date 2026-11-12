@@ -27,7 +27,9 @@ export default function ScanScreen() {
   if (!permission.granted) {
     return (
       <View style={[styles.center, { backgroundColor: c.surface }]}>
-        <Text style={[styles.title, { color: c.onSurface }]}>QR-Code scannen</Text>
+        <Text accessibilityRole="header" style={[styles.title, { color: c.onSurface }]}>
+          QR-Code scannen
+        </Text>
         <Text style={[styles.text, { color: c.onSurfaceVariant }]}>
           Kamerazugriff wird benötigt, um eine PfotenNetz-Notfallkarte zu öffnen.
         </Text>

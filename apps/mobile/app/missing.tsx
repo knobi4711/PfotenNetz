@@ -115,11 +115,12 @@ export default function MissingPetsScreen() {
           <EmptyText>Lege zuerst ein Tierprofil an.</EmptyText>
         )}
         <TextInput
+          accessibilityLabel="Besondere Merkmale und letzte Sichtung"
           multiline
           value={description}
           onChangeText={setDescription}
           placeholder="Besondere Merkmale, letzte Sichtung …"
-          placeholderTextColor={c.outline}
+          placeholderTextColor={c.placeholder}
           style={[
             styles.input,
             {

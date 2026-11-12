@@ -17,6 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de">
       <body className="min-h-screen bg-surface text-on-surface antialiased">
+        <a href="#main-content" className="skip-link">
+          Zum Inhalt springen
+        </a>
         <Providers>
           {children}
           <OnboardingWizardHost />

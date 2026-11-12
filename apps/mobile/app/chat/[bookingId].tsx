@@ -39,6 +39,7 @@ import { QUICK_REPLIES } from '../../lib/chat';
 
 function MessageBubble({ message, own }: { message: MessageWithMedia; own: boolean }) {
   const c = usePalette();
+  const time = formatDate(message.created_at, { hour: '2-digit', minute: '2-digit' });
   return (
     <View style={[styles.messageRow, own ? styles.messageRowOwn : styles.messageRowOther]}>
       <View
@@ -52,6 +53,7 @@ function MessageBubble({ message, own }: { message: MessageWithMedia; own: boole
       >
         {message.type === 'image' && message.mediaUrl ? (
           <Image
+            accessibilityLabel={`Bildnachricht${own ? ' von dir' : ''}, gesendet um ${time} Uhr`}
             source={{ uri: message.mediaUrl }}
             style={styles.messageImage}
             resizeMode="cover"
@@ -64,7 +66,7 @@ function MessageBubble({ message, own }: { message: MessageWithMedia; own: boole
           </Text>
         )}
         <Text style={[styles.messageTime, { color: own ? c.primaryFixed : c.onSurfaceVariant }]}>
-          {formatDate(message.created_at, { hour: '2-digit', minute: '2-digit' })}
+          {time}
         </Text>
       </View>
     </View>
@@ -179,7 +181,11 @@ export default function ChatScreen() {
           >
             <MaterialCommunityIcons name="arrow-left" size={24} color={c.onSurface} />
           </Pressable>
-          <View style={[styles.personAvatar, { backgroundColor: c.secondaryContainer }]}>
+          <View
+            accessible={false}
+            importantForAccessibility="no"
+            style={[styles.personAvatar, { backgroundColor: c.secondaryContainer }]}
+          >
             <MaterialCommunityIcons name="paw" size={22} color={c.secondary} />
           </View>
           <View style={styles.headerText}>
@@ -190,7 +196,6 @@ export default function ChatScreen() {
               {booking?.pet?.name ? `Betreuung für ${booking.pet.name}` : 'PfotenNetz Chat'}
             </Text>
           </View>
-          <MaterialCommunityIcons name="dots-vertical" size={24} color={c.onSurfaceVariant} />
         </View>
 
         {bookingId === undefined || bookingQuery.isError || messagesQuery.isError ? (
@@ -271,7 +276,7 @@ export default function ChatScreen() {
             onChangeText={setDraft}
             onSubmitEditing={send}
             placeholder="Nachricht schreiben …"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[styles.input, { backgroundColor: c.surfaceContainerLow, color: c.onSurface }]}
             value={draft}
           />

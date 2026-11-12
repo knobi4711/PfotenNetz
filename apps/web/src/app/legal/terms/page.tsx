@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export default function TermsPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12 text-on-surface">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-3xl px-6 py-12 text-on-surface">
       <Link href="/" className="font-bold text-primary">
         ← PfotenNetz
       </Link>

@@ -197,7 +197,7 @@ export default function WebHazardRadarPage() {
   };
 
   return (
-    <main className="min-h-screen bg-surface">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader
         backHref="/"
         backLabel="Dashboard"

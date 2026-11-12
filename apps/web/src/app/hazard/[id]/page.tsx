@@ -36,13 +36,17 @@ export default function WebHazardDetailPage() {
   };
   if (query.isPending)
     return (
-      <main className="min-h-screen bg-surface p-10 text-center text-on-surface-variant">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="min-h-screen bg-surface p-10 text-center text-on-surface-variant"
+      >
         Gefahr wird geladen …
       </main>
     );
   if (query.isError || !query.data)
     return (
-      <main className="min-h-screen bg-surface p-10">
+      <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface p-10">
         <p
           role="alert"
           className="mx-auto max-w-2xl rounded-xl bg-error-container p-4 text-on-error-container"
@@ -53,7 +57,7 @@ export default function WebHazardDetailPage() {
     );
   const hazard = query.data;
   return (
-    <main className="min-h-screen bg-surface">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader backHref="/hazard/radar" backLabel="Gefahrenradar" />
       <div className="mx-auto max-w-3xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-error">

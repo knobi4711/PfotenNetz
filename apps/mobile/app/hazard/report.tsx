@@ -154,10 +154,11 @@ export default function HazardReportScreen() {
             }
           />
           <TextInput
+            accessibilityLabel="Adresse oder Ort, optional"
             value={address}
             onChangeText={setAddress}
             placeholder="Adresse oder Ort (optional)"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[
               styles.input,
               {
@@ -185,11 +186,12 @@ export default function HazardReportScreen() {
           </ChipRow>
           <Text style={[styles.label, { color: c.onSurface }]}>Was ist passiert?</Text>
           <TextInput
+            accessibilityLabel="Was ist passiert?"
             multiline
             value={description}
             onChangeText={setDescription}
             placeholder="Beschreibe Fundort und Gefahr …"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[
               styles.textarea,
               {

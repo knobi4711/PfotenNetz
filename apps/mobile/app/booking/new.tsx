@@ -400,7 +400,7 @@ export default function NewBookingScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: c.onSurface }]}>
+        <Text accessibilityRole="header" style={[styles.title, { color: c.onSurface }]}>
           {isEditMode ? 'Betreuungsanfrage bearbeiten' : 'Neue Betreuung buchen'}
         </Text>
         <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
@@ -701,13 +701,15 @@ export default function NewBookingScreen() {
             <View style={styles.column}>
               <Text style={[styles.label, { color: c.onSurface }]}>Uhrzeit</Text>
               <TextInput
+                accessibilityLabel="Start-Uhrzeit"
+                accessibilityHint="Format Stunde und Minute, zum Beispiel 09:30"
                 editable={!pending}
                 keyboardType="number-pad"
                 maxLength={5}
                 onBlur={() => setStartTime((current) => completeTimeEntry(current))}
                 onChangeText={(text) => setStartTime(formatTimeEntry(text))}
                 placeholder="HH:MM"
-                placeholderTextColor={c.outline}
+                placeholderTextColor={c.placeholder}
                 style={[
                   styles.input,
                   styles.centeredText,
@@ -755,13 +757,15 @@ export default function NewBookingScreen() {
             <View style={styles.column}>
               <Text style={[styles.label, { color: c.onSurface }]}>Uhrzeit</Text>
               <TextInput
+                accessibilityLabel="End-Uhrzeit"
+                accessibilityHint="Format Stunde und Minute, zum Beispiel 17:00"
                 editable={!pending}
                 keyboardType="number-pad"
                 maxLength={5}
                 onBlur={() => setEndTime((current) => completeTimeEntry(current))}
                 onChangeText={(text) => setEndTime(formatTimeEntry(text))}
                 placeholder="HH:MM"
-                placeholderTextColor={c.outline}
+                placeholderTextColor={c.placeholder}
                 style={[
                   styles.input,
                   styles.centeredText,
@@ -814,12 +818,13 @@ export default function NewBookingScreen() {
                 : 'Stunden (0 = Gefallen ohne Abrechnung)'}
           </Text>
           <TextInput
+            accessibilityLabel={currency === 'KIEZ_HOURS' ? 'Anzahl Stunden' : 'Preis in Euro'}
             editable={!pending}
             keyboardType="decimal-pad"
             onChangeText={setPrice}
             onSubmitEditing={handleCreate}
             placeholder={currency === 'KIEZ_HOURS' ? 'z. B. 2' : 'z. B. 12,50'}
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             returnKeyType="go"
             style={[
               styles.input,
@@ -836,10 +841,11 @@ export default function NewBookingScreen() {
         <Card>
           <SectionTitle>Treffpunkt (optional)</SectionTitle>
           <TextInput
+            accessibilityLabel="Treffpunkt, optional"
             editable={!pending}
             onChangeText={setMeetingAddress}
             placeholder="Adresse oder Treffpunkt"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[
               styles.input,
               {
@@ -852,11 +858,12 @@ export default function NewBookingScreen() {
           />
           <Text style={[styles.label, { color: c.onSurface }]}>Bedürfnisse und Hinweise</Text>
           <TextInput
+            accessibilityLabel="Bedürfnisse und Hinweise"
             editable={!pending}
             multiline
             onChangeText={setCareNotes}
             placeholder="z. B. Medikamente, Verträglichkeit, Fütterung"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[
               styles.input,
               styles.multiline,
@@ -923,12 +930,13 @@ export default function NewBookingScreen() {
             </View>
             <Text style={[styles.label, { color: c.onSurface }]}>Eigene Weite (km)</Text>
             <TextInput
+              accessibilityLabel="Eigene Weite der Sicherheitszone in Kilometern"
               editable={!pending}
               keyboardType="decimal-pad"
               maxLength={5}
               onChangeText={setCustomRadius}
               placeholder="z. B. 3,5"
-              placeholderTextColor={c.outline}
+              placeholderTextColor={c.placeholder}
               style={[
                 styles.input,
                 styles.centeredText,
@@ -981,11 +989,12 @@ export default function NewBookingScreen() {
             </Text>
             <Text style={[styles.label, { color: c.onSurface }]}>Name der Vorlage</Text>
             <TextInput
+              accessibilityLabel="Name der Vorlage"
               editable={!saveTemplate.isPending}
               maxLength={60}
               onChangeText={setTemplateName}
               placeholder="z. B. Gassi am Nachmittag"
-              placeholderTextColor={c.outline}
+              placeholderTextColor={c.placeholder}
               style={[
                 styles.input,
                 {
@@ -1019,7 +1028,13 @@ export default function NewBookingScreen() {
         ) : null}
 
         {formHint !== null ? (
-          <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
+          <Text
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            style={[styles.hint, { color: c.warningText }]}
+          >
+            {formHint}
+          </Text>
         ) : null}
         {createBooking.isError || updateBooking.isError ? (
           <ErrorBox

@@ -108,7 +108,7 @@ export function LiveTrackingMap({
         leaflet
           .polyline(
             routePoints.map((point) => [point.latitude, point.longitude]),
-            { color: '#e26d46', weight: 5, opacity: 0.85 }
+            { color: '#b34a28', weight: 5, opacity: 0.85 }
           )
           .addTo(layers.current);
       }
@@ -131,7 +131,19 @@ export function LiveTrackingMap({
 
   useEffect(() => () => map.current?.remove(), []);
 
+  const timeLabel =
+    recordedAt === null
+      ? 'keine Zeitangabe'
+      : `${new Date(recordedAt).toLocaleTimeString('de-DE', {
+          hour: '2-digit',
+          minute: '2-digit',
+        })} Uhr`;
   return (
-    <div ref={ref} className="h-[430px] w-full" aria-label="OpenStreetMap-Live-Tracking-Karte" />
+    <div
+      ref={ref}
+      role="region"
+      aria-label={`Live-Tracking-Karte: letzte Position um ${timeLabel}, ${points.length} aufgezeichnete Streckenpunkte, Koordinaten ${latitude.toFixed(4)}, ${longitude.toFixed(4)}.`}
+      className="h-[430px] w-full"
+    />
   );
 }

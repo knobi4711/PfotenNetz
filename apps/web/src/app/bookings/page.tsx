@@ -114,7 +114,7 @@ export default function BookingsPage() {
   const data = bookings.data ?? [];
   const requests = groupBookingsByRequest(data);
   return (
-    <main className="min-h-screen bg-surface">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader backHref="/" backLabel="Dashboard" />
       <div className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">

@@ -142,7 +142,7 @@ export default function ContactChatScreen() {
               onChangeText={setDraft}
               onSubmitEditing={send}
               placeholder="Nachricht schreiben …"
-              placeholderTextColor={c.outline}
+              placeholderTextColor={c.placeholder}
               style={[styles.input, { backgroundColor: c.surfaceContainerLow, color: c.onSurface }]}
               value={draft}
             />

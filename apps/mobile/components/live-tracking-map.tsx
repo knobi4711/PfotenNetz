@@ -15,12 +15,12 @@ export interface LiveTrackPoint {
  */
 function trackingMapHtml(radiusMeters: number): string {
   const radius = Math.max(50, Math.round(radiusMeters));
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>
 var map=L.map('map',{zoomControl:false}).setView([51.16,10.45],6);
 L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);
-var track=L.polyline([],{color:'#e26d46',weight:4,opacity:0.9}).addTo(map);
-var zone=L.circle([0,0],{radius:${radius},color:'#e26d46',weight:1,fillColor:'#e26d46',fillOpacity:0.08});
-var marker=L.circleMarker([0,0],{radius:9,weight:3,color:'#ffffff',fillColor:'#e26d46',fillOpacity:1}).addTo(map);
+var track=L.polyline([],{color:'#b34a28',weight:4,opacity:0.9}).addTo(map);
+var zone=L.circle([0,0],{radius:${radius},color:'#b34a28',weight:1,fillColor:'#b34a28',fillOpacity:0.08});
+var marker=L.circleMarker([0,0],{radius:9,weight:3,color:'#ffffff',fillColor:'#b34a28',fillOpacity:1}).addTo(map);
 var fitted=false;
 window.renderTrack=function(data){
   var pts=data.points||[];
@@ -71,10 +71,14 @@ export function LiveTrackingMap({
     webView.current?.injectJavaScript(`window.renderTrack(${payload}); true;`);
   }, [ready, payload]);
 
+  const summary =
+    latitude !== null && longitude !== null
+      ? `Live-Standort-Karte: aktuelle Position vorhanden, ${points.length} aufgezeichnete Streckenpunkte.`
+      : `Live-Standort-Karte: noch keine aktuelle Position, ${points.length} aufgezeichnete Streckenpunkte.`;
+
   if (Platform.OS === 'web') {
     return (
       <View
-        accessibilityLabel="Live-Standort-Karte"
         style={[
           styles.map,
           { height, backgroundColor: c.surfaceContainerLow, borderColor: c.outlineVariant },
@@ -91,10 +95,17 @@ export function LiveTrackingMap({
   }
 
   return (
-    <View style={[styles.map, { height, borderColor: c.outlineVariant }]}>
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={summary}
+      style={[styles.map, { height, borderColor: c.outlineVariant }]}
+    >
       <WebView
         ref={webView}
-        accessibilityLabel="Live-Standort-Karte"
+        accessible={false}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
         javaScriptEnabled
         onLoadEnd={() => setReady(true)}
         onLoadStart={() => setReady(false)}

@@ -369,11 +369,12 @@ export default function PetsScreen() {
                 ) : null}
                 <Text style={[styles.label, { color: c.onSurface }]}>Name</Text>
                 <TextInput
+                  accessibilityLabel="Name des Tieres"
                   autoCapitalize="words"
                   editable={!pending}
                   onChangeText={setName}
                   placeholder="z. B. Bella"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     {
@@ -416,10 +417,11 @@ export default function PetsScreen() {
                 </View>
                 <Text style={[styles.label, { color: c.onSurface }]}>Rasse (optional)</Text>
                 <TextInput
+                  accessibilityLabel="Rasse, optional"
                   editable={!pending}
                   onChangeText={setBreed}
                   placeholder="z. B. Labrador"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     {
@@ -432,10 +434,11 @@ export default function PetsScreen() {
                 />
                 <Text style={[styles.label, { color: c.onSurface }]}>Farbe (optional)</Text>
                 <TextInput
+                  accessibilityLabel="Farbe, optional"
                   editable={!pending}
                   onChangeText={setColor}
                   placeholder="z. B. Braun"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     {
@@ -448,12 +451,13 @@ export default function PetsScreen() {
                 />
                 <Text style={[styles.label, { color: c.onSurface }]}>Besonderes (optional)</Text>
                 <TextInput
+                  accessibilityLabel="Besonderes, optional"
                   editable={!pending}
                   multiline
                   onChangeText={setSpecialNeeds}
                   onSubmitEditing={handleCreate}
                   placeholder="Medikamente, Allergien, Hinweise"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     styles.multiline,
@@ -467,12 +471,13 @@ export default function PetsScreen() {
                 />
                 <Text style={[styles.label, { color: c.onSurface }]}>Geburtsjahr (optional)</Text>
                 <TextInput
+                  accessibilityLabel="Geburtsjahr, optional"
                   editable={!pending}
                   keyboardType="number-pad"
                   maxLength={4}
                   onChangeText={setBirthYear}
                   placeholder="z. B. 2020"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     {
@@ -487,12 +492,13 @@ export default function PetsScreen() {
                   <View style={styles.birthDateField}>
                     <Text style={[styles.smallLabel, { color: c.onSurfaceVariant }]}>Monat</Text>
                     <TextInput
+                      accessibilityLabel="Geburtsmonat, optional"
                       editable={!pending}
                       keyboardType="number-pad"
                       maxLength={2}
                       onChangeText={setBirthMonth}
                       placeholder="optional"
-                      placeholderTextColor={c.outline}
+                      placeholderTextColor={c.placeholder}
                       style={[
                         styles.input,
                         {
@@ -507,12 +513,13 @@ export default function PetsScreen() {
                   <View style={styles.birthDateField}>
                     <Text style={[styles.smallLabel, { color: c.onSurfaceVariant }]}>Tag</Text>
                     <TextInput
+                      accessibilityLabel="Geburtstag, optional"
                       editable={!pending}
                       keyboardType="number-pad"
                       maxLength={2}
                       onChangeText={setBirthDay}
                       placeholder="optional"
-                      placeholderTextColor={c.outline}
+                      placeholderTextColor={c.placeholder}
                       style={[
                         styles.input,
                         {
@@ -527,10 +534,11 @@ export default function PetsScreen() {
                 </View>
                 <Text style={[styles.label, { color: c.onSurface }]}>Chipnummer (optional)</Text>
                 <TextInput
+                  accessibilityLabel="Chipnummer, optional"
                   editable={!pending}
                   onChangeText={setMicrochipNumber}
                   placeholder="z. B. 276..."
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     {
@@ -545,10 +553,11 @@ export default function PetsScreen() {
                   Medikamente (kommagetrennt)
                 </Text>
                 <TextInput
+                  accessibilityLabel="Medikamente, kommagetrennt"
                   editable={!pending}
                   onChangeText={setMedications}
                   placeholder="z. B. Apoquel 16 mg"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     styles.multiline,
@@ -564,10 +573,11 @@ export default function PetsScreen() {
                   Allergien (kommagetrennt)
                 </Text>
                 <TextInput
+                  accessibilityLabel="Allergien, kommagetrennt"
                   editable={!pending}
                   onChangeText={setAllergies}
                   placeholder="z. B. Huhn, Gräser"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     {
@@ -582,10 +592,11 @@ export default function PetsScreen() {
                   Tierarztpraxis (optional)
                 </Text>
                 <TextInput
+                  accessibilityLabel="Tierarztpraxis, optional"
                   editable={!pending}
                   onChangeText={setVetClinic}
                   placeholder="Name der Praxis"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     {
@@ -600,11 +611,12 @@ export default function PetsScreen() {
                   Tierarzt-Telefon (optional)
                 </Text>
                 <TextInput
+                  accessibilityLabel="Tierarzt-Telefonnummer, optional"
                   editable={!pending}
                   keyboardType="phone-pad"
                   onChangeText={setVetPhone}
                   placeholder="Telefonnummer"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     {
@@ -617,10 +629,11 @@ export default function PetsScreen() {
                 />
                 <Text style={[styles.label, { color: c.onSurface }]}>Versicherung (optional)</Text>
                 <TextInput
+                  accessibilityLabel="Versicherungsnummer, optional"
                   editable={!pending}
                   onChangeText={setInsurancePolicy}
                   placeholder="Versicherungsnummer"
-                  placeholderTextColor={c.outline}
+                  placeholderTextColor={c.placeholder}
                   style={[
                     styles.input,
                     {
@@ -632,7 +645,13 @@ export default function PetsScreen() {
                   value={insurancePolicy}
                 />
                 {formHint !== null ? (
-                  <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
+                  <Text
+                    accessibilityRole="alert"
+                    accessibilityLiveRegion="polite"
+                    style={[styles.hint, { color: c.warningText }]}
+                  >
+                    {formHint}
+                  </Text>
                 ) : null}
                 {createPet.isError || updatePet.isError ? (
                   <ErrorBox

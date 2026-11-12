@@ -209,7 +209,7 @@ export default function BookingDetailPage() {
   };
 
   return (
-    <main className="min-h-screen bg-surface">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader backHref="/bookings" backLabel="Anfragen" />
       <div className="mx-auto max-w-5xl px-6 py-10">
         {booking.isPending ? <p>Buchung wird geladen …</p> : null}

@@ -86,12 +86,13 @@ export default function HelperVerificationAdminScreen() {
               {new Date(request.created_at).toLocaleDateString('de-DE')}
             </Text>
             <TextInput
+              accessibilityLabel="Ablehnungsgrund, optional"
               value={reasons[request.user_id] ?? ''}
               onChangeText={(value) =>
                 setReasons((current) => ({ ...current, [request.user_id]: value }))
               }
               placeholder="Ablehnungsgrund (optional)"
-              placeholderTextColor={c.outline}
+              placeholderTextColor={c.placeholder}
               style={[
                 styles.input,
                 {

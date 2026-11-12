@@ -209,7 +209,11 @@ export function Dashboard() {
 
   if (auth.status !== 'authenticated') {
     return (
-      <main className="min-h-screen bg-surface flex items-center justify-center p-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="min-h-screen bg-surface flex items-center justify-center p-6"
+      >
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-fixed text-3xl">
@@ -233,7 +237,11 @@ export function Dashboard() {
     <div className="min-h-screen bg-surface">
       <WebHeader />
 
-      <main className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10 lg:py-12">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10 lg:py-12"
+      >
         <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="mb-2 text-sm font-bold uppercase tracking-[0.16em] text-secondary">

@@ -51,7 +51,9 @@ export default function RegisterScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: c.onSurface }]}>Konto erstellen</Text>
+        <Text accessibilityRole="header" style={[styles.title, { color: c.onSurface }]}>
+          Konto erstellen
+        </Text>
         <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
           Werde Teil deines PfotenNetzes und organisiere Hilfe in deiner Nachbarschaft.
         </Text>
@@ -70,12 +72,14 @@ export default function RegisterScreen() {
             <>
               <Text style={[styles.label, { color: c.onSurface }]}>Anzeigename</Text>
               <TextInput
+                accessibilityLabel="Anzeigename"
+                accessibilityHint="Vorname oder Spitzname"
                 autoCapitalize="words"
                 autoComplete="name"
                 editable={!pending}
                 onChangeText={setDisplayName}
                 placeholder="Vorname oder Spitzname"
-                placeholderTextColor={c.outline}
+                placeholderTextColor={c.placeholder}
                 style={[
                   styles.input,
                   {
@@ -89,6 +93,8 @@ export default function RegisterScreen() {
 
               <Text style={[styles.label, { color: c.onSurface }]}>E-Mail</Text>
               <TextInput
+                accessibilityLabel="E-Mail-Adresse"
+                accessibilityHint="Zum Erstellen des Kontos erforderlich"
                 autoCapitalize="none"
                 autoComplete="email"
                 autoCorrect={false}
@@ -96,7 +102,7 @@ export default function RegisterScreen() {
                 keyboardType="email-address"
                 onChangeText={setEmail}
                 placeholder="name@beispiel.de"
-                placeholderTextColor={c.outline}
+                placeholderTextColor={c.placeholder}
                 style={[
                   styles.input,
                   {
@@ -110,12 +116,14 @@ export default function RegisterScreen() {
 
               <Text style={[styles.label, { color: c.onSurface }]}>Passwort</Text>
               <TextInput
+                accessibilityLabel="Passwort"
+                accessibilityHint="Mindestens acht Zeichen"
                 autoCapitalize="none"
                 autoComplete="new-password"
                 editable={!pending}
                 onChangeText={setPassword}
                 placeholder="Mindestens 8 Zeichen"
-                placeholderTextColor={c.outline}
+                placeholderTextColor={c.placeholder}
                 secureTextEntry
                 style={[
                   styles.input,
@@ -130,13 +138,14 @@ export default function RegisterScreen() {
 
               <Text style={[styles.label, { color: c.onSurface }]}>Passwort wiederholen</Text>
               <TextInput
+                accessibilityLabel="Passwort wiederholen"
                 autoCapitalize="none"
                 autoComplete="new-password"
                 editable={!pending}
                 onChangeText={setPasswordConfirmation}
                 onSubmitEditing={handleSignUp}
                 placeholder="Passwort wiederholen"
-                placeholderTextColor={c.outline}
+                placeholderTextColor={c.placeholder}
                 returnKeyType="go"
                 secureTextEntry
                 style={[
@@ -151,7 +160,13 @@ export default function RegisterScreen() {
               />
 
               {formHint !== null ? (
-                <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
+                <Text
+                  accessibilityRole="alert"
+                  accessibilityLiveRegion="polite"
+                  style={[styles.hint, { color: c.warningText }]}
+                >
+                  {formHint}
+                </Text>
               ) : null}
               {signUp.isError ? (
                 <ErrorBox message={friendlyAuthError(signUp.error, 'signup')} />

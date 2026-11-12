@@ -119,7 +119,7 @@ export default function MissingRadarScreen() {
         reports.data.map((report) => (
           <Card key={report.id}>
             <View style={styles.top}>
-              <Text style={[styles.title, { color: c.onSurface }]}>
+              <Text accessibilityRole="header" style={[styles.title, { color: c.onSurface }]}>
                 {ownPetIds.has(report.pet_id) ? 'Deine Suchmeldung' : 'Vermisstes Tier'}
               </Text>
               <Text style={[styles.status, { color: c.error }]}>AKTIV</Text>
@@ -143,13 +143,16 @@ export default function MissingRadarScreen() {
       )}
       {selectedReportId ? (
         <Card>
-          <Text style={[styles.title, { color: c.onSurface }]}>Sichtung melden</Text>
+          <Text accessibilityRole="header" style={[styles.title, { color: c.onSurface }]}>
+            Sichtung melden
+          </Text>
           <TextInput
+            accessibilityLabel="Sichtung beschreiben"
             multiline
             value={description}
             onChangeText={setDescription}
             placeholder="Wo und wann hast du das Tier gesehen?"
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[
               styles.input,
               {
@@ -177,7 +180,9 @@ export default function MissingRadarScreen() {
       ) : null}
       {selectedReportId ? (
         <Card>
-          <Text style={[styles.title, { color: c.onSurface }]}>Bisherige Sichtungen</Text>
+          <Text accessibilityRole="header" style={[styles.title, { color: c.onSurface }]}>
+            Bisherige Sichtungen
+          </Text>
           {sightings.isPending ? (
             <LoadingView label="Sichtungen werden geladen …" />
           ) : sightings.isError ? (

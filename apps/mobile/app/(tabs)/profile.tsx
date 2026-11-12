@@ -555,6 +555,7 @@ export default function ProfileScreen() {
               <SectionTitle>Profil bearbeiten</SectionTitle>
               <Text style={[styles.label, { color: c.onSurface }]}>Anzeigename</Text>
               <TextInput
+                accessibilityLabel="Anzeigename"
                 autoCapitalize="words"
                 editable={!updateProfile.isPending}
                 onChangeText={setDisplayName}
@@ -570,11 +571,12 @@ export default function ProfileScreen() {
               />
               <Text style={[styles.label, { color: c.onSurface }]}>Telefon (optional)</Text>
               <TextInput
+                accessibilityLabel="Telefonnummer, optional"
                 editable={!updateProfile.isPending}
                 keyboardType="phone-pad"
                 onChangeText={setPhone}
                 placeholder="Für Absprachen bei Buchungen"
-                placeholderTextColor={c.outline}
+                placeholderTextColor={c.placeholder}
                 style={[
                   styles.input,
                   {
@@ -591,12 +593,13 @@ export default function ProfileScreen() {
               </Text>
               <Text style={[styles.label, { color: c.onSurface }]}>Kurzvorstellung (optional)</Text>
               <TextInput
+                accessibilityLabel="Kurzvorstellung, optional"
                 editable={!updateProfile.isPending}
                 multiline
                 maxLength={500}
                 onChangeText={setProfileBio}
                 placeholder="Wer bist du und was kannst du anbieten?"
-                placeholderTextColor={c.outline}
+                placeholderTextColor={c.placeholder}
                 style={[
                   styles.input,
                   styles.bioInput,
@@ -671,7 +674,13 @@ export default function ProfileScreen() {
                 </Pressable>
               ))}
               {formHint !== null ? (
-                <Text style={[styles.hint, { color: c.tertiary }]}>{formHint}</Text>
+                <Text
+                  accessibilityRole="alert"
+                  accessibilityLiveRegion="polite"
+                  style={[styles.hint, { color: c.warningText }]}
+                >
+                  {formHint}
+                </Text>
               ) : null}
               {updateProfile.isError ? (
                 <ErrorBox message={`Speichern fehlgeschlagen: ${updateProfile.error.message}`} />
@@ -749,7 +758,11 @@ export default function ProfileScreen() {
                 Wähle, ob PfotenNetz dem Gerätemodus folgt oder dauerhaft hell bzw. dunkel angezeigt
                 wird.
               </Text>
-              <View style={styles.themeOptions}>
+              <View
+                accessibilityRole="radiogroup"
+                accessibilityLabel="Darstellung"
+                style={styles.themeOptions}
+              >
                 {(
                   [
                     ['system', 'System'],
@@ -759,8 +772,9 @@ export default function ProfileScreen() {
                 ).map(([value, label]) => (
                   <Pressable
                     key={value}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: theme.mode === value }}
+                    accessibilityRole="radio"
+                    accessibilityLabel={label}
+                    accessibilityState={{ checked: theme.mode === value }}
                     onPress={() => theme.setMode(value as ThemeMode)}
                     style={[
                       styles.themeOption,
@@ -769,6 +783,9 @@ export default function ProfileScreen() {
                       },
                     ]}
                   >
+                    {theme.mode === value ? (
+                      <MaterialCommunityIcons name="check" size={16} color={c.onPrimary} />
+                    ) : null}
                     <Text
                       style={[
                         styles.themeOptionText,
@@ -1084,6 +1101,14 @@ const styles = StyleSheet.create({
   contactRequestStatus: { fontFamily: appFonts.regular, fontSize: 11, lineHeight: 16 },
   contactRequestActions: { gap: 8, marginTop: 4 },
   themeOptions: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  themeOption: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
+  themeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    borderRadius: 14,
+    paddingVertical: 12,
+  },
   themeOptionText: { fontFamily: appFonts.bold, fontSize: 13 },
 });

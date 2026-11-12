@@ -101,12 +101,13 @@ function ListingCard({
           {open ? (
             <View>
               <TextInput
+                accessibilityLabel="Nachricht an die Anbieterin oder den Anbieter"
                 value={message}
                 onChangeText={setMessage}
                 multiline
                 maxLength={1000}
                 placeholder="Kurze Nachricht …"
-                placeholderTextColor={c.outline}
+                placeholderTextColor={c.placeholder}
                 style={[
                   styles.input,
                   styles.multiline,
@@ -222,18 +223,20 @@ export default function MarketplaceScreen() {
             ))}
           </ChipRow>
           <TextInput
+            accessibilityLabel="Titel"
             placeholder="Titel"
             value={title}
             onChangeText={setTitle}
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
           />
           <TextInput
+            accessibilityLabel="Beschreibung"
             placeholder="Beschreibung, Menge, Übergabe …"
             value={description}
             onChangeText={setDescription}
             multiline
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[
               styles.input,
               styles.multiline,
@@ -241,36 +244,40 @@ export default function MarketplaceScreen() {
             ]}
           />
           <TextInput
+            accessibilityLabel="Zustand, optional"
             placeholder="Zustand (optional)"
             value={condition}
             onChangeText={setCondition}
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
           />
           {kind === 'sell' ? (
             <TextInput
+              accessibilityLabel="Preis in Euro"
               placeholder="Preis in €"
               value={price}
               onChangeText={setPrice}
               keyboardType="decimal-pad"
-              placeholderTextColor={c.outline}
+              placeholderTextColor={c.placeholder}
               style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
             />
           ) : null}
           {kind === 'swap' ? (
             <TextInput
+              accessibilityLabel="Was suchst du im Tausch?"
               placeholder="Was suchst du im Tausch?"
               value={exchangeFor}
               onChangeText={setExchangeFor}
-              placeholderTextColor={c.outline}
+              placeholderTextColor={c.placeholder}
               style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
             />
           ) : null}
           <TextInput
+            accessibilityLabel="Stadtteil oder Postleitzahl, optional"
             placeholder="Stadtteil oder PLZ (optional)"
             value={locationArea}
             onChangeText={setLocationArea}
-            placeholderTextColor={c.outline}
+            placeholderTextColor={c.placeholder}
             style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
           />
           {formError ? <ErrorBox message={formError} /> : null}
@@ -280,10 +287,11 @@ export default function MarketplaceScreen() {
       ) : null}
       <Card>
         <TextInput
+          accessibilityLabel="Suche in der Tauschbörse"
           placeholder="Suche nach Futter, Zubehör …"
           value={search}
           onChangeText={setSearch}
-          placeholderTextColor={c.outline}
+          placeholderTextColor={c.placeholder}
           style={[styles.input, { color: c.onSurface, borderColor: c.outlineVariant }]}
         />
         <Text style={[styles.label, { color: c.onSurface }]}>Filtern nach</Text>

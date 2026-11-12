@@ -5,8 +5,89 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { NotificationBell } from './NotificationBell';
+
+/**
+ * H-05: Die bisherigen `role="menu"`-Container versprachen eine
+ * Pfeiltasten-Navigation, die nie implementiert war. Für Navigationslinks ist
+ * das Disclosure-Muster ohnehin passender: Tab erreicht alle Einträge, Escape
+ * schließt und gibt den Fokus an den Auslöser zurück.
+ */
+function NavDropdown({
+  label,
+  active,
+  open,
+  onToggle,
+  onClose,
+  align = 'left',
+  children,
+}: {
+  label: string;
+  active: boolean;
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  align?: 'left' | 'right';
+  children: ReactNode;
+}) {
+  const panelId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      closeRef.current();
+      buttonRef.current?.focus();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && containerRef.current?.contains(event.target) === true) {
+        return;
+      }
+      closeRef.current();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={onToggle}
+        className={`rounded-full px-3 py-2 text-sm font-semibold whitespace-nowrap ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
+      >
+        {label}
+      </button>
+      {open ? (
+        <div
+          id={panelId}
+          className={`absolute top-full z-20 mt-2 min-w-56 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)] ${align === 'right' ? 'right-0' : 'left-0'}`}
+        >
+          {children}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const dropdownLinkClass = (isCurrent: boolean) =>
+  `block rounded-xl px-4 py-3 text-sm text-on-surface hover:bg-surface-container ${
+    isCurrent ? 'font-extrabold underline underline-offset-4' : 'font-semibold'
+  }`;
 
 export function WebHeader({
   backHref,
@@ -71,78 +152,67 @@ export function WebHeader({
                     : pathname.startsWith(href);
               if (label === 'Community') {
                 return (
-                  <div key={href} className="relative">
-                    <button
-                      type="button"
-                      aria-expanded={communityOpen}
-                      aria-haspopup="menu"
-                      onClick={() => setCommunityOpen((open) => !open)}
-                      className={`rounded-full px-3 py-2 text-sm font-semibold whitespace-nowrap ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                  <NavDropdown
+                    key={href}
+                    label="Community"
+                    active={active}
+                    open={communityOpen}
+                    onToggle={() => {
+                      setCommunityOpen((open) => !open);
+                      setProfileOpen(false);
+                    }}
+                    onClose={() => setCommunityOpen(false)}
+                  >
+                    <Link
+                      href="/community"
+                      aria-current={pathname.startsWith('/community') ? 'page' : undefined}
+                      onClick={() => setCommunityOpen(false)}
+                      className={dropdownLinkClass(pathname.startsWith('/community'))}
                     >
-                      Community
-                    </button>
-                    {communityOpen ? (
-                      <div
-                        role="menu"
-                        className="absolute left-0 top-full z-20 mt-2 min-w-56 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]"
-                      >
-                        <Link
-                          href="/community"
-                          role="menuitem"
-                          onClick={() => setCommunityOpen(false)}
-                          className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
-                        >
-                          Community &amp; Treffen
-                        </Link>
-                        <Link
-                          href="/marketplace"
-                          role="menuitem"
-                          onClick={() => setCommunityOpen(false)}
-                          className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
-                        >
-                          Tauschbörse für Tierbedarf
-                        </Link>
-                      </div>
-                    ) : null}
-                  </div>
+                      Community &amp; Treffen
+                    </Link>
+                    <Link
+                      href="/marketplace"
+                      aria-current={pathname.startsWith('/marketplace') ? 'page' : undefined}
+                      onClick={() => setCommunityOpen(false)}
+                      className={dropdownLinkClass(pathname.startsWith('/marketplace'))}
+                    >
+                      Tauschbörse für Tierbedarf
+                    </Link>
+                  </NavDropdown>
                 );
               }
               if (label === 'Mein Profil') {
                 return (
-                  <div key={href} className="relative">
-                    <button
-                      type="button"
-                      aria-expanded={profileOpen}
-                      aria-haspopup="menu"
-                      onClick={() => setProfileOpen((open) => !open)}
-                      className={`rounded-full px-3 py-2 text-sm font-semibold whitespace-nowrap ${active ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                  <NavDropdown
+                    key={href}
+                    label="Mein Profil"
+                    active={active}
+                    open={profileOpen}
+                    onToggle={() => {
+                      setProfileOpen((open) => !open);
+                      setCommunityOpen(false);
+                    }}
+                    onClose={() => setProfileOpen(false)}
+                    align="right"
+                  >
+                    <Link
+                      href="/profile"
+                      aria-current={pathname.startsWith('/profile') ? 'page' : undefined}
+                      onClick={() => setProfileOpen(false)}
+                      className={dropdownLinkClass(pathname.startsWith('/profile'))}
                     >
-                      Mein Profil
-                    </button>
-                    {profileOpen ? (
-                      <div
-                        role="menu"
-                        className="absolute right-0 top-full z-20 mt-2 min-w-56 rounded-2xl border border-outline-variant/40 bg-surface p-2 shadow-[var(--shadow-level-2)]"
-                      >
-                        <Link
-                          href="/profile"
-                          role="menuitem"
-                          onClick={() => setProfileOpen(false)}
-                          className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
-                        >
-                          Profileinstellungen
-                        </Link>
-                        <Link
-                          href="/pets"
-                          role="menuitem"
-                          onClick={() => setProfileOpen(false)}
-                          className="block rounded-xl px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container"
-                        >
-                          Meine Tiere
-                        </Link>
-                      </div>
-                    ) : null}
-                  </div>
+                      Profileinstellungen
+                    </Link>
+                    <Link
+                      href="/pets"
+                      aria-current={pathname.startsWith('/pets') ? 'page' : undefined}
+                      onClick={() => setProfileOpen(false)}
+                      className={dropdownLinkClass(pathname.startsWith('/pets'))}
+                    >
+                      Meine Tiere
+                    </Link>
+                  </NavDropdown>
                 );
               }
               return (

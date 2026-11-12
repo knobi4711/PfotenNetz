@@ -1,0 +1,271 @@
+# Barrierefreiheits-Audit PfotenNetz
+
+**Stand:** 12.11.2026
+**Grundlage:** WCAG 2.2 Level AA, EN 301 549 (v3.2.1), BITV 2.0
+**Umfang:** `apps/mobile` (Expo/React Native, iOS + Android), `apps/web` (Next.js 15 + Tailwind), gemeinsame Tokens in `packages/design-system`
+**Art:** Ursprünglich rein statische Codeanalyse (Read-only). Die Befunde beschreiben den Stand vor den Korrekturen; Abschnitt 1.1 dokumentiert den Umsetzungsstand. Laufzeit-, Screenreader- und Kontrastmessungen am Gerät sind nicht enthalten und in Abschnitt 4 als manuell zu prüfen ausgewiesen.
+
+---
+
+## 1. Zusammenfassung
+
+Geprüft wurden die zentralen Flows (Start/Dashboard, Login, Registrierung, Helfer:innensuche, Buchung, Chat, Verfügbarkeiten, Einstellungen/Profil, Notfallkarte).
+**21 Befunde:** 4 Kritisch, 6 Hoch, 8 Mittel, 3 Niedrig.
+Wichtigste Ursache ist das Design-Token `primary` (`#E26D46`) mit weißer Schrift: **3,23:1** statt 4,5:1 – das betrifft nahezu jeden Primär-Button, jedes ausgewählte Chip und viele Links auf beiden Plattformen.
+Zweitgrößtes Problem ist die **mobile Formularschicht**: 53 `TextInput`-Vorkommen, davon nur 3 mit `accessibilityLabel`; die sichtbaren `<Text>`-Labels sind technisch nicht verknüpft.
+Dazu kommen **fehlendes Fokusmanagement in beiden Web-Dialogen**, **nicht erreichbare verschachtelte Buttons** in der Helferkarte und **Karten ohne Textalternative**.
+Positiv: Web nutzt durchgängig `<label htmlFor>`, `role="alert"`, `aria-live` und `aria-current`; mobile Fehlerboxen haben `accessibilityRole="alert"`; Touch-Ziele liegen über 24 px (WCAG 2.2, 2.5.8).
+Es existieren **keine automatisierten A11y-Tests** (kein `eslint-plugin-jsx-a11y`, kein axe/Playwright-`toHaveNoViolations`, kein Espresso/Compose-A11y-Check).
+
+### 1.1 Umsetzungsstand (12.11.2026)
+
+| ID | Status | Umsetzung |
+|---|---|---|
+| K-01 | **behoben** | Light-Token `primary` → `#B34A28` (5,35:1 mit Weiß), `primaryHover` → `#9C3F21`; Web-Tokens, Button-Schatten, `.btn-secondary`-Hover und hartkodierte Kartenfarben (Leaflet, Radar, Tracking-Notification) mitgezogen. Dark Mode unverändert (`#F0825B`, 6,67:1). |
+| K-02 | **behoben** | Alle **55** `TextInput` in `apps/mobile` haben `accessibilityLabel` (teils zusätzlich `accessibilityHint`); per Skript geprüft: 55/55. |
+| K-03 | **behoben** | Neuer Hook `apps/web/src/lib/dialog-focus.ts` (Initialfokus via `data-autofocus`, Tab-Trap, Escape, Fokus-Rückgabe, `inert` auf Body-Geschwistern) plus `Portal` nach `document.body`; eingesetzt in `OnboardingWizard` und `AvailabilityManager`. |
+| K-04 | **behoben** | `HelperCard` in `explore.tsx`: Kartenkörper als eigener `Pressable`, „Detail ansehen“/„Betreuung anfragen“ als gleichrangige Geschwister-Buttons. |
+| H-01 | **behoben** | Neues Token `warningText` (Light `#8A5200` = 6,08:1, Dark `#FFB86E` = 10,22:1) für Formularhinweise in Login, Registrierung, Profil, Tiere und Buchung; `tertiary` bleibt Flächen/Icons vorbehalten. |
+| H-02 | **behoben** | Neues Token `placeholder` (Light `#6B544C` = 6,34:1 auf `#FFF1E9`, Dark `#A79C96` = 6,50:1) ersetzt `outline` an allen 38 mobilen Platzhaltern. |
+| H-03 | **behoben** | Mobile Karten (`explore`, `hazard/radar`, `LiveTrackingMap`) sind als dekorativ ausgeblendet; die Listen darunter sind die Textalternative. Web-Karten haben eine Region-Rolle mit beschreibendem Label, die sichtbare Textzusammenfassung und die Liste bleiben erhalten; die Tracking-Karte nennt Position, Zeit und Streckenpunkte. |
+| H-04 | **behoben** | Alle Filter-/Auswahl-Chips (Explore, Buchung, Verfügbarkeiten) haben `aria-pressed`; `.chip-selected` nutzt zusätzlich Fettdruck und einen Ring als nicht-farblichen Indikator. |
+| H-05 | **behoben** | `WebHeader`-Dropdowns auf Disclosure-Muster umgestellt (kein `role="menu"` mehr), mit `aria-expanded`/`aria-controls`, Escape schließt und gibt den Fokus zurück, Klick außerhalb schließt. |
+| H-06 | **behoben** | Web: Formular „Zeitfenster ohne Zeigegeste anlegen“ (Wochentag, Von, Bis) plus Enter im Raster übernimmt die Formularzeiten. Mobile: gleiches Formular mit Radiogruppe und Zeitfeldern; die Bedienungshilfen-Aktion nutzt ebenfalls diese Zeiten statt fix 9–10 Uhr. |
+| M-01 | **behoben** | Skip-Link „Zum Inhalt springen“ als erstes fokussierbares Element im Root-Layout; alle 42 `<main>`-Elemente haben `id="main-content"` und `tabIndex={-1}`. |
+| M-02 | **behoben** | `SectionTitle` und `AppHeader`-Titel haben `accessibilityRole="header"`; zusätzlich zehn eigenständige Seitentitel (Login, Registrierung, Scan, Notfallkarte, Vermisstensuche u. a.). |
+| M-03 | **behoben** | Tier-Auswahl in der Buchung ist jetzt eine `fieldset`/`legend`-Gruppe mit Checkboxen statt `role="listbox"`. |
+| M-04 | **behoben** | Design-Auswahl im Profil ist eine `radiogroup` mit `radio`/`checked`; die aktive Option zeigt zusätzlich ein Häkchen. |
+| M-05 | **behoben** | Alle `formHint`-Meldungen (Login, Registrierung, Profil, Tiere, Buchung) tragen `accessibilityRole="alert"` und `accessibilityLiveRegion="polite"`. |
+| M-06 | **behoben** | `app.json` auf `"orientation": "default"`; `android:screenOrientation="portrait"` aus dem Manifest entfernt. Querformat ist damit freigegeben. |
+| M-07 | **behoben** | Bildnachrichten haben ein Label mit Absenderrichtung und Uhrzeit; der dekorative Header-Avatar ist für Screenreader ausgeblendet. |
+| M-08 | **behoben** | Web-Helferkarte hat `aria-pressed` und ein sichtbares „✓ Ausgewählt“; mobile Filter- und Zeitfenster-Chips zeigen bei Auswahl ein Häkchen (zusätzlich zu Farbe und Screenreader-Status). |
+| N-01 | **behoben** | Nicht bedienbares `dots-vertical`-Icon im Chat-Header entfernt. |
+| N-02 | **behoben** | `maximum-scale=1` aus allen drei Karten-WebViews entfernt; Zoom im Karteninhalt ist wieder möglich. |
+| N-03 | **behoben** | Dropdown-Links im Web-Header tragen `aria-current="page"` und markieren den aktiven Bereich zusätzlich mit Fettdruck und Unterstreichung. |
+
+Verifikation nach den Fixes: `typecheck` (web, mobile) und `lint` (web: 0 Fehler, 1 vorbestehende `<img>`-Warnung; mobile: 0 Fehler) grün, `next build` erfolgreich, Mobile-Vitest 96/96.
+
+---
+
+## 2. Befunde
+
+Legende Schweregrad: **Kritisch** = Kernaufgabe für eine Nutzergruppe nicht ausführbar; **Hoch** = erhebliche Barriere mit Workaround; **Mittel** = deutliche Erschwernis; **Niedrig** = Qualitätsmangel.
+
+| ID | Schweregrad | WCAG 2.2 | Datei:Zeile | Beobachtung | Auswirkung | Korrekturvorschlag (Kurzform) |
+|---|---|---|---|---|---|---|
+| K-01 | Kritisch | 1.4.3 Kontrast (Minimum) | `packages/design-system/src/tokens/colors.ts:9-12`; `apps/web/src/app/globals.css:173,217`; `apps/mobile/components/ui.tsx:127-130` | Weiß (`#FFFFFF`) auf Primär (`#E26D46`) = **3,23:1** (Rechnung in §2.1). Betroffen: `.btn-primary`, `.chip-selected`, `ActionButton variant="primary"`, Chat-Blasen eigener Nachrichten, `booking/[id]` Statusflächen, `explore` „Betreuung anfragen“, `hazard/*` Pins. | Text von Schaltflächen und Zuständen ist für Menschen mit Sehschwäche nicht lesbar; Kernaktionen („Anmelden“, „Konto erstellen“, „Anfrage senden“) verlieren ihre Beschriftung. | Primärton für Flächen abdunkeln (z. B. `#B34A28`, 5,35:1 mit Weiß) oder `onPrimary` auf `#3A1206` wechseln (5,13:1); anschließend alle Kombinationen neu messen. Code: `primaryAction: '#B34A28'` als separates Token einführen, `primary` nur für Text/Border behalten. |
+| K-02 | Kritisch | 1.3.1 Info & Beziehungen; 3.3.2 Beschriftungen; 4.1.2 Name, Rolle, Wert | `apps/mobile/app/(auth)/login.tsx:151-193`; `register.tsx:71-150`; `profile.tsx:557-593`; `pets.tsx:371-619`; `booking/new.tsx:703-983`; `community.tsx:109-148`; `marketplace.tsx:103-282` | 53 `TextInput` in `apps/mobile/app/**`, nur 3 mit `accessibilityLabel` (`chat/[bookingId].tsx:268`, `booking/[id].tsx:177`, `chat/contact/[contactRequestId].tsx:139`). Die sichtbaren Labels sind reine `<Text>`-Geschwister ohne `accessibilityLabelledBy`. | TalkBack/VoiceOver lesen nur „Textfeld“ bzw. den Platzhalter. Nutzer:innen können E-Mail, Passwort und Profilfelder nicht zuordnen – Login und Registrierung sind für blinde Nutzer:innen praktisch nicht durchführbar. | `accessibilityLabel` je Feld setzen und Fehler per `accessibilityHint`/`accessibilityState={{ invalid }}` melden. |
+| K-03 | Kritisch | 2.4.3 Fokusreihenfolge; 2.1.2 Keine Tastaturfalle | `apps/web/src/components/OnboardingWizard.tsx:128-141`; `AvailabilityManager.tsx:748-758` | Beide `role="dialog" aria-modal="true"`-Container haben keinen Fokus-Trap, keinen Initialfokus, keine Fokus-Rückgabe. Im Onboarding ist das erste fokussierbare Element der vollflächige Schließen-Button (`:135-140`), der Inhalt liegt dahinter. `Escape` schließt nur das Onboarding (`:114-119`). | Tastatur- und Screenreader-Nutzer:innen landen beim Öffnen nicht im Dialog, tabben in die verdeckte Seite dahinter und verlieren nach dem Schließen ihre Position. | `inert`/`aria-hidden` auf den Hintergrund, Initialfokus auf Überschrift/ersten Schritt, Fokus-Trap (Tab/Shift+Tab) und Fokus-Rückgabe per `previouslyFocused.focus()`. |
+| K-04 | Kritisch | 2.1.1 Tastatur; 4.1.2 Name, Rolle, Wert | `apps/mobile/app/(tabs)/explore.tsx:187-236` | `HelperCard` ist ein `Pressable` mit `accessibilityRole="button"` und `accessibilityState`; darin liegen zwei weitere `Pressable`-Buttons („Detail ansehen“ `:215`, „Betreuung anfragen“ `:223`). | TalkBack/VoiceOver fassen den äußeren Container zu einem Element zusammen; die inneren Buttons sind nicht einzeln fokussierbar. Die Hauptaktion „Betreuung anfragen“ ist für Screenreader-Nutzer:innen nicht erreichbar. | Karte als `View` (ohne Rolle) rendern und die drei Aktionen als gleichrangige Geschwister-Buttons anordnen, oder die Karte als Container mit `accessible={false}` markieren und die Aktionen separat fokussierbar lassen. |
+| H-01 | Hoch | 1.4.3 Kontrast (Minimum) | `apps/mobile/app/(auth)/login.tsx:208`; `register.tsx:154`; `profile.tsx:1048`; `colors.ts:30` | Hinweis-/Validierungstext in `tertiary` (`#E68A00`) auf `surface` (`#FFF8F5`) = **2,50:1** (13 px, regulär). | Fehlermeldungen wie „Die Passwörter stimmen nicht überein.“ sind bei Sehschwäche kaum lesbar – genau dann, wenn die Eingabe korrigiert werden muss. | Eigenes Token `warningText` mit ≥ 4,5:1 (z. B. `#8A5200`, 6,08:1) einführen und für Text verwenden; `tertiary` nur für Icons/Flächen. |
+| H-02 | Hoch | 1.4.3 Kontrast (Minimum) | `login.tsx:160,181`; `register.tsx:79,98,119,139`; `colors.ts:68,137`; `globals.css:197` | Platzhalter `outline` (`#8A726A`) auf `surfaceContainerLow` (`#FFF1E9`) = **4,05:1**; im Dark Mode `#766C66` auf `#1A1A1A` = **3,40:1**. Das Web ist mit `placeholder:text-on-surface-variant` (8,45:1) konform – die mobilen Felder sind die Problemstelle. | Platzhaltertexte („name@beispiel.de“, „Passwort“) sind unter 4,5:1 und damit für viele nicht lesbar; da die Labels nicht programmatisch verknüpft sind (K-02), ist der Platzhalter oft die einzige Orientierung. | Platzhalterfarbe auf ≥ 4,5:1 anheben (`#6B544C` auf `#FFF1E9` = 6,34:1; Dark `#A79C96` auf `#1A1A1A` = 6,50:1) und Platzhalter nie als Ersatz für Labels nutzen. |
+| H-03 | Hoch | 1.1.1 Nicht-Text-Inhalt | `apps/mobile/app/(tabs)/explore.tsx:83-121`; `hazard/radar.tsx:146-162`; `components/live-tracking-map.tsx:77-97`; `apps/web/src/app/explore/page.tsx:166-171`; `components/LiveTrackingMap.tsx:135` | Karten sind `<WebView>`/Leaflet-`div`s mit `aria-label`/`accessibilityLabel`, aber ohne textuelle Zusammenfassung der angezeigten Positionen. Die Web-`div`s haben zudem keine Rolle, sodass `aria-label` von vielen Screenreadern ignoriert wird. | Blinde Nutzer:innen erhalten keine Information über Helfer:innen, Gefahren oder Live-Position – die Karte ist die einzige Darstellung dieser Daten in `explore`/`radar`. | Parallel eine zugängliche Liste („3 Helfer:innen in deiner Nähe: …“) rendern, per `aria-describedby`/`accessibilityLabel` verknüpfen und die Karte als `aria-hidden` dekorativ setzen. |
+| H-04 | Hoch | 4.1.2 Name, Rolle, Wert; 1.4.1 Farbe allein | `apps/web/src/app/explore/page.tsx:283-333`; `booking/new/page.tsx:445-560` | Filter- und Auswahl-Chips sind `<button>` ohne `aria-pressed`; der Zustand wird ausschließlich über `chip-selected` (Farbe) transportiert. | Screenreader hören „Alle Betreuungsarten, Schaltfläche“ ohne Zustand; farbfehlsichtige Nutzer:innen erkennen die aktive Auswahl nicht. | `aria-pressed={aktiv}` ergänzen und zusätzlich ein sichtbares Häkchen/„✓“ oder Fettdruck als nicht-farblichen Indikator. |
+| H-05 | Hoch | 2.1.1 Tastatur; 4.1.2 Name, Rolle, Wert | `apps/web/src/components/WebHeader.tsx:75-140` | `role="menu"`/`role="menuitem"` ohne Pfeiltasten-Navigation, ohne `Escape`, ohne Fokusverschiebung; die Menüs öffnen nur per Klick auf den Toggle (`aria-expanded`, `aria-haspopup` vorhanden). | Tastaturnutzer:innen können die Menüpunkte nur per Tab erreichen; das erwartete Menü-Verhalten (Pfeile, Esc, Fokus im Menü) fehlt, `role="menu"` verspricht es aber. | Entweder echte Menü-Semantik implementieren (ArrowDown/Up, Home/End, Esc, Fokus auf ersten Eintrag) oder `role="menu"`/`menuitem` entfernen und als normale Navigationsliste mit `aria-expanded` belassen. |
+| H-06 | Hoch | 2.1.1 Tastatur | `apps/mobile/components/helper-availability.tsx:428-437`; `apps/web/src/components/AvailabilityManager.tsx:320-334` | Der Wochenplan ist ziehbasiert. Mobile legt `onAccessibilityTap` **immer** ein Fenster 9–10 Uhr an (`:433`); Web legt per Enter/Space ebenfalls fix 9–10 Uhr an (`:330-334`). Andere Zeiten sind ohne Zeigegeste nicht erreichbar; die Startzeit ist nicht wählbar. | Screenreader- und Tastaturnutzer:innen können nur ein einziges Standardfenster erzeugen und ihre tatsächliche Verfügbarkeit nicht abbilden – die Kernfunktion „Verfügbarkeit pflegen“ ist nur eingeschränkt nutzbar. | Zusätzliche Formularfelder (Wochentag, Von, Bis) mit `accessibilityActions` bzw. als `role="group"` bereitstellen; die Geste als Komfortpfad behalten, nicht als einzigen Weg. |
+| M-01 | Mittel | 2.4.1 Blöcke umgehen | `apps/web/src/app/layout.tsx:16-25`; `components/WebHeader.tsx:35-63` | Kein Skip-Link („Zum Inhalt springen“) vorhanden; jede Seite beginnt mit Header + Hauptnavigation. | Tastatur- und Screenreader-Nutzer:innen müssen auf jeder Seite durch die komplette Navigation tabben, bevor sie zum Inhalt kommen. | Skip-Link als erstes fokussierbares Element einfügen. |
+| M-02 | Mittel | 1.3.1 Info & Beziehungen; 2.4.6 Überschriften und Beschriftungen | `apps/mobile/components/ui.tsx:98-101`; `app/(tabs)/home.tsx` (Abschnittstitel), `profile.tsx` | `SectionTitle` und alle Bildschirmtitel sind reine `<Text>` ohne `accessibilityRole="header"`; im gesamten Mobile-Code gibt es kein `accessibilityRole="header"`. | Screenreader-Nutzer:innen können nicht per Überschriften-Navigation durch die langen Screens (z. B. Profil mit > 900 Zeilen) springen. | `accessibilityRole="header"` (optional `accessibilityLevel`) auf Titel und `SectionTitle` setzen. |
+| M-03 | Mittel | 1.3.1 Info & Beziehungen; 4.1.2 Name, Rolle, Wert | `apps/web/src/app/booking/new/page.tsx:395-421` | Ein `<div role="listbox" aria-multiselectable="true">` umschließt `<label><input type="checkbox">`; die Kinder haben keine `role="option"`. | Screenreader kündigen eine Mehrfach-Listbox an, finden aber keine Optionen; die Checkboxen werden je nach Browser doppelt oder falsch angesagt. | `role="listbox"`/`aria-multiselectable` entfernen und eine normale `fieldset`/`legend`-Gruppe mit Checkboxen verwenden. |
+| M-04 | Mittel | 1.3.1 Info & Beziehungen; 4.1.2 Name, Rolle, Wert | `apps/mobile/app/(tabs)/profile.tsx:757-780` | Design-Auswahl (Hell/Dunkel/System) sind drei `Pressable` mit `accessibilityRole="button"` und `accessibilityState={{ selected }}`; keine Radiogruppe. | Screenreader hören „Schaltfläche, ausgewählt“ statt „Optionsfeld 2 von 3“; die exklusive Auswahl ist nicht erkennbar. | `accessibilityRole="radio"` + `accessibilityState={{ checked }}` innerhalb eines Containers mit `accessibilityRole="radiogroup"` verwenden. |
+| M-05 | Mittel | 3.3.1 Fehlererkennung; 4.1.3 Statusmeldungen | `apps/mobile/app/(auth)/login.tsx:207-209`; `register.tsx:153-155` | `formHint` („Bitte gib eine gültige E-Mail-Adresse ein.“, „Die Passwörter stimmen nicht überein.“) wird als normales `<Text>` gerendert; im Mobile-Code existiert kein `accessibilityLiveRegion` und kein `AccessibilityInfo.announceForAccessibility`. | Die Meldung erscheint optisch, wird aber nicht angesagt; Screenreader-Nutzer:innen erhalten nach dem Absenden keine Rückmeldung, warum nichts passiert. | `<Text accessibilityLiveRegion="polite" role="alert">` bzw. beim Absenden `AccessibilityInfo.announceForAccessibility(formHint)`. |
+| M-06 | Mittel | 1.3.4 Ausrichtung (Display) | `apps/mobile/app.json:7`; `apps/mobile/android/app/src/main/AndroidManifest.xml:31` | `"orientation": "portrait"` und `android:screenOrientation="portrait"` sperren die Querformat-Anzeige auf beiden Plattformen. | Nutzer:innen mit am Gerät fixierter Halterung (Rollstuhl, Bett) oder großer Schrift können die App nicht quer nutzen, obwohl Querformat mehr Platz für große Schrift bietet. | Sperre entfernen (`"orientation": "default"`, `screenOrientation` löschen) und Layouts für Querformat prüfen. |
+| M-07 | Mittel | 1.1.1 Nicht-Text-Inhalt | `apps/mobile/app/chat/[bookingId].tsx:53-58` | Gesendete Bilder werden als `<Image>` ohne `accessibilityLabel`/`accessible={false}` gerendert; die Blase hat kein übergeordnetes Label. | Screenreader sagen „Bild“ ohne Kontext; empfangene Bilder sind nicht von Statusanzeigen unterscheidbar, die Funktion „Bild teilen“ ist für blinde Nutzer:innen nicht nachvollziehbar. | `accessibilityLabel={"Bildnachricht von " + absender + ", " + zeit}` setzen; rein dekorative Avatare mit `accessible={false}` ausblenden. |
+| M-08 | Mittel | 1.4.1 Farbe allein | `apps/web/src/app/explore/page.tsx:185-189`; `apps/mobile/components/helper-availability.tsx:882-894` | Auswahl wird nur über Hintergrund-/Rahmenfarbe gezeigt (Helferkarte `border-primary bg-primary-fixed/40`; Slot-Chip `backgroundColor: selected ? c.primary : …`). | Farbfehlsichtige Nutzer:innen erkennen nicht, welche Karte/ welches Zeitfenster ausgewählt ist; die Detailansicht rechts wirkt unvermittelt. | Zusätzlich Rahmenstärke, Häkchen-Icon und `aria-pressed`/`accessibilityState` (vorhanden) plus sichtbaren Text „Ausgewählt“ ergänzen. |
+| N-01 | Niedrig | 1.1.1 Nicht-Text-Inhalt; 4.1.2 Name, Rolle, Wert | `apps/mobile/app/chat/[bookingId].tsx:193` | `dots-vertical`-Icon im Chat-Header ist ein reines `MaterialCommunityIcons` ohne `Pressable` und ohne Label – es sieht wie ein Menü aus, ist aber nicht bedienbar. | Nutzer:innen tippen ins Leere; Screenreader überspringen es, die Erwartung „Menü“ wird enttäuscht. | Entfernen oder als echten Button mit `accessibilityLabel="Chat-Optionen"` implementieren. |
+| N-02 | Niedrig | 1.4.4 Text vergrößern | `apps/mobile/app/(tabs)/explore.tsx:83` | Das eingebettete Karten-HTML setzt `<meta name="viewport" content="…,maximum-scale=1">` und blockiert damit Zoom innerhalb der Karte. | Nutzer:innen mit Sehschwäche können Kartenbeschriftungen nicht vergrößern (Annahme: betrifft nur den WebView-Inhalt, nicht die App-Schrift). | `maximum-scale=1` entfernen und `user-scalable=yes` zulassen. |
+| N-03 | Niedrig | 4.1.2 Name, Rolle, Wert | `apps/web/src/components/WebHeader.tsx:75-137` | Die Dropdown-Toggles zeigen ihren aktiven Zustand nur über `bg-primary-fixed text-on-primary-fixed-variant`; `aria-current` fehlt an den Menü-Links (die mobile Navigationsliste `:151-153` hat es korrekt). | Der aktuelle Bereich ist für Screenreader in den Dropdowns nicht erkennbar; die visuelle Markierung ist zudem kontrastarm. | `aria-current="page"` an die passenden `Link`s setzen und den aktiven Zustand zusätzlich mit Unterstrich/Fettdruck markieren. |
+
+### 2.1 Kontrastnachweise (berechnet, nicht geschätzt)
+
+Formel nach WCAG: `L = 0,2126·R + 0,7152·G + 0,0722·B` mit `C = ((c + 0,055) / 1,055)^2,4`; Verhältnis `(L_hell + 0,05) / (L_dunkel + 0,05)`. Beide Farben stammen aus dem Code.
+
+| Vordergrund | Hintergrund | Verhältnis | Bewertung | Fundstelle |
+|---|---|---|---|---|
+| `#FFFFFF` | `#E26D46` | **3,23:1** | ✗ (4,5 nötig) | `colors.ts:9-12` |
+| `#E68A00` | `#FFF8F5` | **2,50:1** | ✗ | `colors.ts:30,52` |
+| `#8A726A` | `#FFF1E9` | **4,05:1** | ✗ | `colors.ts:68,56` |
+| `#766C66` | `#1A1A1A` | **3,40:1** | ✗ | `colors.ts:137,123` |
+| `#E26D46` | `#FFF8F5` | **3,07:1** | ✗ (Text) / ✓ (UI-Grenze 3:1) | `colors.ts:9,52` |
+| `#4B7C59` | `#FFF8F5` | **4,62:1** | ✓ | `colors.ts:20,52` |
+| `#57423C` | `#FFFFFF` | **9,33:1** | ✓ | `colors.ts:64,55` |
+| `#362F2A` | `#FFB4AB` | **7,75:1** | ✓ (Dark-Danger) | `colors.ts:113,115` |
+| `#FFFBFF` | `#C0532F` | **4,65:1** | ✓ (`.chip-primary`) | `globals.css:205` |
+| `#F0825B` | `#1A1A1A` | **6,67:1** | ✓ (Dark-Primary-Text) | `colors.ts:85,123` |
+| `#362F2A` | `#F0825B` | **5,04:1** | ✓ (Dark-Button) | `colors.ts:88,85` |
+
+Rechenbeispiel K-01: `#E26D46` → R 0,7607 · G 0,1529 · B 0,0613 → `L = 0,2755`; Weiß `L = 1,0` → `1,05 / 0,3255 = 3,23:1`.
+**Wichtig:** Der Fehler tritt nur im Light Mode auf. Im Dark Mode sind die Primär-Buttons mit 5,04:1 konform – die Korrektur darf den Dark Mode nicht verschlechtern.
+
+### 2.2 Korrekturen mit Codebeispielen
+
+**K-01 – Primärton abdunkeln (Token-Ebene, wirkt für Mobile und Web)**
+```ts
+// packages/design-system/src/tokens/colors.ts
+primary: '#B34A28',        // war #E26D46: 5,35:1 mit Weiß, 5,09:1 auf Surface
+primaryHover: '#9C3F21',   // 6,67:1 mit Weiß
+onPrimary: '#FFFFFF',
+```
+```css
+/* apps/web/src/app/globals.css */
+.btn-primary { @apply btn bg-primary text-on-primary …; }
+.chip-selected { @apply bg-primary text-on-primary border-primary; }
+```
+Alternative, falls die Markenfarbe `#E26D46` für Flächen erhalten bleiben soll: zusätzliches Token `primaryAction: '#B34A28'` nur für Flächen und `primaryText: '#A8401F'` (5,85:1 auf `#FFF8F5`) für Primärtext. Beides ist konform; entscheidend ist, dass `#E26D46` nicht mehr mit Weiß kombiniert und nicht mehr als kleiner Text auf hellem Grund verwendet wird.
+Prüfen: `#B34A28` + `#FFFFFF` = 5,35:1; `#B34A28` auf `#FFF8F5` = 5,09:1; Hover `#9C3F21` = 6,67:1.
+
+**K-02 – Mobile Labels verknüpfen**
+```tsx
+<Text nativeID="login-email-label" style={styles.label}>E-Mail</Text>
+<TextInput
+  accessibilityLabel="E-Mail-Adresse"
+  accessibilityLabelledBy="login-email-label"   // Android
+  accessibilityHint="Zum Anmelden erforderlich"
+  textContentType="emailAddress"
+  …
+/>
+```
+Kurzfristig ohne Token-Umbau: mindestens `accessibilityLabel` an allen 50 Feldern setzen (Liste: `login`, `register`, `profile`, `pets`, `booking/new`, `community`, `marketplace`, `hazard/report`, `missing`, `admin/verifications`, `helper/[id]`, `forgot-password`).
+
+**K-03 – Fokusmanagement im Dialog**
+```tsx
+const panelRef = useRef<HTMLDivElement>(null);
+const returnFocusRef = useRef<HTMLElement | null>(null);
+
+useEffect(() => {
+  returnFocusRef.current = document.activeElement as HTMLElement;
+  panelRef.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus();
+  document.body.style.overflow = 'hidden';
+  return () => {
+    document.body.style.overflow = '';
+    returnFocusRef.current?.focus();
+  };
+}, []);
+
+<div role="dialog" aria-modal="true" ref={panelRef}
+     onKeyDown={(e) => {
+       if (e.key === 'Escape') close();
+       if (e.key === 'Tab') trapFocus(e, panelRef.current);
+     }}>
+```
+Zusätzlich den Hintergrund in `inert` setzen (`<div inert={open}>`), damit Screenreader nicht hinter den Dialog springen.
+
+**K-04 – Helferkarte entkoppeln**
+```tsx
+<View style={styles.helperCard}>
+  <Pressable accessibilityRole="button"
+    accessibilityLabel={`${helper.display_name}, ${distance} Kilometer entfernt`}
+    accessibilityState={{ selected }} onPress={onSelect}>…</Pressable>
+  <Pressable accessibilityRole="button" onPress={openDetail}>Detail ansehen</Pressable>
+  <Pressable accessibilityRole="button" onPress={requestCare}>Betreuung anfragen</Pressable>
+</View>
+```
+
+**H-03 – Karte plus Textalternative**
+```tsx
+<View accessible accessibilityLabel={`Karte: ${helpers.length} Helfer:innen in der Nähe`} />
+<FlatList
+  accessibilityLabel="Helfer:innen als Liste"
+  data={helpers}
+  renderItem={({ item }) => <Text>{item.display_name}, {item.distance_km} km</Text>}
+/>
+```
+
+**H-04 – Chip-Zustand**
+```tsx
+<button type="button" aria-pressed={bookingType === type}
+        className={`chip ${bookingType === type ? 'chip-selected' : ''}`}>
+  {bookingType === type ? <span aria-hidden="true">✓ </span> : null}
+  {BOOKING_TYPE_LABELS[type]}
+</button>
+```
+
+**M-03 – Checkbox-Gruppe statt Listbox**
+```tsx
+<fieldset className="…">
+  <legend className="text-sm font-bold">Tiere</legend>
+  {activePets.map((pet) => (
+    <label key={pet.id} className="flex min-h-11 items-center gap-3">
+      <input type="checkbox" checked={petIds.includes(pet.id)}
+             onChange={() => togglePet(pet.id)} className="h-5 w-5 accent-primary" />
+      {pet.name}
+    </label>
+  ))}
+</fieldset>
+```
+
+---
+
+## 3. Positive Befunde
+
+- **Sprache gesetzt:** `apps/web/src/app/layout.tsx:18` (`<html lang="de">`), `apps/mobile/app.json:56` (`"lang": "de"`).
+- **Web-Formulare korrekt beschriftet:** `PasskeyPanel.tsx:193,206,221` und `account/delete/page.tsx:85` nutzen `<label htmlFor>`; `marketplace`, `reset-password`, `booking/new` folgen dem Muster.
+- **Statusmeldungen im Web:** `role="alert"`/`role="status"`/`aria-live` durchgängig, u. a. `explore/page.tsx:347,383`, `chat/[bookingId]/page.tsx:81,90`, `tracking/page.tsx:156`, `reset-password/page.tsx:44`.
+- **Mobile Fehlerbox:** `ui.tsx:344` `accessibilityRole="alert"` – Server-/Netzwerkfehler werden angesagt (die lokale Validierung in M-05 nicht).
+- **Mobile Aktions-Buttons:** `ui.tsx:133-135` mit `accessibilityRole="button"` und `accessibilityState={{ disabled, busy }}`; Mindesthöhe 52 px (`ui.tsx:409`), Back-Button 44 px (`:367`).
+- **Mobile Karten-/Zeitfenster-Kontext:** `helper-availability.tsx:431-432` liefert Label **und** Hint inkl. Geste; `explore.tsx:143` nennt Name und Entfernung.
+- **Checkbox-Semantik mobil:** `profile.tsx:655-656` `role="checkbox"` + `checked` – vorbildlich.
+- **Navigation:** `WebHeader.tsx:152` `aria-current="page"`; `nav aria-label="Hauptnavigation"` (`:61-63`).
+- **Struktur im Dashboard:** `<main>`, genau ein `<h1>` (`Dashboard.tsx:242`), `<h2>` je Karte, `<section aria-label="Dashboard">` (`:274`).
+- **Fokus sichtbar:** `.input` hat `focus:ring-2 focus:ring-primary` (`globals.css:197`); das Verfügbarkeitsraster `focus:ring-2 focus:ring-secondary` (`AvailabilityManager.tsx:323`).
+- **Keine Zoom-Sperre im Web:** kein `maximum-scale`/`user-scalable=no` in `apps/web`; in der Mobile-App ist `allowFontScaling={false}` nirgends gesetzt, die Systemschrift also nicht aktiv blockiert.
+- **Keine Farb-only-Statusanzeige bei Buchungen:** `StatusBadge` (`ui.tsx:48`) kombiniert Text und Farbe.
+
+---
+
+## 4. Nicht prüfbar (statische Analyse) – mit Prüfanleitung
+
+| Thema | Warum nicht prüfbar | Manuelle Prüfung |
+|---|---|---|
+| 1.4.4 Text vergrößern / 1.4.10 Reflow | Skalierungsverhalten hängt von Systemeinstellung und Layout zur Laufzeit ab; nur wenige feste Höhen gefunden (`helper-availability.tsx:494,535`, `booking/[id].tsx:181`). | iOS: Bedienungshilfen → Größerer Text auf 200 %; Android: Schriftgröße max. + Anzeigegröße; jeden zentralen Screen auf Abschneiden/Überlappung prüfen. |
+| 1.4.5 Bilder von Text / 1.4.11 Kontrast von UI-Komponenten | Kontrast über Bildern/Verläufen und Kartenkacheln nur am gerenderten Pixel messbar. | Screenshots mit Colour-Contrast-Analyzer (z. B. axe DevTools, Contrast Checker) über Karten, Hero-Bildern, Badges. |
+| 2.1.1 Tastatur (vollständig) | Fokusreihenfolge über React-Native-WebViews und Leaflet ist im Code nicht abschließend bestimmbar. | Nur Tastatur: kompletter Buchungs- und Chat-Flow; auf Fokusfalle im Onboarding und in der Verfügbarkeitsbearbeitung achten. |
+| 2.4.7 Fokus sichtbar | Standard-Outline von Browsern ist nicht im CSS sichtbar; nur gerendert beurteilbar. | Jede Seite mit Tab durchlaufen, Fokus auf Custom-Buttons/Chips/Links prüfen. |
+| 2.5.7 Ziehbewegungen / 2.5.8 Zielgröße | Zieh-Alternative für den Wochenplan nur teilweise vorhanden (H-06); tatsächliche Zielgrößen hängen von `fontScale` ab. | Wochenplan mit einer Hand/Sprachsteuerung bedienen; Trefferflächen mit „Layout-Grenzen anzeigen“ (Android) messen. |
+| 3.2.3/3.2.4 Konsistente Navigation/Identifikation | Erfordert Durchlauf aller Seiten. | Navigation auf allen Hauptseiten vergleichen (Position, Reihenfolge, Bezeichnung). |
+| 4.1.3 Statusmeldungen (vollständig) | Nur Mobile-Validierung belegt (M-05); Toasts/Ladezustände nicht alle erfasst. | Formular absichtlich falsch absenden mit VoiceOver/TalkBack; Ansage der Fehlermeldung prüfen. |
+| Sprachausgabe-Qualität | `accessibilityLabel`-Texte sind vorhanden, werden aber erst im Screenreader vorgelesen. | VoiceOver (iOS) und TalkBack (Android): alle zentralen Screens einmal linear durchhören. |
+| Medienalternativen | Sprach-/Audionachrichten (`VoiceMessage`) haben keinen Transkript; Videos wurden im geprüften Umfang nicht gefunden. | Prüfen, ob Sprachnachrichten eine Textalternative benötigen (1.2.1). |
+| Zeitlimits (2.2.1) | Keine expliziten Timeouts im geprüften Code gefunden; Session-Timeout im Backend nicht Teil des Repos. | 30 min inaktiv bleiben, Verhalten prüfen. |
+| Fehlerseiten/Offline | `emergency/[token]` hat Offline-Cache (E2E-Test), andere Seiten nicht geprüft. | Flugmodus, Offline-Seite auf verständliche Fehlermeldung prüfen. |
+
+**Nicht im Detail geprüft (Code existiert, aber nicht gelesen):**
+Mobile: `marketplace.tsx`, `community.tsx`, `missing.tsx`, `missing/radar.tsx`, `hazard/report.tsx`, `hazard/[id].tsx`, `hazard/moderation.tsx`, `admin/verifications.tsx`, `helper/[id].tsx`, `legal/*`, `forgot-password.tsx`, `pet/[petId]/emergency.tsx` (nur grep).
+Web: `community/*`, `marketplace`, `hazard/radar|report|[id]|moderation`, `missing/*`, `tracking`, `profile`, `bookings`, `chat/*`, `admin/*`, `legal/*`, `reset-password`, `account/delete`, `kinderschutz`, `pets/[petId]`.
+Diese Bereiche sind **nicht bewertet**; die Befunde oben sind repräsentativ, aber nicht abschließend für sie.
+
+### 4.1 Verifikation automatisierter Tests
+
+| Prüfung | Ergebnis |
+|---|---|
+| `eslint-plugin-jsx-a11y` | nicht installiert (`package.json:18-23` nur next/react/hooks/prettier) → keine statischen A11y-Regeln. |
+| axe / `@axe-core/playwright` / `toHaveNoViolations` | nicht vorhanden; `apps/web/e2e/smoke.spec.ts` prüft nur Rendering, Navigation, Offline-Cache und Flows (Zeilen 45, 58, 67, 77, 110). |
+| Mobile Unit-Tests (vitest) | keine Assertions zu Rollen/Labels gefunden. |
+| Android/iOS A11y-Checks | kein Espresso/Compose-Test, kein `AccessibilityScanner`/XCUITest-Audit. |
+| Kontrast-Automatisierung | keine Tokens-Prüfung; Farben sind manuell gepflegt (`colors.ts`, `globals.css`) und bereits auseinandergelaufen (H-02). |
+
+---
+
+## 5. Priorisierte Top-10-Maßnahmen
+
+1. **K-01 – Primärton auf ≥ 4,5:1 bringen** (`primary: '#B34A28'`). Ein Token, zwei Plattformen, größte Wirkung. Aufwand: 0,5 PT.
+2. **K-02 – `accessibilityLabel` für alle mobilen Eingabefelder** (53 Felder, 3 bereits korrekt). Aufwand: 1–2 PT, sofort spürbar für blinde Nutzer:innen.
+3. **K-03 – Fokusmanagement in beiden Web-Dialogen** (`OnboardingWizard`, `AvailabilityManager`): Initialfokus, Trap, Rückgabe, `inert`. Aufwand: 1 PT.
+4. **K-04 – Helferkarte entkoppeln**, damit „Betreuung anfragen“ per Screenreader erreichbar ist. Aufwand: 0,5 PT.
+5. **H-01/H-02 – Textfarben für Hinweise und Platzhalter** auf ≥ 4,5:1 (hell und dunkel). Aufwand: 0,5 PT.
+6. **H-03 – Textalternative für alle Karten** (Liste parallel, Karte `aria-hidden`). Aufwand: 1–2 PT.
+7. **H-04 + M-08 – `aria-pressed` und nicht-farbliche Auswahlindikatoren** für Chips und Karten. Aufwand: 1 PT.
+8. **M-05 – Mobile Validierung ansagen** (`accessibilityLiveRegion="polite"` / `announceForAccessibility`). Aufwand: 0,5 PT.
+9. **H-06 – Verfügbarkeit per Formular statt nur per Geste** (Wochentag/Von/Bis). Aufwand: 2–3 PT.
+10. **M-01/M-02/M-03/M-04/M-06 – Struktur und Semantik**: Skip-Link, `role="header"`, Checkbox-`fieldset`, Radiogruppe für Theme, Querformat freigeben. Aufwand: 2 PT gesamt.
+
+**Danach:** H-05 (Menü-Tastatur, Hoch), M-07 (Chat-Bild-Alternativtext, Mittel), N-01–N-03.
+**Prozess:** `eslint-plugin-jsx-a11y` + `@axe-core/playwright` in die bestehende E2E-Suite aufnehmen und einen Kontrast-Test über die Design-Tokens etablieren, damit K-01/H-01/H-02 nicht zurückkehren.
+
+---
+
+## 6. Annahmen und Grenzen
+
+- **Annahme:** Beide Plattformen sind Produktbestandteil (App-Store-App + Web-Dashboard); BITV 2.0 wird über die EN 301 549-Relevanz hinaus als Prüfmaßstab herangezogen, auch wenn keine öffentliche Stelle betroffen ist.
+- **Annahme:** Kontrastwerte gelten für den Light Mode als Standard; Dark Mode wurde separat geprüft und ist bei K-01 konform.
+- Es wurden ausschließlich Dateien gelesen; keine Builds, keine Geräte, keine Screenreader-Läufe. Alle „nicht prüfbar“-Punkte sind deshalb bewusst offen und nicht als konform gewertet.
+- Zeilennummern beziehen sich auf den Stand des Arbeitsverzeichnisses vom 12.11.2026 und können sich bei Änderungen verschieben.

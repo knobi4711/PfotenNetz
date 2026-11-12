@@ -61,10 +61,11 @@ export default function HazardModerationScreen() {
               <Text style={[styles.body, { color: c.onSurface }]}>{hazard.description}</Text>
             ) : null}
             <TextInput
+              accessibilityLabel="Moderationsnotiz, optional"
               value={notes[hazard.id] ?? ''}
               onChangeText={(value) => setNotes((current) => ({ ...current, [hazard.id]: value }))}
               placeholder="Moderationsnotiz (optional)"
-              placeholderTextColor={c.outline}
+              placeholderTextColor={c.placeholder}
               style={[
                 styles.input,
                 {

@@ -58,7 +58,7 @@ function osmHazardMapHtml(
       hazard.severity,
   }));
   const markerJson = JSON.stringify(markers).replace(/</g, '\\u003c');
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}.hazard{background:#c62828;border:2px solid #fff;border-radius:50%;color:#fff;font:bold 16px sans-serif;text-align:center;width:28px;height:28px;line-height:28px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${Math.max(10, Math.round(15 - Math.log2(radiusKm)))});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.circle(center,{radius:${radiusKm * 1000},color:'#e26d46',fillColor:'#e26d46',fillOpacity:.12}).addTo(map);L.marker(center).addTo(map).bindPopup('Dein Standort');${markerJson}.forEach(h=>L.marker([h.latitude,h.longitude],{icon:L.divIcon({className:'hazard',html:'!',iconSize:[32,32],iconAnchor:[16,16]})}).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.severity).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}.hazard{background:#c62828;border:2px solid #fff;border-radius:50%;color:#fff;font:bold 16px sans-serif;text-align:center;width:28px;height:28px;line-height:28px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${Math.max(10, Math.round(15 - Math.log2(radiusKm)))});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.circle(center,{radius:${radiusKm * 1000},color:'#b34a28',fillColor:'#b34a28',fillOpacity:.12}).addTo(map);L.marker(center).addTo(map).bindPopup('Dein Standort');${markerJson}.forEach(h=>L.marker([h.latitude,h.longitude],{icon:L.divIcon({className:'hazard',html:'!',iconSize:[32,32],iconAnchor:[16,16]})}).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.severity).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
 }
 
 function HazardRow({ hazard }: { hazard: ActiveHazard }) {
@@ -143,11 +143,12 @@ function HazardMap({
     };
     return (
       <View
-        accessibilityLabel={`OpenStreetMap-Gefahrenkarte mit ${hazards.length} aktiven Gefahren`}
+        accessible={false}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
         style={[styles.map, { borderColor: c.outlineVariant }]}
       >
         <WebView
-          accessibilityLabel="OpenStreetMap-Gefahrenkarte"
           javaScriptEnabled
           onMessage={openHazard}
           originWhitelist={['*']}
@@ -159,7 +160,9 @@ function HazardMap({
   }
   return (
     <View
-      accessibilityLabel={`Karte mit ${hazards.length} aktiven Gefahren`}
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
       style={[
         styles.map,
         { backgroundColor: c.surfaceContainerLow, borderColor: c.outlineVariant },
@@ -336,6 +339,11 @@ export default function HazardRadarScreen() {
         />
       ) : (
         <>
+          <Text style={[styles.mapHint, { color: c.onSurfaceVariant }]}>
+            {visibleHazards.length === 0
+              ? 'Die Karte zeigt aktuell keine aktiven Gefahren in diesem Radius.'
+              : `Die Karte zeigt ${visibleHazards.length === 1 ? 'eine aktive Gefahr' : `${visibleHazards.length} aktive Gefahren`} im Radius von ${radiusKm} km. Art, Ort und Details findest du in der Liste darunter.`}
+          </Text>
           <HazardMap center={center} radiusKm={radiusKm} hazards={visibleHazards} />
           <View style={styles.heading}>
             <SectionTitle>Aktive Warnungen</SectionTitle>
@@ -369,6 +377,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   count: { fontFamily: appFonts.bold, fontSize: 13 },
+  mapHint: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginBottom: 8 },
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   type: { flex: 1, fontFamily: appFonts.bold, fontSize: 17, lineHeight: 23 },
   severity: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },

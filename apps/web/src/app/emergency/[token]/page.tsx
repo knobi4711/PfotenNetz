@@ -92,7 +92,11 @@ export default function PublicEmergencyCardPage() {
   }, [params.token]);
 
   return (
-    <main className="min-h-screen bg-surface px-5 py-10 text-on-surface">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-surface px-5 py-10 text-on-surface"
+    >
       <div className="mx-auto max-w-xl">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-primary">PfotenNetz</p>
         <h1 className="mt-2 text-3xl font-extrabold">Digitale Notfallkarte</h1>

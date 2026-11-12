@@ -80,7 +80,7 @@ function osmMapHtml(center: MapCoordinate, helpers: NearbyHelper[], centerLabel:
     longitude: helper.longitude,
     distance: `${Number(helper.distance_km).toLocaleString('de-DE')} km entfernt`,
   }));
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${zoomForHelpers(helpers)});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.marker(center).addTo(map).bindPopup(${JSON.stringify(`Dein ${centerLabel}`)});${JSON.stringify(markers)}.forEach(h=>L.marker([h.latitude,h.longitude]).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.distance).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${zoomForHelpers(helpers)});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.marker(center).addTo(map).bindPopup(${JSON.stringify(`Dein ${centerLabel}`)});${JSON.stringify(markers)}.forEach(h=>L.marker([h.latitude,h.longitude]).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.distance).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
 }
 
 function NeighborhoodMap({
@@ -101,11 +101,12 @@ function NeighborhoodMap({
     const handleMapMessage = (event: WebViewMessageEvent) => onSelect(event.nativeEvent.data);
     return (
       <View
-        accessibilityLabel={`OpenStreetMap-Karte der Nachbarschaft mit ${helpers.length} Helferinnen und Helfern`}
+        accessible={false}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
         style={[styles.map, { borderColor: c.outlineVariant }]}
       >
         <WebView
-          accessibilityLabel="OpenStreetMap-Nachbarschaftskarte"
           javaScriptEnabled
           onMessage={handleMapMessage}
           originWhitelist={['*']}
@@ -118,7 +119,9 @@ function NeighborhoodMap({
   const radiusKm = projectionRadiusKm(helpers);
   return (
     <View
-      accessibilityLabel={`Kartenübersicht der Nachbarschaft mit ${helpers.length} Helferinnen und Helfern`}
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
       style={[
         styles.map,
         { backgroundColor: c.surfaceContainerLow, borderColor: c.outlineVariant },
@@ -184,8 +187,14 @@ function HelperCard({
 }) {
   const c = usePalette();
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onSelect}>
-      <Card>
+    <Card>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        accessibilityLabel={`${helper.display_name}, ${Number(helper.distance_km).toLocaleString('de-DE')} Kilometer entfernt`}
+        accessibilityHint="Doppeltippen, um Details und die Anfrage-Aktionen anzuzeigen"
+        onPress={onSelect}
+      >
         <View style={styles.helperHeader}>
           <View style={[styles.avatar, { backgroundColor: c.surfaceContainerHigh }]}>
             <Text style={[styles.avatarText, { color: c.primary }]}>
@@ -210,30 +219,28 @@ function HelperCard({
         />
         <InfoRow label="Regelmäßig verfügbar" value={formatAvailableDays(helper.available_days)} />
         <InfoRow label="Abgeschlossene Einsätze" value={String(helper.total_walks)} />
-        {selected ? (
-          <View style={styles.cardActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${helper.display_name} im Detail ansehen`}
-              onPress={onOpenDetail}
-              style={[styles.cardButton, { backgroundColor: c.surfaceContainerHigh }]}
-            >
-              <Text style={[styles.cardButtonText, { color: c.onSurface }]}>Detail ansehen</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${helper.display_name} für Betreuung anfragen`}
-              onPress={onRequest}
-              style={[styles.cardButton, { backgroundColor: c.primary }]}
-            >
-              <Text style={[styles.cardButtonText, { color: c.onPrimary }]}>
-                Betreuung anfragen
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
-      </Card>
-    </Pressable>
+      </Pressable>
+      {selected ? (
+        <View style={styles.cardActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${helper.display_name} im Detail ansehen`}
+            onPress={onOpenDetail}
+            style={[styles.cardButton, { backgroundColor: c.surfaceContainerHigh }]}
+          >
+            <Text style={[styles.cardButtonText, { color: c.onSurface }]}>Detail ansehen</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${helper.display_name} für Betreuung anfragen`}
+            onPress={onRequest}
+            style={[styles.cardButton, { backgroundColor: c.primary }]}
+          >
+            <Text style={[styles.cardButtonText, { color: c.onPrimary }]}>Betreuung anfragen</Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </Card>
   );
 }
 
@@ -353,6 +360,11 @@ export default function ExploreScreen() {
               />
             </View>
 
+            <Text style={[styles.mapHint, { color: c.onSurfaceVariant }]}>
+              {helpers.length === 0
+                ? 'Die Karte zeigt aktuell keine Helfer:innen in deiner Nähe.'
+                : `Die Karte zeigt ${helpers.length === 1 ? 'eine Helferin bzw. einen Helfer' : `${helpers.length} Helfer:innen`} in deiner Nähe. Namen, Entfernung und Aktionen findest du in der Liste darunter.`}
+            </Text>
             <NeighborhoodMap
               center={center}
               helpers={helpers}
@@ -419,6 +431,7 @@ const styles = StyleSheet.create({
   filterSection: { marginBottom: 16 },
   filterHint: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginBottom: 8 },
   filterLabel: { fontFamily: appFonts.bold, fontSize: 13, marginTop: 10, marginBottom: 4 },
+  mapHint: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginBottom: 8 },
   map: {
     height: 280,
     borderRadius: 24,

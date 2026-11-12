@@ -6,8 +6,10 @@ export const colors = {
   // Light Mode (Primary)
   light: {
     // Primary - Terracotta
-    primary: '#E26D46',
-    primaryHover: '#C8542F',
+    // K-01: von #E26D46 abgedunkelt, damit weiße Schrift 4,5:1 und Primärtext
+    // auf Surface 4,5:1 erreicht (5,35:1 bzw. 5,09:1). Siehe ACCESSIBILITY_AUDIT.md.
+    primary: '#B34A28',
+    primaryHover: '#9C3F21',
     primaryContainer: '#C0532F',
     onPrimary: '#FFFFFF',
     onPrimaryContainer: '#FFFBFF',
@@ -63,6 +65,13 @@ export const colors = {
     onSurface: '#211A16',
     onSurfaceVariant: '#57423C',
     onBackground: '#211A16',
+
+    // H-01: Textfarbe für Hinweise/Warnungen. `tertiary` (2,50:1) ist nur für
+    // Flächen und Icons geeignet, nicht für kleinere Schrift.
+    warningText: '#8A5200',
+
+    // H-02: Platzhaltertext in Eingabefeldern (6,34:1 auf #FFF1E9).
+    placeholder: '#6B544C',
 
     // Outline
     outline: '#8A726A',
@@ -133,6 +142,10 @@ export const colors = {
     onSurface: '#F9F8F6',
     onSurfaceVariant: '#B8B2AD',
     onBackground: '#F9F8F6',
+
+    // H-01 / H-02: Dark Mode erreicht mit denselben Rollen 4,5:1.
+    warningText: '#FFB86E',
+    placeholder: '#A79C96',
 
     outline: '#766C66',
     outlineVariant: '#57423C',

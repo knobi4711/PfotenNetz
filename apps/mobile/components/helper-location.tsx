@@ -283,7 +283,7 @@ export function PetHomeCard({ profile }: { profile: Profile }) {
           editable={!pending || !searchPending}
           onChangeText={setSearchQuery}
           placeholder="Ort manuell: z. B. Leipzig oder 04109"
-          placeholderTextColor={c.outline}
+          placeholderTextColor={c.placeholder}
           style={[styles.searchInput, { borderColor: c.outlineVariant, color: c.onSurface }]}
           value={searchQuery}
         />
