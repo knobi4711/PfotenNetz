@@ -127,12 +127,14 @@ export default function MissingRadarPage() {
           <section className="card mt-6 p-6">
             <h2 className="text-xl font-extrabold">Sichtung melden</h2>
             <textarea
+              aria-label="Beschreibung der Sichtung"
               className="input mt-4 min-h-28"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Wo und wann hast du das Tier gesehen?"
             />
             <input
+              aria-label="Foto zur Sichtung hochladen"
               type="file"
               accept="image/jpeg,image/png,image/webp"
               className="mt-4 block w-full rounded-xl border border-outline-variant/50 p-3 text-sm"

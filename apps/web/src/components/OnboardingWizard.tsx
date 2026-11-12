@@ -198,11 +198,7 @@ function OnboardingDialog({ userId }: { userId: string }) {
           )}
 
           {step.kind === 'intro' ? null : (
-            <p
-              className={`mt-4 text-xs font-bold ${
-                step.done ? 'text-secondary' : 'text-on-surface-variant'
-              }`}
-            >
+            <p className="mt-4 text-xs font-bold text-on-surface-variant">
               {step.done
                 ? '✓ Bereits erledigt'
                 : step.optional

@@ -277,6 +277,7 @@ export default function WebHazardRadarPage() {
             <button
               type="button"
               key={value}
+              aria-pressed={radius === value}
               onClick={() => setRadius(value)}
               className={`rounded-full border px-4 py-2 text-sm font-bold ${radius === value ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant text-on-surface hover:bg-surface-container'}`}
             >
@@ -362,6 +363,7 @@ export default function WebHazardRadarPage() {
                 <button
                   type="button"
                   key={value}
+                  aria-pressed={severity === value}
                   onClick={() => setSeverity(value)}
                   className={`rounded-full px-4 py-2 text-sm font-bold ${severity === value ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}`}
                 >
@@ -375,6 +377,7 @@ export default function WebHazardRadarPage() {
                 <button
                   type="button"
                   key={value}
+                  aria-pressed={hours === value}
                   onClick={() => setHours(value)}
                   className={`rounded-full px-4 py-2 text-sm font-bold ${hours === value ? 'bg-secondary text-on-secondary' : 'bg-surface-container text-on-surface-variant'}`}
                 >

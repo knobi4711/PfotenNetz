@@ -82,12 +82,14 @@ export default function MissingPetDetailPage() {
                 Der aktuelle Browserstandort wird zusammen mit der Meldung gespeichert.
               </p>
               <textarea
+                aria-label="Beschreibung der Sichtung"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Wo und wann hast du das Tier gesehen?"
                 className="input mt-4 min-h-32 py-3"
               />
               <input
+                aria-label="Foto zur Sichtung hochladen"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 className="mt-4 block w-full rounded-xl border border-outline-variant/50 p-3 text-sm"

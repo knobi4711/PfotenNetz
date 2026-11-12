@@ -1032,6 +1032,7 @@ export function AvailabilityManager() {
           />
           {selectedSlot !== null && draft !== null ? (
             <View
+              accessibilityViewIsModal
               style={[
                 styles.sheetPanel,
                 { backgroundColor: c.surface, paddingBottom: insets.bottom },
@@ -1268,6 +1269,7 @@ export function AvailabilityManager() {
           />
           {actionSlot !== null ? (
             <View
+              accessibilityViewIsModal
               style={[
                 styles.actionPanel,
                 {

@@ -197,7 +197,7 @@ function HelperCard({
       >
         <View style={styles.helperHeader}>
           <View style={[styles.avatar, { backgroundColor: c.surfaceContainerHigh }]}>
-            <Text style={[styles.avatarText, { color: c.primary }]}>
+            <Text style={[styles.avatarText, { color: c.onSurfaceVariant }]}>
               {helperInitial(helper.display_name)}
             </Text>
           </View>

@@ -70,6 +70,29 @@ Die neue statische Prüfung findet **14 zusätzliche Punkte** (2 Hoch, 7 Mittel,
 
 Zusätzlich als Beobachtung ohne eigenen Befund: `aria-invalid` und `aria-describedby` kommen im Web nicht vor (0 Vorkommen). Fehler werden über `role="alert"` angesagt, aber nicht am betroffenen Feld verknüpft; das ist kein AA-Verstoß, würde die Orientierung bei Formularfehlern aber verbessern.
 
+### 1.3 Behebung der erneuten Prüfung (12.11.2026)
+
+Alle 14 Befunde aus 1.2 sind umgesetzt:
+
+| ID   | Status      | Umsetzung                                                                                                                                                                                                          |
+| ---- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| R-01 | **behoben** | `lib/page-titles.ts` bildet jeden Pfad auf einen Titel ab; `components/DocumentTitle.tsx` setzt `document.title` bei jeder Navigation (26 der 31 Seiten sind Client-Komponenten). 17 Unit-Tests für die Zuordnung. |
+| R-02 | **behoben** | `aria-label` für Suche/Art/Kategorie der Tauschbörse sowie Beschreibung und Foto-Upload der Sichtungsmeldung (beide Seiten).                                                                                       |
+| R-03 | **behoben** | Alle neun mobilen Bilder beschriftet oder mit `accessible={false}` ausgeblendet (Tierfotos, Buchungs-/Gefahren-/Sichtungsfotos, Logo).                                                                             |
+| R-04 | **behoben** | `ErrorBox` hat `accessibilityRole="alert"`; die vier Erfolgsmeldungen ebenfalls.                                                                                                                                   |
+| R-05 | **behoben** | Acht `Pressable` mit `accessibilityRole="button"`; Foto-Backdrop zusätzlich mit Label „Foto schließen“.                                                                                                            |
+| R-06 | **behoben** | `aria-pressed` für Radius, Dringlichkeit, Zeitraum, Gefahrentyp und Sicherheitszone.                                                                                                                               |
+| R-07 | **behoben** | `role="menu"`/`menuitem` durch `role="group"` und normale Buttons ersetzt.                                                                                                                                         |
+| R-08 | **behoben** | Buchungsansicht nutzt `role="group"` + `aria-pressed` statt unvollständigem Tab-Muster.                                                                                                                            |
+| R-09 | **behoben** | Alle vier Async-Fehler im Verfügbarkeits-Editor mit `role="alert"`.                                                                                                                                                |
+| R-10 | **behoben** | Onboarding-Hinweis auf `text-on-surface-variant` (8,45:1); Explore-Avatar auf `onSurfaceVariant` (7,64:1).                                                                                                         |
+| R-11 | **behoben** | `role="group"` für Schnellantworten und Suchergebnisse.                                                                                                                                                            |
+| R-12 | **behoben** | „Sichtung melden“ und „Foto anzeigen“ haben `minHeight: 44`.                                                                                                                                                       |
+| R-13 | **behoben** | Beide Chat-Header und der Onboarding-Titel mit `accessibilityRole="header"`.                                                                                                                                       |
+| R-14 | **behoben** | Alle drei mobilen Modals mit `accessibilityViewIsModal`.                                                                                                                                                           |
+
+Verifikation: `typecheck` web/mobile grün, `lint` web 0 Fehler (1 vorbestehende `<img>`-Warnung), mobile 0; Web-Vitest 17/17 (neu), Mobile-Vitest 96/96; `next build` erfolgreich. Nachprüfung per Skript: 0 Bilder ohne Label, 0 `Pressable` ohne Rolle, keine `role="menu"`/`tab`-Reste, alle Formularfelder beschriftet.
+
 ---
 
 ## 2. Befunde

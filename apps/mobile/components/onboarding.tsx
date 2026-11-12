@@ -135,6 +135,7 @@ export function OnboardingWizard({ userId }: { userId: string }) {
           style={styles.backdrop}
         />
         <View
+          accessibilityViewIsModal
           style={[
             styles.panel,
             { backgroundColor: c.surfaceContainerLow, paddingBottom: 18 + insets.bottom },
@@ -181,7 +182,9 @@ export function OnboardingWizard({ userId }: { userId: string }) {
             <MaterialCommunityIcons name={STEP_ICONS[step.id]} size={30} color={c.onPrimaryFixed} />
           </View>
 
-          <Text style={[styles.title, { color: c.onSurface }]}>{step.title}</Text>
+          <Text accessibilityRole="header" style={[styles.title, { color: c.onSurface }]}>
+            {step.title}
+          </Text>
           <Text style={[styles.summary, { color: c.onSurfaceVariant }]}>{step.summary}</Text>
 
           {step.bullets === undefined ? null : (

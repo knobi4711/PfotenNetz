@@ -313,12 +313,14 @@ export default function MarketplacePage() {
         {showCreate ? <CreateListingForm onCreated={() => setShowCreate(false)} /> : null}
         <div className="mt-8 grid gap-3 rounded-2xl bg-surface-container-low p-4 md:grid-cols-[1fr_auto_auto]">
           <input
+            aria-label="Tauschbörse durchsuchen"
             className="input"
             placeholder="Tiere, Futter, Transportbox …"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
           <select
+            aria-label="Art der Anzeige"
             className="input"
             value={kind ?? ''}
             onChange={(event) =>
@@ -333,6 +335,7 @@ export default function MarketplacePage() {
             ))}
           </select>
           <select
+            aria-label="Kategorie"
             className="input"
             value={category ?? ''}
             onChange={(event) => setCategory(event.target.value || undefined)}

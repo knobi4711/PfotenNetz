@@ -137,7 +137,7 @@ export default function HelperDetailScreen() {
                 />
               ) : null}
               {contactSent ? (
-                <Text style={[styles.privacy, { color: c.secondary }]}>
+                <Text accessibilityRole="alert" style={[styles.privacy, { color: c.secondary }]}>
                   Kontaktanfrage gesendet. Warte auf eine Antwort.
                 </Text>
               ) : (
@@ -256,7 +256,7 @@ export default function HelperDetailScreen() {
                   <ErrorBox message={userReportErrorMessage(createReport.error)} />
                 ) : null}
                 {createReport.isSuccess ? (
-                  <Text style={[styles.privacy, { color: c.secondary }]}>
+                  <Text accessibilityRole="alert" style={[styles.privacy, { color: c.secondary }]}>
                     Danke, deine Meldung wurde übermittelt.
                   </Text>
                 ) : (

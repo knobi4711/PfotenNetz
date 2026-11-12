@@ -61,7 +61,11 @@ function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
       >
         <View style={[styles.petAvatar, { backgroundColor: c.primaryFixed }]}>
           {pet.avatar_url !== null ? (
-            <Image source={{ uri: pet.avatar_url }} style={styles.petAvatarImage} />
+            <Image
+              accessible={false}
+              source={{ uri: pet.avatar_url }}
+              style={styles.petAvatarImage}
+            />
           ) : (
             <Text style={styles.petAvatarEmoji}>{pet.species === 'cat' ? '🐱' : '🐶'}</Text>
           )}
@@ -286,6 +290,7 @@ export default function PetsScreen() {
                     <View style={[styles.detailPhoto, { backgroundColor: c.primaryFixed }]}>
                       {editingPet.avatar_url !== null ? (
                         <Image
+                          accessibilityLabel={`Foto von ${editingPet.name}`}
                           source={{ uri: editingPet.avatar_url }}
                           style={styles.detailPhotoImage}
                         />

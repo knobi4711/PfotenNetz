@@ -124,7 +124,12 @@ export default function HazardDetailScreen() {
           <Text style={[styles.body, { color: c.onSurface }]}>{hazard.description}</Text>
         ) : null}
         {hazard.photos.map((path) => (
-          <Pressable key={path} onPress={() => void loadPhoto(path)}>
+          <Pressable
+            key={path}
+            accessibilityRole="button"
+            style={styles.linkButton}
+            onPress={() => void loadPhoto(path)}
+          >
             <Text style={[styles.photoLink, { color: c.primary }]}>Foto anzeigen →</Text>
           </Pressable>
         ))}
@@ -147,7 +152,7 @@ export default function HazardDetailScreen() {
           onPress={() => sendFeedback('Gefahr besteht weiterhin')}
         />
         {sighting.isSuccess ? (
-          <Text style={[styles.success, { color: c.secondary }]}>
+          <Text accessibilityRole="alert" style={[styles.success, { color: c.secondary }]}>
             Danke, deine Rückmeldung wurde gespeichert.
           </Text>
         ) : null}
@@ -157,8 +162,19 @@ export default function HazardDetailScreen() {
         {feedbackError ? <ErrorBox message={feedbackError} /> : null}
       </Card>
       <Modal transparent visible={photoVisible} onRequestClose={() => setPhotoVisible(false)}>
-        <Pressable style={styles.modal} onPress={() => setPhotoVisible(false)}>
-          {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.image} /> : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Foto schließen"
+          style={styles.modal}
+          onPress={() => setPhotoVisible(false)}
+        >
+          {photoUrl ? (
+            <Image
+              accessibilityLabel="Foto der Gefahrenmeldung"
+              source={{ uri: photoUrl }}
+              style={styles.image}
+            />
+          ) : null}
         </Pressable>
       </Modal>
       <ActionButton
@@ -178,6 +194,7 @@ const styles = StyleSheet.create({
   meta: { fontFamily: appFonts.regular, fontSize: 13, marginTop: 12 },
   body: { fontFamily: appFonts.regular, fontSize: 15, lineHeight: 22, marginTop: 14 },
   photoLink: { fontFamily: appFonts.semibold, marginTop: 12 },
+  linkButton: { minHeight: 44, justifyContent: 'center' },
   success: { fontFamily: appFonts.semibold, marginTop: 12 },
   modal: {
     flex: 1,

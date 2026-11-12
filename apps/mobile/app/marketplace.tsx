@@ -121,7 +121,9 @@ function ListingCard({
                 onPress={() => inquiry.mutate({ listingId: listing.id, message })}
               />
               {inquiry.isSuccess ? (
-                <Text style={[styles.success, { color: c.secondary }]}>Nachricht gesendet.</Text>
+                <Text accessibilityRole="alert" style={[styles.success, { color: c.secondary }]}>
+                  Nachricht gesendet.
+                </Text>
               ) : null}
               {inquiry.isError ? <ErrorBox message={inquiry.error.message} /> : null}
             </View>

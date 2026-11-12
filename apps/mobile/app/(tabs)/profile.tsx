@@ -712,7 +712,11 @@ export default function ProfileScreen() {
                   ]}
                 >
                   {avatarUrl ? (
-                    <Image source={{ uri: avatarUrl }} style={styles.profileAvatarImage} />
+                    <Image
+                      accessible={false}
+                      source={{ uri: avatarUrl }}
+                      style={styles.profileAvatarImage}
+                    />
                   ) : (
                     <Text style={[styles.profileAvatarText, { color: c.primary }]}>
                       {profile.display_name.slice(0, 1).toUpperCase() || '🐾'}

@@ -94,7 +94,7 @@ export default function ContactChatScreen() {
             <MaterialCommunityIcons name="paw" size={22} color={c.secondary} />
           </View>
           <View style={styles.headerText}>
-            <Text style={[styles.headerTitle, { color: c.onSurface }]}>
+            <Text accessibilityRole="header" style={[styles.headerTitle, { color: c.onSurface }]}>
               {otherPerson?.display_name ?? 'Kennenlern-Chat'}
             </Text>
             <Text style={[styles.headerSubtitle, { color: c.onSurfaceVariant }]}>

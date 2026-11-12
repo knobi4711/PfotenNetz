@@ -135,7 +135,7 @@ export default function BookingChatPage() {
             </p>
           )}
         </section>
-        <div className="mt-4 flex flex-wrap gap-2" aria-label="Schnellantworten">
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Schnellantworten">
           {['Danke! ❤️', 'Gibt es Probleme?', 'Wasser gegeben?'].map((reply) => (
             <button
               key={reply}

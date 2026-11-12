@@ -53,11 +53,15 @@ export default function ScanScreen() {
         <Text style={styles.hint}>Richte die Kamera auf den QR-Code der Notfallkarte.</Text>
         {error ? <ErrorBox message={error} /> : null}
         {scanned ? (
-          <Pressable style={styles.retry} onPress={() => setScanned(false)}>
+          <Pressable
+            accessibilityRole="button"
+            style={styles.retry}
+            onPress={() => setScanned(false)}
+          >
             <Text style={styles.retryText}>Erneut scannen</Text>
           </Pressable>
         ) : null}
-        <Pressable style={styles.back} onPress={() => router.back()}>
+        <Pressable accessibilityRole="button" style={styles.back} onPress={() => router.back()}>
           <Text style={styles.backText}>Abbrechen</Text>
         </Pressable>
       </View>

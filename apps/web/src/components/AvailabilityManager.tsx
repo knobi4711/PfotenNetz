@@ -751,7 +751,9 @@ export function AvailabilityManager() {
       {query.isPending ? (
         <p className="mt-4 text-sm text-on-surface-variant">Verfügbarkeiten werden geladen …</p>
       ) : query.isError ? (
-        <p className="mt-4 text-sm text-error">{query.error.message}</p>
+        <p role="alert" className="mt-4 text-sm text-error">
+          {query.error.message}
+        </p>
       ) : (
         <>
           <WeeklyEditor
@@ -769,13 +771,19 @@ export function AvailabilityManager() {
             </p>
           ) : null}
           {create.isError ? (
-            <p className="mt-3 text-sm text-error">{create.error.message}</p>
+            <p role="alert" className="mt-3 text-sm text-error">
+              {create.error.message}
+            </p>
           ) : null}
           {update.isError ? (
-            <p className="mt-3 text-sm text-error">{update.error.message}</p>
+            <p role="alert" className="mt-3 text-sm text-error">
+              {update.error.message}
+            </p>
           ) : null}
           {remove.isError ? (
-            <p className="mt-3 text-sm text-error">{remove.error.message}</p>
+            <p role="alert" className="mt-3 text-sm text-error">
+              {remove.error.message}
+            </p>
           ) : null}
 
           {slots.length === 0 ? (
@@ -1047,7 +1055,8 @@ export function AvailabilityManager() {
           }}
         >
           <div
-            role="menu"
+            role="group"
+            aria-label="Aktionen für das Zeitfenster"
             className="absolute w-60 rounded-2xl border border-outline-variant bg-surface-container-low p-2 shadow-xl"
             style={{ left: menuPosition.left, top: menuPosition.top }}
             onClick={(event) => event.stopPropagation()}
@@ -1061,7 +1070,6 @@ export function AvailabilityManager() {
             </p>
             <button
               type="button"
-              role="menuitem"
               className="mt-1 flex w-full items-center rounded-xl px-3 py-2 text-left text-sm font-bold text-on-surface hover:bg-surface-container"
               onClick={() => {
                 setMenu(null);
@@ -1072,7 +1080,6 @@ export function AvailabilityManager() {
             </button>
             <button
               type="button"
-              role="menuitem"
               className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm font-bold text-on-surface hover:bg-surface-container disabled:opacity-50"
               disabled={update.isPending}
               onClick={() => toggleActive(menuSlot)}
@@ -1081,7 +1088,6 @@ export function AvailabilityManager() {
             </button>
             <button
               type="button"
-              role="menuitem"
               className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm font-bold text-error hover:bg-error-container disabled:opacity-50"
               disabled={remove.isPending}
               onClick={() => deleteSlot(menuSlot)}

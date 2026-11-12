@@ -131,7 +131,11 @@ export default function MissingRadarScreen() {
             {report.description ? (
               <Text style={[styles.description, { color: c.onSurface }]}>{report.description}</Text>
             ) : null}
-            <Pressable onPress={() => setSelectedReportId(report.id)}>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.linkButton}
+              onPress={() => setSelectedReportId(report.id)}
+            >
               <Text style={[styles.hint, { color: c.primary }]}>Sichtung melden →</Text>
             </Pressable>
           </Card>
@@ -206,9 +210,10 @@ export default function MissingRadarScreen() {
                     showsHorizontalScrollIndicator={false}
                     style={styles.photoGallery}
                   >
-                    {sighting.photoUrls.map((photoUrl) => (
+                    {sighting.photoUrls.map((photoUrl, index) => (
                       <Image
                         key={photoUrl}
+                        accessibilityLabel={`Sichtungsfoto ${index + 1} von ${sighting.photoUrls.length}`}
                         source={{ uri: photoUrl }}
                         style={styles.sightingPhoto}
                         resizeMode="cover"
@@ -223,7 +228,7 @@ export default function MissingRadarScreen() {
           )}
         </Card>
       ) : null}
-      <Pressable onPress={() => router.replace('/missing')}>
+      <Pressable accessibilityRole="button" onPress={() => router.replace('/missing')}>
         <Text style={[styles.back, { color: c.primary }]}>← Eigene Suchmeldungen</Text>
       </Pressable>
     </ScrollView>
@@ -253,5 +258,6 @@ const styles = StyleSheet.create({
   sightingPhoto: { width: 120, height: 90, borderRadius: 12, marginTop: 8 },
   photoGallery: { marginTop: 4 },
   hint: { fontFamily: appFonts.bold, fontSize: 13, marginTop: 14 },
+  linkButton: { minHeight: 44, justifyContent: 'center' },
   back: { textAlign: 'center', fontFamily: appFonts.bold, padding: 16 },
 });

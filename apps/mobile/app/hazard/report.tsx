@@ -239,7 +239,7 @@ export default function HazardReportScreen() {
       {error ? <ErrorBox message={error} /> : null}
       <View style={styles.navigation}>
         {step > 1 ? (
-          <Pressable onPress={() => setStep((current) => current - 1)}>
+          <Pressable accessibilityRole="button" onPress={() => setStep((current) => current - 1)}>
             <Text style={[styles.back, { color: c.primary }]}>Zurück</Text>
           </Pressable>
         ) : (

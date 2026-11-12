@@ -445,7 +445,11 @@ export default function BookingDetailScreen() {
                             onPress={() => setLargePhotoUrl(photoUrl)}
                             style={styles.petPhotoPreview}
                           >
-                            <Image source={{ uri: photoUrl }} style={styles.petPhoto} />
+                            <Image
+                              accessible={false}
+                              source={{ uri: photoUrl }}
+                              style={styles.petPhoto}
+                            />
                           </Pressable>
                         ) : null}
                         <Text style={[styles.petGalleryName, { color: c.onSurface }]}>
@@ -823,7 +827,11 @@ export default function BookingDetailScreen() {
           style={styles.photoModal}
         >
           {largePhotoUrl !== null ? (
-            <Image source={{ uri: largePhotoUrl }} style={styles.largePhoto} />
+            <Image
+              accessibilityLabel="Foto in voller Größe"
+              source={{ uri: largePhotoUrl }}
+              style={styles.largePhoto}
+            />
           ) : null}
         </Pressable>
       </Modal>

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DocumentTitle } from '../components/DocumentTitle';
 import { OnboardingWizardHost } from '../components/OnboardingWizard';
 import { Providers } from '../providers/Providers';
 import './globals.css';
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Zum Inhalt springen
         </a>
         <Providers>
+          <DocumentTitle />
           {children}
           <OnboardingWizardHost />
         </Providers>

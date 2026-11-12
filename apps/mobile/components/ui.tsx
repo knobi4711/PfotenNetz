@@ -165,7 +165,10 @@ export function ActionButton({
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
   const c = usePalette();
   return (
-    <View style={[styles.errorBox, { backgroundColor: c.errorContainer }]}>
+    <View
+      accessibilityRole="alert"
+      style={[styles.errorBox, { backgroundColor: c.errorContainer }]}
+    >
       <Text style={[styles.errorText, { color: c.onErrorContainer }]}>{message}</Text>
       {onRetry !== undefined ? (
         <View style={styles.retryWrap}>
@@ -221,7 +224,7 @@ export function AppHeader({
       <View style={styles.brandRow}>
         <View style={styles.brandLockup}>
           <View style={[styles.brandMark, { backgroundColor: c.primaryFixed }]}>
-            <Image source={logo} style={styles.brandLogo} />
+            <Image accessible={false} source={logo} style={styles.brandLogo} />
           </View>
           <Text style={[styles.brandName, { color: c.onSurface }]}>PfotenNetz</Text>
         </View>

@@ -140,11 +140,10 @@ export default function BookingsPage() {
             </button>
           </div>
         </div>
-        <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Buchungsansicht">
+        <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label="Buchungsansicht">
           <button
             type="button"
-            role="tab"
-            aria-selected={view === 'active'}
+            aria-pressed={view === 'active'}
             className={view === 'active' ? 'btn-primary' : 'btn-secondary'}
             onClick={() => setView('active')}
           >
@@ -152,8 +151,7 @@ export default function BookingsPage() {
           </button>
           <button
             type="button"
-            role="tab"
-            aria-selected={view === 'archive'}
+            aria-pressed={view === 'archive'}
             className={view === 'archive' ? 'btn-primary' : 'btn-secondary'}
             onClick={() => setView('archive')}
           >

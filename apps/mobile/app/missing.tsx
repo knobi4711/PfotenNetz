@@ -100,6 +100,7 @@ export default function MissingPetsScreen() {
                 >
                   {pet.avatar_url ? (
                     <Image
+                      accessibilityLabel={`Foto von ${pet.name}`}
                       source={{ uri: pet.avatar_url }}
                       style={styles.petPhoto}
                       resizeMode="cover"
@@ -174,7 +175,7 @@ export default function MissingPetsScreen() {
           <EmptyText>Noch keine Suchmeldungen.</EmptyText>
         )}
       </Card>
-      <Pressable onPress={() => router.replace('/(tabs)/home')}>
+      <Pressable accessibilityRole="button" onPress={() => router.replace('/(tabs)/home')}>
         <Text style={[styles.back, { color: c.primary }]}>← Zur Übersicht</Text>
       </Pressable>
     </ScrollView>

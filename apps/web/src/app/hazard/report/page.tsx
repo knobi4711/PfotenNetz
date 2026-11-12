@@ -137,6 +137,7 @@ export default function WebHazardReportPage() {
                 <button
                   type="button"
                   key={value}
+                  aria-pressed={type === value}
                   onClick={() => setType(value)}
                   className={`rounded-xl border p-4 text-left font-bold ${type === value ? 'border-primary bg-primary-fixed text-on-primary-fixed-variant' : 'border-outline-variant/50 hover:bg-surface-container'}`}
                 >
@@ -178,7 +179,7 @@ export default function WebHazardReportPage() {
               </button>
             </div>
             {searchResults.length > 0 ? (
-              <div className="mt-3 grid gap-2" aria-label="Suchergebnisse">
+              <div className="mt-3 grid gap-2" role="group" aria-label="Suchergebnisse">
                 {searchResults.map((result) => (
                   <button
                     type="button"
@@ -207,6 +208,7 @@ export default function WebHazardReportPage() {
                 <button
                   type="button"
                   key={value}
+                  aria-pressed={severity === value}
                   onClick={() => setSeverity(value)}
                   className={`rounded-full px-4 py-2 text-sm font-bold ${severity === value ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}`}
                 >

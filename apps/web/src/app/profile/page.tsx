@@ -377,6 +377,7 @@ export default function ProfilePage() {
                       <button
                         key={option}
                         type="button"
+                        aria-pressed={radius === option}
                         className={`rounded-full px-3 py-2 text-sm font-bold ${radius === option ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface'}`}
                         onClick={() => setRadius(option)}
                       >
