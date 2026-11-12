@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu in 0.3.5: Buchungsvorlagen – speichere Tiere, Leistung, Vergütung und Hinweise am Ende des Buchungsformulars unter einem Namen und übernimm sie bei der nächsten Anfrage mit einem Klick. Außerdem zeigen Kennenlernanfragen jetzt präzisere Fehlermeldungen.';
+  'Neu in 0.3.6: Verbesserte Barrierefreiheit – höhere Kontraste, beschriftete Formularfelder, Fokusführung in Dialogen, zugängliche Karten und Verfügbarkeiten ohne Zeigegeste.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';

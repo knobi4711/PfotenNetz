@@ -3,7 +3,7 @@
     "name": "PfotenNetz",
     "slug": "pfotennetz",
     "scheme": "pfotennetz",
-    "version": "0.3.5",
+    "version": "0.3.6",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/pfotennetz-logo.png",
