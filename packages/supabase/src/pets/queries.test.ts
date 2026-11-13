@@ -82,6 +82,31 @@ describe('pets queries', () => {
     });
   });
 
+  it('stores the Tasso registration number for a pet', async () => {
+    const pet = { id: 'pet-1', name: 'Bella' };
+    const { client, calls } = clientWithStubs({
+      userId: 'user-1',
+      result: { data: pet, error: null },
+    });
+
+    await createPet(client, {
+      name: 'Bella',
+      species: 'dog',
+      breed: null,
+      color: null,
+      specialNeeds: null,
+      birthDate: null,
+      microchipNumber: ' 276000000000000 ',
+      tassoNumber: ' T-12345 ',
+    });
+
+    const insertCall = calls.find((call) => call.values !== undefined);
+    expect(insertCall?.values).toMatchObject({
+      microchip_number: '276000000000000',
+      tasso_number: 'T-12345',
+    });
+  });
+
   it('validates the pet name before creating', async () => {
     expect(
       validateCreatePet({

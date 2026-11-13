@@ -2,6 +2,14 @@ export const APP_NAME = 'PfotenNetz';
 export const APP_DESCRIPTION = 'Nachbarschafts-Plattform für Haustierbetreuung';
 export const APP_VERSION = '0.0.1';
 
+/**
+ * Tasso-Zentralregister: einheitliche Notrufnummer für alle registrierten
+ * Tiere. Die Nummer gehört nicht zum einzelnen Tierprofil, sondern wird
+ * überall gleich angezeigt und verlinkt.
+ */
+export const TASSO_PHONE_NUMBER = '+49 6190 937300';
+export const TASSO_PHONE_URL = 'tel:+496190937300';
+
 export const STORAGE_KEYS = {
   AUTH: 'pfotennetz-auth',
   THEME: 'pfotennetz-theme',

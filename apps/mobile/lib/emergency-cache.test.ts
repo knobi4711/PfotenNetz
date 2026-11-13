@@ -16,6 +16,7 @@ const card = {
   breed: null,
   birthDate: null,
   microchipNumber: '123',
+  tassoNumber: 'T-123',
   medications: ['Tablette'],
   allergies: [],
   vetClinic: null,

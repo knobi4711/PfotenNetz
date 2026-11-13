@@ -1226,6 +1226,7 @@ export type Database = {
           owner_id: string;
           special_needs: string | null;
           species: string;
+          tasso_number: string | null;
           tattoo_number: string | null;
           updated_at: string;
           vet_clinic: string | null;
@@ -1250,6 +1251,7 @@ export type Database = {
           owner_id: string;
           special_needs?: string | null;
           species: string;
+          tasso_number?: string | null;
           tattoo_number?: string | null;
           updated_at?: string;
           vet_clinic?: string | null;
@@ -1274,6 +1276,7 @@ export type Database = {
           owner_id?: string;
           special_needs?: string | null;
           species?: string;
+          tasso_number?: string | null;
           tattoo_number?: string | null;
           updated_at?: string;
           vet_clinic?: string | null;
@@ -2285,6 +2288,7 @@ export type Database = {
           name: string;
           special_needs: string;
           species: string;
+          tasso_number: string;
           vet_clinic: string;
           vet_phone: string;
         }[];

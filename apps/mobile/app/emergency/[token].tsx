@@ -8,6 +8,7 @@ import {
   type PublicEmergencyCard,
   type PetSpecies,
 } from '@pfotennetz/supabase';
+import { TASSO_PHONE_NUMBER, TASSO_PHONE_URL } from '@pfotennetz/shared';
 import {
   ActionButton,
   Card,
@@ -103,6 +104,8 @@ export default function PublicEmergencyScreen() {
       <Card>
         <SectionTitle>Wichtige Hinweise</SectionTitle>
         <Info label="Chipnummer" value={card.microchip_number} />
+        <Info label="Tasso-Nummer" value={card.tasso_number} />
+        <Info label="Tasso-Telefon" value={TASSO_PHONE_NUMBER} />
         <Info label="Medikamente" value={list(card.medications)} />
         <Info label="Allergien" value={list(card.allergies)} />
         <Info label="Besonderes" value={card.special_needs} />
@@ -112,6 +115,13 @@ export default function PublicEmergencyScreen() {
             title="Tierarzt anrufen"
             variant="secondary"
             onPress={() => void Linking.openURL(`tel:${card.vet_phone}`)}
+          />
+        ) : null}
+        {card.tasso_number ? (
+          <ActionButton
+            title="Tasso anrufen"
+            variant="secondary"
+            onPress={() => void Linking.openURL(TASSO_PHONE_URL)}
           />
         ) : null}
       </Card>

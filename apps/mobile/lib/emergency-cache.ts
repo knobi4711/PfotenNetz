@@ -7,6 +7,7 @@ export type EmergencyCardSnapshot = {
   breed: string | null;
   birthDate: string | null;
   microchipNumber: string | null;
+  tassoNumber: string | null;
   medications: string[];
   allergies: string[];
   vetClinic: string | null;
@@ -28,6 +29,7 @@ function isEmergencyCardSnapshot(value: unknown): value is EmergencyCardSnapshot
     (card.breed === null || typeof card.breed === 'string') &&
     (card.birthDate === null || typeof card.birthDate === 'string') &&
     (card.microchipNumber === null || typeof card.microchipNumber === 'string') &&
+    (card.tassoNumber === null || typeof card.tassoNumber === 'string') &&
     Array.isArray(card.medications) &&
     card.medications.every((item) => typeof item === 'string') &&
     Array.isArray(card.allergies) &&

@@ -9,6 +9,7 @@ import {
   useRevokeEmergencyCardLink,
   type PetSpecies,
 } from '@pfotennetz/supabase';
+import { TASSO_PHONE_NUMBER, TASSO_PHONE_URL } from '@pfotennetz/shared';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -128,6 +129,8 @@ export default function EmergencyCardPage() {
                 <Info label="Alter" value={age(pet.birth_date)} />
                 <Info label="Rasse" value={pet.breed ?? 'Nicht angegeben'} />
                 <Info label="Chipnummer" value={pet.microchip_number ?? 'Nicht angegeben'} />
+                <Info label="Tasso-Nummer" value={pet.tasso_number ?? 'Nicht angegeben'} />
+                <Info label="Tasso-Telefon" value={TASSO_PHONE_NUMBER} />
                 <Info label="Medikamente" value={list(pet.medications)} />
                 <Info label="Allergien" value={list(pet.allergies)} />
                 <Info
@@ -139,6 +142,11 @@ export default function EmergencyCardPage() {
               </dl>
             </section>
 
+            {pet.tasso_number ? (
+              <a href={TASSO_PHONE_URL} className="btn-secondary mt-5 mr-3 inline-flex">
+                Tasso anrufen
+              </a>
+            ) : null}
             {message ? (
               <p
                 role="status"

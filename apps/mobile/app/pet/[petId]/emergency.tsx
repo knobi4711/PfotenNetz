@@ -11,6 +11,7 @@ import {
   useRevokeEmergencyCardLink,
   type PetSpecies,
 } from '@pfotennetz/supabase';
+import { TASSO_PHONE_NUMBER, TASSO_PHONE_URL } from '@pfotennetz/shared';
 import {
   ActionButton,
   AppHeader,
@@ -79,6 +80,7 @@ export default function EmergencyCardScreen() {
       breed: pet.breed,
       birthDate: pet.birth_date,
       microchipNumber: pet.microchip_number,
+      tassoNumber: pet.tasso_number,
       medications: Array.isArray(pet.medications)
         ? pet.medications.filter((item): item is string => typeof item === 'string')
         : [],
@@ -120,7 +122,7 @@ export default function EmergencyCardScreen() {
       const publicUrl = `${webUrl}/emergency/${token}`;
       await Share.share({
         title: `Notfallkarte ${pet.name}`,
-        message: `PfotenNetz Notfallkarte (Link 30 Tage gültig)\n\n${publicUrl}\n\nName: ${pet.name}\nTierart: ${PET_SPECIES_LABELS[pet.species as PetSpecies] ?? pet.species}\nAlter: ${calculateAge(pet.birth_date)}\nChipnummer: ${pet.microchip_number ?? 'Nicht angegeben'}\nMedikamente: ${jsonList(pet.medications)}\nAllergien: ${pet.allergies?.join(', ') || 'Keine Angaben'}\nTierarzt: ${pet.vet_clinic ?? 'Nicht angegeben'} · ${pet.vet_phone ?? 'Keine Telefonnummer'}\nBesonderes: ${pet.special_needs ?? 'Keine Angaben'}`,
+        message: `PfotenNetz Notfallkarte (Link 30 Tage gültig)\n\n${publicUrl}\n\nName: ${pet.name}\nTierart: ${PET_SPECIES_LABELS[pet.species as PetSpecies] ?? pet.species}\nAlter: ${calculateAge(pet.birth_date)}\nChipnummer: ${pet.microchip_number ?? 'Nicht angegeben'}\nTasso-Nummer: ${pet.tasso_number ?? 'Nicht angegeben'}\nTasso-Telefon: ${TASSO_PHONE_NUMBER}\nMedikamente: ${jsonList(pet.medications)}\nAllergien: ${pet.allergies?.join(', ') || 'Keine Angaben'}\nTierarzt: ${pet.vet_clinic ?? 'Nicht angegeben'} · ${pet.vet_phone ?? 'Keine Telefonnummer'}\nBesonderes: ${pet.special_needs ?? 'Keine Angaben'}`,
       });
     } catch (error) {
       setLinkError(error instanceof Error ? error.message : 'Link konnte nicht erstellt werden.');
@@ -166,6 +168,8 @@ export default function EmergencyCardScreen() {
             value={pet.is_deceased ? 'Verstorben' : pet.is_active ? 'Aktiv' : 'Pausiert'}
           />
           <Info label="Chipnummer" value={pet.microchip_number ?? 'Nicht angegeben'} />
+          <Info label="Tasso-Nummer" value={pet.tasso_number ?? 'Nicht angegeben'} />
+          <Info label="Tasso-Telefon" value={TASSO_PHONE_NUMBER} />
         </View>
       </Card>
       <Card>
@@ -185,6 +189,13 @@ export default function EmergencyCardScreen() {
         <ActionButton
           title="Tierarzt direkt anrufen"
           onPress={() => void Linking.openURL(phoneUrl(pet.vet_phone) as string)}
+        />
+      ) : null}
+      {pet.tasso_number !== null ? (
+        <ActionButton
+          title="Tasso anrufen"
+          variant="secondary"
+          onPress={() => void Linking.openURL(TASSO_PHONE_URL)}
         />
       ) : null}
       {links.data
@@ -255,6 +266,8 @@ function OfflineEmergencyCard({ card }: { card: EmergencyCardSnapshot }) {
           <Info label="Alter" value={calculateAge(card.birthDate)} />
           <Info label="Rasse" value={card.breed ?? 'Nicht angegeben'} />
           <Info label="Chipnummer" value={card.microchipNumber ?? 'Nicht angegeben'} />
+          <Info label="Tasso-Nummer" value={card.tassoNumber ?? 'Nicht angegeben'} />
+          <Info label="Tasso-Telefon" value={TASSO_PHONE_NUMBER} />
         </View>
       </Card>
       <Card>

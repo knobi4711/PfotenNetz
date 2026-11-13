@@ -36,6 +36,7 @@ export interface CreatePetInput {
   specialNeeds: string | null;
   birthDate: string | null;
   microchipNumber?: string | null;
+  tassoNumber?: string | null;
   insurancePolicy?: string | null;
   vetClinic?: string | null;
   vetPhone?: string | null;
@@ -87,8 +88,16 @@ function toInsertRow(ownerId: string, input: CreatePetInput) {
         vet_phone: input.vetPhone?.trim() || null,
         medications: input.medications ?? [],
         allergies: input.allergies ?? [],
+        ...(input.tassoNumber !== undefined
+          ? { tasso_number: input.tassoNumber?.trim() || null }
+          : {}),
       }
-    : row;
+    : {
+        ...row,
+        ...(input.tassoNumber !== undefined
+          ? { tasso_number: input.tassoNumber?.trim() || null }
+          : {}),
+      };
 }
 
 /** Loads the caller's own pets, newest first (RLS: owners only). */
@@ -159,6 +168,9 @@ export async function updatePet(
             medications: input.medications ?? [],
             allergies: input.allergies ?? [],
           }
+        : {}),
+      ...(input.tassoNumber !== undefined
+        ? { tasso_number: input.tassoNumber?.trim() || null }
         : {}),
     })
     .eq('id', input.petId)

@@ -17,6 +17,7 @@ import {
   type Pet,
   type PetSpecies,
 } from '@pfotennetz/supabase';
+import { TASSO_PHONE_NUMBER } from '@pfotennetz/shared';
 import {
   ActionButton,
   AppHeader,
@@ -80,6 +81,7 @@ function PetCard({ pet, onEdit }: { pet: Pet; onEdit: (pet: Pet) => void }) {
       </Pressable>
       {pet.breed !== null ? <InfoRow label="Rasse" value={pet.breed} /> : null}
       {pet.color !== null ? <InfoRow label="Farbe" value={pet.color} /> : null}
+      {pet.tasso_number !== null ? <InfoRow label="Tasso-Nummer" value={pet.tasso_number} /> : null}
       {pet.special_needs !== null ? <InfoRow label="Besonderes" value={pet.special_needs} /> : null}
       <ActionButton
         title="Notfallkarte"
@@ -116,6 +118,7 @@ export default function PetsScreen() {
   const [color, setColor] = useState('');
   const [specialNeeds, setSpecialNeeds] = useState('');
   const [microchipNumber, setMicrochipNumber] = useState('');
+  const [tassoNumber, setTassoNumber] = useState('');
   const [insurancePolicy, setInsurancePolicy] = useState('');
   const [vetClinic, setVetClinic] = useState('');
   const [vetPhone, setVetPhone] = useState('');
@@ -161,6 +164,7 @@ export default function PetsScreen() {
     setColor(pet.color ?? '');
     setSpecialNeeds(pet.special_needs ?? '');
     setMicrochipNumber(pet.microchip_number ?? '');
+    setTassoNumber(pet.tasso_number ?? '');
     setInsurancePolicy(pet.insurance_policy ?? '');
     setVetClinic(pet.vet_clinic ?? '');
     setVetPhone(pet.vet_phone ?? '');
@@ -195,6 +199,7 @@ export default function PetsScreen() {
     setColor('');
     setSpecialNeeds('');
     setMicrochipNumber('');
+    setTassoNumber('');
     setInsurancePolicy('');
     setVetClinic('');
     setVetPhone('');
@@ -234,6 +239,7 @@ export default function PetsScreen() {
       specialNeeds: specialNeeds.trim() === '' ? null : specialNeeds.trim(),
       birthDate: year === '' ? null : `${year}-${month}-${day}`,
       microchipNumber,
+      tassoNumber,
       insurancePolicy,
       vetClinic,
       vetPhone,
@@ -554,6 +560,26 @@ export default function PetsScreen() {
                   ]}
                   value={microchipNumber}
                 />
+                <Text style={[styles.label, { color: c.onSurface }]}>Tasso-Nummer (optional)</Text>
+                <TextInput
+                  accessibilityLabel="Tasso-Nummer, optional"
+                  editable={!pending}
+                  onChangeText={setTassoNumber}
+                  placeholder="Registrierungsnummer bei Tasso"
+                  placeholderTextColor={c.placeholder}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: c.surfaceContainerLow,
+                      borderColor: c.outlineVariant,
+                      color: c.onSurface,
+                    },
+                  ]}
+                  value={tassoNumber}
+                />
+                <Text style={[styles.tassoHint, { color: c.onSurfaceVariant }]}>
+                  Tasso-Telefon für alle Tiere: {TASSO_PHONE_NUMBER}
+                </Text>
                 <Text style={[styles.label, { color: c.onSurface }]}>
                   Medikamente (kommagetrennt)
                 </Text>
@@ -688,6 +714,7 @@ export default function PetsScreen() {
                   setColor('');
                   setSpecialNeeds('');
                   setMicrochipNumber('');
+                  setTassoNumber('');
                   setInsurancePolicy('');
                   setVetClinic('');
                   setVetPhone('');
@@ -737,6 +764,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   multiline: { minHeight: 88, paddingTop: 12, textAlignVertical: 'top' },
+  tassoHint: { fontFamily: appFonts.regular, fontSize: 12, lineHeight: 18, marginTop: 6 },
   hint: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, marginTop: 8 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },

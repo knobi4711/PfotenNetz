@@ -12,6 +12,7 @@ import {
   type Pet,
   type PetSpecies,
 } from '@pfotennetz/supabase';
+import { TASSO_PHONE_NUMBER } from '@pfotennetz/shared';
 import Image from 'next/image';
 import Link from 'next/link';
 import { WebHeader } from '../../components/WebHeader';
@@ -34,6 +35,7 @@ function PetEditor({ pet, onClose }: { pet: Pet | null; onClose: () => void }) {
   const [specialNeeds, setSpecialNeeds] = useState(pet?.special_needs ?? '');
   const [birthDate, setBirthDate] = useState(pet?.birth_date ?? '');
   const [microchipNumber, setMicrochipNumber] = useState(pet?.microchip_number ?? '');
+  const [tassoNumber, setTassoNumber] = useState(pet?.tasso_number ?? '');
   const [insurancePolicy, setInsurancePolicy] = useState(pet?.insurance_policy ?? '');
   const [vetClinic, setVetClinic] = useState(pet?.vet_clinic ?? '');
   const [vetPhone, setVetPhone] = useState(pet?.vet_phone ?? '');
@@ -50,6 +52,7 @@ function PetEditor({ pet, onClose }: { pet: Pet | null; onClose: () => void }) {
       specialNeeds: specialNeeds || null,
       birthDate: birthDate || null,
       microchipNumber,
+      tassoNumber,
       insurancePolicy,
       vetClinic,
       vetPhone,
@@ -124,6 +127,18 @@ function PetEditor({ pet, onClose }: { pet: Pet | null; onClose: () => void }) {
             value={microchipNumber}
             onChange={(event) => setMicrochipNumber(event.target.value)}
           />
+        </label>
+        <label className="text-sm font-bold">
+          Tasso-Nummer
+          <input
+            className="input mt-1"
+            placeholder="Registrierungsnummer bei Tasso"
+            value={tassoNumber}
+            onChange={(event) => setTassoNumber(event.target.value)}
+          />
+          <span className="mt-1 block text-xs font-normal text-on-surface-variant">
+            Tasso-Telefon für alle Tiere: {TASSO_PHONE_NUMBER}
+          </span>
         </label>
         <label className="text-sm font-bold">
           Versicherungspolice
@@ -443,6 +458,12 @@ export default function PetsPage() {
                     <div>
                       <dt className="font-bold text-on-surface-variant">Farbe</dt>
                       <dd className="mt-1 text-on-surface">{pet.color ?? 'Nicht angegeben'}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-bold text-on-surface-variant">Tasso-Nummer</dt>
+                      <dd className="mt-1 text-on-surface">
+                        {pet.tasso_number ?? 'Nicht angegeben'}
+                      </dd>
                     </div>
                   </dl>
                   {pet.special_needs ? (

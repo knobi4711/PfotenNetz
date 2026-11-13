@@ -124,6 +124,7 @@ export const createPetSchema = z.object({
   weight_kg: z.number().positive().max(200).optional().nullable(),
   color: z.string().max(30).optional().nullable(),
   microchip_number: z.string().max(20).optional().nullable(),
+  tasso_number: z.string().max(40).optional().nullable(),
 });
 
 export const createHazardSchema = z.object({

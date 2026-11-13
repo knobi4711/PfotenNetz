@@ -5,6 +5,7 @@ import {
   getSupabaseClient,
   type PublicEmergencyCard,
 } from '@pfotennetz/supabase';
+import { TASSO_PHONE_NUMBER, TASSO_PHONE_URL } from '@pfotennetz/shared';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -127,6 +128,7 @@ export default function PublicEmergencyCardPage() {
             <dl className="mt-6 space-y-4">
               <Row label="Farbe" value={card.color} />
               <Row label="Chipnummer" value={card.microchip_number} />
+              <Row label="Tasso-Nummer" value={card.tasso_number} />
               <Row label="Medikamente" value={list(card.medications)} />
               <Row label="Allergien" value={list(card.allergies)} />
               <Row label="Besondere Hinweise" value={card.special_needs} />
@@ -143,6 +145,14 @@ export default function PublicEmergencyCardPage() {
                 ) : (
                   <dd className="mt-1">Nicht angegeben</dd>
                 )}
+              </div>
+              <div className="border-b border-outline-variant/30 pb-3">
+                <dt className="text-sm font-bold text-on-surface-variant">Tasso-Telefon</dt>
+                <dd className="mt-1">
+                  <a href={TASSO_PHONE_URL} className="font-bold text-primary underline">
+                    {TASSO_PHONE_NUMBER}
+                  </a>
+                </dd>
               </div>
             </dl>
             <p className="mt-8 text-xs text-on-surface-variant">
