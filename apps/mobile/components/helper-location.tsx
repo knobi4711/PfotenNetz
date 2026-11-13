@@ -203,6 +203,55 @@ export function PetHomeCard({ profile }: { profile: Profile }) {
 
   const confirmedAddress = candidate !== null ? buildProfileAddress(candidate.address) : null;
 
+  const candidateBox =
+    candidate !== null ? (
+      <View
+        style={[styles.candidateBox, { borderColor: c.primary, backgroundColor: c.primaryFixed }]}
+      >
+        <Text style={[styles.candidateTitle, { color: c.onSurface }]}>Bitte Standort prüfen</Text>
+        <Text style={[styles.candidateText, { color: c.onSurfaceVariant }]}>
+          {candidate.source === 'gps'
+            ? `Das Gerät meldet: ${candidate.displayName}`
+            : `Ausgewählt: ${candidate.displayName}`}
+        </Text>
+        {addressPending ? (
+          <Text style={[styles.candidateText, { color: c.onSurfaceVariant }]}>
+            Straßenadresse wird ermittelt …
+          </Text>
+        ) : confirmedAddress !== null ? (
+          <Text style={[styles.candidateText, { color: c.onSurface }]}>
+            Wird als Profiladresse übernommen: {confirmedAddress.street},{' '}
+            {confirmedAddress.postalCode} {confirmedAddress.city}
+          </Text>
+        ) : (
+          <Text style={[styles.candidateText, { color: c.onSurfaceVariant }]}>
+            Für diese Position wurde keine vollständige Straßenadresse ermittelt. Wähle den Ort in
+            diesem Fall über die Ortssuche.
+          </Text>
+        )}
+        {candidate.source === 'gps' ? (
+          <Text style={[styles.candidateText, { color: c.onSurfaceVariant }]}>
+            Speichere diesen Standort nur, wenn der angezeigte Ort wirklich stimmt. Eine
+            Gerät-Ortung kann trotz Freigabe falsch liegen.
+          </Text>
+        ) : null}
+        <View style={styles.candidateActions}>
+          <ActionButton
+            title={addressPending ? 'Adresse wird ermittelt …' : `Als ${homeLabel} speichern`}
+            pending={pending}
+            disabled={addressPending}
+            onPress={confirmCandidate}
+          />
+          <ActionButton
+            title="Verwerfen"
+            variant="secondary"
+            disabled={pending}
+            onPress={dismissCandidate}
+          />
+        </View>
+      </View>
+    ) : null;
+
   return (
     <Card>
       <SectionTitle>{homeLabel}</SectionTitle>
@@ -230,53 +279,7 @@ export function PetHomeCard({ profile }: { profile: Profile }) {
         onPress={locate}
       />
 
-      {candidate !== null ? (
-        <View
-          style={[styles.candidateBox, { borderColor: c.primary, backgroundColor: c.primaryFixed }]}
-        >
-          <Text style={[styles.candidateTitle, { color: c.onSurface }]}>Bitte Standort prüfen</Text>
-          <Text style={[styles.candidateText, { color: c.onSurfaceVariant }]}>
-            {candidate.source === 'gps'
-              ? `Das Gerät meldet: ${candidate.displayName}`
-              : `Ausgewählt: ${candidate.displayName}`}
-          </Text>
-          {addressPending ? (
-            <Text style={[styles.candidateText, { color: c.onSurfaceVariant }]}>
-              Straßenadresse wird ermittelt …
-            </Text>
-          ) : confirmedAddress !== null ? (
-            <Text style={[styles.candidateText, { color: c.onSurface }]}>
-              Wird als Profiladresse übernommen: {confirmedAddress.street},{' '}
-              {confirmedAddress.postalCode} {confirmedAddress.city}
-            </Text>
-          ) : (
-            <Text style={[styles.candidateText, { color: c.onSurfaceVariant }]}>
-              Für diese Position wurde keine vollständige Straßenadresse ermittelt. Wähle den Ort in
-              diesem Fall über die Ortssuche.
-            </Text>
-          )}
-          {candidate.source === 'gps' ? (
-            <Text style={[styles.candidateText, { color: c.onSurfaceVariant }]}>
-              Speichere diesen Standort nur, wenn der angezeigte Ort wirklich stimmt. Eine
-              Gerät-Ortung kann trotz Freigabe falsch liegen.
-            </Text>
-          ) : null}
-          <View style={styles.candidateActions}>
-            <ActionButton
-              title="Standort bestätigen und speichern"
-              pending={pending}
-              disabled={addressPending}
-              onPress={confirmCandidate}
-            />
-            <ActionButton
-              title="Verwerfen"
-              variant="secondary"
-              disabled={pending}
-              onPress={dismissCandidate}
-            />
-          </View>
-        </View>
-      ) : null}
+      {candidate?.source === 'gps' ? candidateBox : null}
 
       <View style={styles.searchRow}>
         <TextInput
@@ -299,6 +302,8 @@ export function PetHomeCard({ profile }: { profile: Profile }) {
         <Pressable
           key={`${result.latitude}-${result.longitude}`}
           accessibilityRole="button"
+          accessibilityLabel={`${result.displayName} als ${homeLabel} übernehmen`}
+          accessibilityHint="Öffnet die Bestätigung, in der der Standort gespeichert wird."
           onPress={() => {
             applyCandidate({ ...result, source: 'search' });
             setSearchResults([]);
@@ -309,8 +314,13 @@ export function PetHomeCard({ profile }: { profile: Profile }) {
           <Text style={[styles.searchResultText, { color: c.onSurface }]}>
             {result.displayName}
           </Text>
+          <Text style={[styles.searchResultAction, { color: c.primary }]}>
+            Diesen Ort übernehmen ›
+          </Text>
         </Pressable>
       ))}
+
+      {candidate?.source === 'search' ? candidateBox : null}
 
       {updateLocation.isError ? (
         <Text style={[styles.errorText, { color: c.error }]}>
@@ -359,6 +369,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   searchResultText: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 18 },
+  searchResultAction: {
+    fontFamily: appFonts.semibold,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
+  },
   errorText: { fontFamily: appFonts.regular, fontSize: 13, lineHeight: 20, marginTop: 8 },
   savedText: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 18, marginTop: 8 },
 });
