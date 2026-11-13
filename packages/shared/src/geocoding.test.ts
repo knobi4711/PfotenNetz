@@ -90,6 +90,7 @@ describe('OpenStreetMap geocoding', () => {
       street: 'Musterstraße 12',
       postalCode: '04109',
       city: 'Leipzig',
+      place: 'Leipzig',
     });
   });
 
@@ -118,6 +119,7 @@ describe('OpenStreetMap geocoding', () => {
         street: 'Pestalozzistraße 10',
         postalCode: '06258',
         city: 'Ermlitz',
+        place: 'Schkopau',
       },
     });
   });
@@ -137,6 +139,7 @@ describe('OpenStreetMap geocoding', () => {
             postcode: '06258',
             village: 'Ermlitz',
             municipality: 'Schkopau',
+            town: 'Merseburg',
           },
         }),
       })
@@ -150,7 +153,58 @@ describe('OpenStreetMap geocoding', () => {
         street: 'Dorfstraße 3',
         postalCode: '06258',
         city: 'Ermlitz',
+        place: 'Schkopau',
       },
+    });
+  });
+
+  it('uses the district name for an address in a big city', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          lat: '52.49',
+          lon: '13.4',
+          display_name: 'Bergmannstraße 3, 10961 Berlin, Deutschland',
+          address: {
+            road: 'Bergmannstraße',
+            house_number: '3',
+            postcode: '10961',
+            city: 'Berlin',
+            suburb: 'Kreuzberg',
+          },
+        }),
+      })
+    );
+
+    await expect(reverseGeocodeOpenStreetMap(52.49, 13.4)).resolves.toMatchObject({
+      address: { city: 'Berlin', place: 'Kreuzberg' },
+    });
+  });
+
+  it('uses the town name for an address in a small town', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          lat: '51.87',
+          lon: '10.03',
+          display_name: 'Markt 1, 37581 Bad Gandersheim, Deutschland',
+          address: {
+            road: 'Markt',
+            house_number: '1',
+            postcode: '37581',
+            town: 'Bad Gandersheim',
+            suburb: 'Altstadt',
+          },
+        }),
+      })
+    );
+
+    await expect(reverseGeocodeOpenStreetMap(51.87, 10.03)).resolves.toMatchObject({
+      address: { city: 'Bad Gandersheim', place: 'Bad Gandersheim' },
     });
   });
 });

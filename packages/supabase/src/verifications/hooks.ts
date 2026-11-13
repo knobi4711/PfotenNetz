@@ -62,7 +62,7 @@ export function useUpdateOwnLocation() {
   const client = getSupabaseClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { latitude: number; longitude: number }) =>
+    mutationFn: (input: { latitude: number; longitude: number; homePlace?: string | null }) =>
       updateOwnLocation(client, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });

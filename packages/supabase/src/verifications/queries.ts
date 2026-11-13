@@ -94,7 +94,7 @@ export async function reviewHelperVerification(
 /** Securely stores the caller's location (validated server-side). */
 export async function updateOwnLocation(
   client: SupabaseClient<Database>,
-  input: { latitude: number; longitude: number }
+  input: { latitude: number; longitude: number; homePlace?: string | null }
 ): Promise<void> {
   if (!Number.isFinite(input.latitude) || input.latitude < -90 || input.latitude > 90) {
     throw new Error('Ungültiger Breitengrad.');
@@ -107,4 +107,16 @@ export async function updateOwnLocation(
     p_longitude: input.longitude,
   });
   if (error) throw error;
+
+  if (input.homePlace === undefined) return;
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (user === null) throw new Error('Not authenticated');
+  const homePlace = input.homePlace?.trim() || null;
+  const { error: homePlaceError } = await client
+    .from('profiles')
+    .update({ home_place: homePlace })
+    .eq('id', user.id);
+  if (homePlaceError) throw homePlaceError;
 }

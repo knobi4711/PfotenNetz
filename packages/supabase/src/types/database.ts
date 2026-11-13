@@ -1336,6 +1336,7 @@ export type Database = {
           created_at: string;
           display_name: string;
           email: string;
+          home_place: string | null;
           id: string;
           kiez_radius_km: number;
           language: string;
@@ -1356,6 +1357,7 @@ export type Database = {
           created_at?: string;
           display_name: string;
           email: string;
+          home_place?: string | null;
           id: string;
           kiez_radius_km?: number;
           language?: string;
@@ -1376,6 +1378,7 @@ export type Database = {
           created_at?: string;
           display_name?: string;
           email?: string;
+          home_place?: string | null;
           id?: string;
           kiez_radius_km?: number;
           language?: string;

@@ -100,6 +100,7 @@ export function WebHeader({
 }) {
   const profile = useOwnProfile();
   const account = useTimebankAccount();
+  const homePlace = profile.data?.home_place?.trim();
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -129,7 +130,14 @@ export function WebHeader({
               className="h-11 w-11 rounded-xl object-cover"
               priority
             />
-            <span className="text-xl font-extrabold text-on-surface">PfotenNetz</span>
+            <span className="flex min-w-0 flex-col leading-tight">
+              <span className="text-xl font-extrabold text-on-surface">PfotenNetz</span>
+              {homePlace ? (
+                <span className="truncate text-sm font-semibold text-on-surface-variant">
+                  {homePlace}
+                </span>
+              ) : null}
+            </span>
           </Link>
           {backHref ? (
             <Link

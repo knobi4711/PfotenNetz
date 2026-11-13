@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 import { colors } from '@pfotennetz/design-system';
+import { useAuth, useOwnProfile } from '@pfotennetz/supabase';
 import { bookingStatusLabels, type BookingStatus } from '../lib/booking';
 import { useTheme } from '../providers/theme';
 import logo from '../assets/pfotennetz-logo.png';
@@ -222,6 +223,9 @@ export function AppHeader({
   const c = usePalette();
   const router = useRouter();
   const pathname = usePathname();
+  const auth = useAuth();
+  const profile = useOwnProfile({ enabled: auth.status === 'authenticated' });
+  const homePlace = profile.data?.home_place?.trim();
   const isProfileTab = pathname === '/profile';
   const openProfile =
     onAvatarPress ??
@@ -235,7 +239,14 @@ export function AppHeader({
           <View style={[styles.brandMark, { backgroundColor: c.primaryFixed }]}>
             <Image accessible={false} source={logo} style={styles.brandLogo} />
           </View>
-          <Text style={[styles.brandName, { color: c.onSurface }]}>PfotenNetz</Text>
+          <View style={styles.brandText}>
+            <Text style={[styles.brandName, { color: c.onSurface }]}>PfotenNetz</Text>
+            {homePlace ? (
+              <Text numberOfLines={1} style={[styles.brandLocation, { color: c.onSurfaceVariant }]}>
+                {homePlace}
+              </Text>
+            ) : null}
+          </View>
         </View>
         <View style={styles.appHeaderSide}>
           {onNotifications !== undefined ? (
@@ -504,7 +515,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 18,
   },
-  brandLockup: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  brandLockup: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  brandText: { flexShrink: 1 },
   brandMark: {
     width: 40,
     height: 40,
@@ -514,6 +526,12 @@ const styles = StyleSheet.create({
   },
   brandLogo: { width: 40, height: 40, borderRadius: 8 },
   brandName: { fontFamily: appFonts.extrabold, fontSize: 17, letterSpacing: -0.2 },
+  brandLocation: {
+    fontFamily: appFonts.semibold,
+    fontSize: 13,
+    lineHeight: 17,
+    marginTop: -1,
+  },
   appHeaderMain: { flexShrink: 1, flex: 1 },
   appHeaderTitle: {
     fontFamily: appFonts.extrabold,

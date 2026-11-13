@@ -167,6 +167,7 @@ export function PetHomeCard({ profile }: { profile: Profile }) {
         await updateLocation.mutateAsync({
           latitude: candidate.latitude,
           longitude: candidate.longitude,
+          homePlace: candidate.address?.place ?? null,
         });
         if (confirmedAddress === null) {
           setCandidate(null);

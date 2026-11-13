@@ -2,6 +2,11 @@ export interface GeocodingAddress {
   street: string | null;
   postalCode: string | null;
   city: string | null;
+  /**
+   * Ortsname des Tier-Zuhauses: in Großstädten der Stadtteil, in Kleinstädten
+   * der Stadtname und auf dem Land der Gemeindename.
+   */
+  place: string | null;
 }
 
 export interface GeocodingResult {
@@ -18,7 +23,13 @@ interface NominatimAddress {
   city?: string;
   town?: string;
   village?: string;
+  hamlet?: string;
   municipality?: string;
+  suburb?: string;
+  city_district?: string;
+  borough?: string;
+  quarter?: string;
+  neighbourhood?: string;
 }
 
 interface NominatimResult {
@@ -42,6 +53,37 @@ const OPENSTREETMAP_HEADERS: Record<string, string> = {
   'User-Agent': OPENSTREETMAP_USER_AGENT,
 };
 
+function trimmed(value: string | undefined): string | null {
+  return value?.trim() || null;
+}
+
+/**
+ * Wählt den Ortsnamen fürs Tier-Zuhause nach der Siedlungsgröße:
+ * - Land (`village`/`hamlet`): Gemeindename, sonst Ortschaft
+ * - Kleinstadt (`town`): Stadtname
+ * - Großstadt (`city` mit Stadtteil): Stadtteil
+ */
+function resolveHomePlace(address: NominatimAddress | undefined): string | null {
+  if (!address) return null;
+
+  const city = trimmed(address.city);
+  const town = trimmed(address.town);
+  const village = trimmed(address.village);
+  const hamlet = trimmed(address.hamlet);
+  const municipality = trimmed(address.municipality);
+  const district =
+    trimmed(address.suburb) ??
+    trimmed(address.city_district) ??
+    trimmed(address.borough) ??
+    trimmed(address.quarter) ??
+    trimmed(address.neighbourhood);
+
+  if (village !== null || hamlet !== null) return municipality ?? town ?? village ?? hamlet;
+  if (town !== null) return town;
+  if (city !== null && district !== null) return district;
+  return city ?? municipality ?? town ?? village ?? hamlet;
+}
+
 function parseGeocodingAddress(
   address: NominatimAddress | undefined
 ): GeocodingAddress | undefined {
@@ -54,9 +96,10 @@ function parseGeocodingAddress(
   // Prefer the most specific locality: village before the superordinate town.
   const city =
     (address.city ?? address.village ?? address.town ?? address.municipality)?.trim() || null;
+  const place = resolveHomePlace(address);
 
-  if (!street && !postalCode && !city) return undefined;
-  return { street, postalCode, city };
+  if (!street && !postalCode && !city && !place) return undefined;
+  return { street, postalCode, city, place };
 }
 
 export function buildOpenStreetMapSearchUrl(query: string): string {

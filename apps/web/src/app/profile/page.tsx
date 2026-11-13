@@ -234,7 +234,11 @@ export default function ProfilePage() {
     setProfileFormError(null);
 
     void updateLocation
-      .mutateAsync(locationCandidate)
+      .mutateAsync({
+        latitude: locationCandidate.latitude,
+        longitude: locationCandidate.longitude,
+        homePlace: locationCandidate.address?.place ?? null,
+      })
       .then(async () => {
         if (!confirmedAddress) {
           clearLocationCandidate();

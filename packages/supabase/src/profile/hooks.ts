@@ -12,11 +12,14 @@ import {
 } from './queries';
 
 /** The caller's own profile. */
-export function useOwnProfile(): UseQueryResult<Profile | null, Error> {
+export function useOwnProfile(options?: {
+  enabled?: boolean;
+}): UseQueryResult<Profile | null, Error> {
   const client = getSupabaseClient();
   return useQuery({
     queryKey: profileKeys.own,
     queryFn: () => fetchOwnProfile(client),
+    enabled: options?.enabled ?? true,
   });
 }
 
