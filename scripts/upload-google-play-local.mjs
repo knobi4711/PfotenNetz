@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu in 0.3.8: Feinschliff Barrierefreiheit – besser lesbare Wiederholen-Schaltflächen, angesagte Erfolgs- und Chat-Meldungen, eindeutige Seitentitel, korrekte Karten- und Menü-Semantik sowie sichtbarere Fokusringe.';
+  'Neu in 0.3.9: Die Einführung merkt sich jetzt den Fortschritt. Wird zwischendurch das Profil ausgefüllt oder ein Tier angelegt, geht es danach an der richtigen Stelle weiter – und offene Punkte erscheinen beim nächsten App-Start erneut.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';

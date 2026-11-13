@@ -3,7 +3,7 @@
     "name": "PfotenNetz",
     "slug": "pfotennetz",
     "scheme": "pfotennetz",
-    "version": "0.3.8",
+    "version": "0.3.9",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/pfotennetz-logo.png",
@@ -22,7 +22,7 @@
     },
     "android": {
       "package": "app.pfotennetz",
-      "versionCode": 40,
+      "versionCode": 44,
       "intentFilters": [
         {
           "action": "VIEW",
