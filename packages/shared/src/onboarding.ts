@@ -7,6 +7,18 @@
 
 export type OnboardingStepId = 'intro' | 'profile' | 'pets' | 'helper';
 
+/** All step ids in their fixed order, used to validate persisted progress. */
+export const ONBOARDING_STEP_IDS: readonly OnboardingStepId[] = [
+  'intro',
+  'profile',
+  'pets',
+  'helper',
+];
+
+export function isOnboardingStepId(value: unknown): value is OnboardingStepId {
+  return typeof value === 'string' && ONBOARDING_STEP_IDS.includes(value as OnboardingStepId);
+}
+
 export type OnboardingTarget = 'profile-edit' | 'profile-address' | 'pet-new' | 'profile-helper';
 
 export interface OnboardingFacts {
@@ -109,6 +121,21 @@ export function firstOpenStepIndex(steps: readonly OnboardingStep[]): number {
 export function firstOpenTaskIndex(steps: readonly OnboardingStep[]): number {
   const index = steps.findIndex((step) => step.kind === 'task' && !step.done);
   return index === -1 ? Math.max(0, steps.length - 1) : index;
+}
+
+/**
+ * Index at which an interrupted assistant continues. The remembered step wins
+ * so a restart lands where the user left off; without a remembered step the
+ * assistant opens with the overview like on the very first start.
+ */
+export function resumeStepIndex(
+  steps: readonly OnboardingStep[],
+  lastStepId: OnboardingStepId | null
+): number {
+  if (steps.length === 0) return 0;
+  if (lastStepId === null) return firstOpenStepIndex(steps);
+  const index = steps.findIndex((step) => step.id === lastStepId);
+  return index === -1 ? firstOpenStepIndex(steps) : index;
 }
 
 /** Required steps decide whether the assistant may stop appearing on startup. */

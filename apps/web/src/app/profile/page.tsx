@@ -280,7 +280,11 @@ export default function ProfilePage() {
       <div className="mx-auto max-w-5xl px-6 py-10">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-secondary">Mein Konto</p>
         <h1 className="mt-2 text-4xl font-extrabold text-on-surface">Profil & Nachbarschaft</h1>
-        <button type="button" className="btn-secondary mt-4" onClick={() => openOnboarding()}>
+        <button
+          type="button"
+          className="btn-secondary mt-4"
+          onClick={() => openOnboarding('intro')}
+        >
           Einführung erneut ansehen
         </button>
         {profile.isPending ? (

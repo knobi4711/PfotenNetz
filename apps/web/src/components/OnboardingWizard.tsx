@@ -4,18 +4,26 @@ import {
   buildOnboardingSteps,
   firstOpenStepIndex,
   firstOpenTaskIndex,
+  onboardingComplete,
+  resumeStepIndex,
   type OnboardingStep,
+  type OnboardingStepId,
   type OnboardingTarget,
 } from '@pfotennetz/shared';
 import { useOwnAvailabilities, useOwnPets, useOwnProfile, useAuth } from '@pfotennetz/supabase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
+  clearOnboardingResumePending,
   closeOnboarding,
-  hasCompletedOnboarding,
+  getOnboardingOpenMode,
+  getOnboardingResumeStepId,
   isOnboardingVisible,
   markOnboardingCompleted,
   openOnboarding,
+  readOnboardingProgress,
+  rememberOnboardingStep,
+  setOnboardingResumePending,
   subscribeOnboarding,
 } from '../lib/onboarding';
 import { useDialogFocus } from '../lib/dialog-focus';
@@ -48,23 +56,75 @@ export function OnboardingWizardHost() {
 /**
  * Mounted once near the app root. It only runs the storage check and renders
  * the dialog when it is actually open, so no profile queries fire on every
- * page in the background.
+ * page in the background. The small watcher only exists after the user left
+ * the tour via an action button.
  */
 export function OnboardingWizard({ userId }: { userId: string }) {
   const visible = useSyncExternalStore(subscribeOnboarding, isOnboardingVisible, () => false);
+  const resumeStepId = useSyncExternalStore(
+    subscribeOnboarding,
+    () => getOnboardingResumeStepId(userId),
+    () => null
+  );
   const [checkedStorage, setCheckedStorage] = useState(false);
 
   useEffect(() => {
-    if (hasCompletedOnboarding(userId)) {
-      setCheckedStorage(true);
-      return;
-    }
+    const progress = readOnboardingProgress(userId);
     setCheckedStorage(true);
-    openOnboarding();
+    if (!progress.completed) openOnboarding('resume');
   }, [userId]);
 
-  if (!checkedStorage || !visible) return null;
-  return <OnboardingDialog userId={userId} />;
+  return (
+    <>
+      {!visible && resumeStepId !== null ? (
+        <OnboardingResumeWatcher userId={userId} pendingStepId={resumeStepId} />
+      ) : null}
+      {checkedStorage && visible ? <OnboardingDialog userId={userId} /> : null}
+    </>
+  );
+}
+
+/**
+ * Watches the facts of the step the user left for. When saving the profile or
+ * creating the pet completes that step, the assistant reopens and continues.
+ */
+function OnboardingResumeWatcher({
+  userId,
+  pendingStepId,
+}: {
+  userId: string;
+  pendingStepId: OnboardingStepId;
+}) {
+  const profileQuery = useOwnProfile();
+  const petsQuery = useOwnPets();
+  const availabilitiesQuery = useOwnAvailabilities();
+  const ready = profileQuery.data !== undefined && petsQuery.data !== undefined;
+
+  const profile = profileQuery.data ?? null;
+  const steps = buildOnboardingSteps({
+    displayName: profile?.display_name ?? null,
+    hasAddress: Boolean(profile?.private_address) && /^\d{5}$/.test(profile?.postal_code ?? ''),
+    petCount: petsQuery.data?.length ?? 0,
+    availabilityCount: availabilitiesQuery.data?.length ?? 0,
+  });
+  const stepsRef = useRef(steps);
+  stepsRef.current = steps;
+  const readiness = steps.map((entry) => (entry.done ? '1' : '0')).join('');
+
+  useEffect(() => {
+    if (!ready) return;
+    const currentSteps = stepsRef.current;
+    const pending = currentSteps.find((entry) => entry.id === pendingStepId);
+    if (pending === undefined || !pending.done) return;
+    clearOnboardingResumePending();
+    if (pending.optional && onboardingComplete(currentSteps)) {
+      markOnboardingCompleted(userId);
+      return;
+    }
+    openOnboarding('resume');
+  }, [ready, pendingStepId, readiness, userId]);
+
+  return null;
 }
 
 function OnboardingDialog({ userId }: { userId: string }) {
@@ -74,6 +134,7 @@ function OnboardingDialog({ userId }: { userId: string }) {
   const availabilitiesQuery = useOwnAvailabilities();
   const [stepIndex, setStepIndex] = useState(0);
   const autoStep = useRef(true);
+  const lastStepIdRef = useRef<OnboardingStepId | null>(null);
 
   const profile = profileQuery.data ?? null;
   const steps = buildOnboardingSteps({
@@ -86,19 +147,41 @@ function OnboardingDialog({ userId }: { userId: string }) {
   stepsRef.current = steps;
 
   useEffect(() => {
-    setStepIndex(firstOpenStepIndex(stepsRef.current));
-  }, []);
+    lastStepIdRef.current = readOnboardingProgress(userId).lastStepId;
+    autoStep.current = true;
+    setStepIndex(
+      getOnboardingOpenMode() === 'intro'
+        ? firstOpenStepIndex(stepsRef.current)
+        : resumeStepIndex(stepsRef.current, lastStepIdRef.current)
+    );
+  }, [userId]);
 
   // Data often arrives after the sheet opened: keep following the first open
-  // step until the user navigates by hand.
+  // step until the user navigates by hand. The overview stays until "Los geht's".
   const readiness = steps.map((entry) => (entry.done ? '1' : '0')).join('');
   useEffect(() => {
     if (!autoStep.current) return;
-    setStepIndex(firstOpenStepIndex(stepsRef.current));
-  }, [readiness]);
+    const currentSteps = stepsRef.current;
+    const current = currentSteps[Math.min(stepIndex, currentSteps.length - 1)];
+    if (current === undefined || current.kind === 'intro' || !current.done) return;
+    const next = firstOpenTaskIndex(currentSteps);
+    if (next !== stepIndex) setStepIndex(next);
+  }, [readiness, stepIndex]);
+
+  const rememberStep = (stepId: OnboardingStepId | undefined) => {
+    if (stepId === undefined || getOnboardingOpenMode() !== 'resume') return;
+    lastStepIdRef.current = stepId;
+    rememberOnboardingStep(userId, stepId);
+  };
 
   const close = () => {
-    markOnboardingCompleted(userId);
+    const currentSteps = stepsRef.current;
+    const current = currentSteps[Math.min(stepIndex, currentSteps.length - 1)];
+    rememberStep(current?.id);
+    if (onboardingComplete(currentSteps)) {
+      markOnboardingCompleted(userId);
+    }
+    clearOnboardingResumePending();
     closeOnboarding();
   };
 
@@ -106,10 +189,15 @@ function OnboardingDialog({ userId }: { userId: string }) {
     if (step.target === null) {
       // The overview has no screen of its own: continue with the first task.
       autoStep.current = false;
-      setStepIndex(firstOpenTaskIndex(stepsRef.current));
+      const next = firstOpenTaskIndex(stepsRef.current);
+      setStepIndex(next);
+      rememberStep(stepsRef.current[next]?.id);
       return;
     }
     close();
+    // Only an open step needs to be continued after saving; a finished step
+    // stays finished and must not reopen the assistant immediately.
+    if (!step.done) setOnboardingResumePending(userId, step.id);
     router.push(TARGET_HREFS[step.target]);
   };
 
@@ -223,6 +311,7 @@ function OnboardingDialog({ userId }: { userId: string }) {
                 onClick={() => {
                   autoStep.current = false;
                   setStepIndex(safeIndex - 1);
+                  rememberStep(steps[safeIndex - 1]?.id);
                 }}
               >
                 Zurück
@@ -238,6 +327,7 @@ function OnboardingDialog({ userId }: { userId: string }) {
                 }
                 autoStep.current = false;
                 setStepIndex(safeIndex + 1);
+                rememberStep(steps[safeIndex + 1]?.id);
               }}
             >
               {isLast ? 'Fertig' : 'Weiter'}

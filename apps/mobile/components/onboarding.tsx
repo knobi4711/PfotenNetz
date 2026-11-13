@@ -5,18 +5,26 @@ import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useOwnAvailabilities, useOwnPets, useOwnProfile } from '@pfotennetz/supabase';
 import {
+  clearOnboardingResumePending,
   closeOnboarding,
-  hasCompletedOnboarding,
+  getOnboardingOpenMode,
+  getOnboardingResumeStepId,
   isOnboardingVisible,
   markOnboardingCompleted,
   openOnboarding,
+  readOnboardingProgress,
+  rememberOnboardingStep,
+  setOnboardingResumePending,
   subscribeOnboarding,
 } from '../lib/onboarding';
 import {
   buildOnboardingSteps,
   firstOpenStepIndex,
   firstOpenTaskIndex,
+  onboardingComplete,
+  resumeStepIndex,
   type OnboardingStep,
+  type OnboardingStepId,
   type OnboardingTarget,
 } from '@pfotennetz/shared';
 import { ActionButton, appFonts, usePalette } from './ui';
@@ -48,14 +56,24 @@ function openTarget(target: OnboardingTarget): void {
  * First-run assistant: guides through the own profile, the pet profile and the
  * optional helper profile. Rendered once near the app root and reopened from
  * the profile screen.
+ *
+ * Leaving via a step action does not finish the tour: the screen is remembered
+ * and the assistant reopens as soon as the step is done (profile saved, pet
+ * created). While a required step is open it also returns on the next start.
  */
 export function OnboardingWizard({ userId }: { userId: string }) {
   const c = usePalette();
   const insets = useSafeAreaInsets();
   const visible = useSyncExternalStore(subscribeOnboarding, isOnboardingVisible, () => false);
+  const resumeStepId = useSyncExternalStore(
+    subscribeOnboarding,
+    () => getOnboardingResumeStepId(userId),
+    () => null
+  );
   const [checkedStorage, setCheckedStorage] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const autoStep = useRef(true);
+  const lastStepId = useRef<OnboardingStepId | null>(null);
 
   const profileQuery = useOwnProfile();
   const petsQuery = useOwnPets();
@@ -73,37 +91,75 @@ export function OnboardingWizard({ userId }: { userId: string }) {
 
   useEffect(() => {
     let active = true;
-    void hasCompletedOnboarding(userId).then((done) => {
+    void readOnboardingProgress(userId).then((progress) => {
       if (!active) return;
+      lastStepId.current = progress.lastStepId;
       setCheckedStorage(true);
-      if (!done) openOnboarding();
+      if (!progress.completed) openOnboarding('resume');
     });
     return () => {
       active = false;
     };
   }, [userId]);
 
+  // Resume where the user left off; a manual "Einführung erneut ansehen" always
+  // starts with the overview.
   useEffect(() => {
     if (!visible) {
       autoStep.current = false;
       return;
     }
     autoStep.current = true;
-    setStepIndex(firstOpenStepIndex(stepsRef.current));
+    setStepIndex(
+      getOnboardingOpenMode() === 'intro'
+        ? firstOpenStepIndex(stepsRef.current)
+        : resumeStepIndex(stepsRef.current, lastStepId.current)
+    );
   }, [visible]);
 
   // Data often arrives after the sheet opened: keep following the first open
-  // step until the user navigates by hand.
+  // step until the user navigates by hand. The overview stays until "Los geht's".
   const readiness = steps.map((entry) => (entry.done ? '1' : '0')).join('');
   useEffect(() => {
     if (!visible || !autoStep.current) return;
-    setStepIndex(firstOpenStepIndex(stepsRef.current));
-  }, [visible, readiness]);
+    const currentSteps = stepsRef.current;
+    const current = currentSteps[Math.min(stepIndex, currentSteps.length - 1)];
+    if (current === undefined || current.kind === 'intro' || !current.done) return;
+    const next = firstOpenTaskIndex(currentSteps);
+    if (next !== stepIndex) setStepIndex(next);
+  }, [visible, readiness, stepIndex]);
 
-  // Closing the assistant counts as "seen": it never nags on later starts and
-  // can be reopened from the profile screen at any time.
+  // The user left via an action button. Once that step is done, continue the
+  // tour. A finished optional step at the end marks the tour as complete.
+  useEffect(() => {
+    if (!checkedStorage || visible || resumeStepId === null) return;
+    const currentSteps = stepsRef.current;
+    const pending = currentSteps.find((entry) => entry.id === resumeStepId);
+    if (pending === undefined || !pending.done) return;
+    clearOnboardingResumePending();
+    if (pending.optional && onboardingComplete(currentSteps)) {
+      void markOnboardingCompleted(userId);
+      return;
+    }
+    openOnboarding('resume');
+  }, [checkedStorage, visible, resumeStepId, readiness, userId]);
+
+  const rememberStep = (stepId: OnboardingStepId | undefined) => {
+    if (stepId === undefined || getOnboardingOpenMode() !== 'resume') return;
+    lastStepId.current = stepId;
+    void rememberOnboardingStep(userId, stepId);
+  };
+
+  // Closing does not finish the tour while a required step is still open: the
+  // assistant returns on the next start at the remembered step.
   const close = () => {
-    void markOnboardingCompleted(userId);
+    const currentSteps = stepsRef.current;
+    const current = currentSteps[Math.min(stepIndex, currentSteps.length - 1)];
+    rememberStep(current?.id);
+    if (onboardingComplete(currentSteps)) {
+      void markOnboardingCompleted(userId);
+    }
+    clearOnboardingResumePending();
     closeOnboarding();
   };
 
@@ -111,10 +167,15 @@ export function OnboardingWizard({ userId }: { userId: string }) {
     if (step.target === null) {
       // The overview has no screen of its own: continue with the first task.
       autoStep.current = false;
-      setStepIndex(firstOpenTaskIndex(stepsRef.current));
+      const next = firstOpenTaskIndex(stepsRef.current);
+      setStepIndex(next);
+      rememberStep(stepsRef.current[next]?.id);
       return;
     }
     close();
+    // Only an open step needs to be continued after saving; a finished step
+    // stays finished and must not reopen the assistant immediately.
+    if (!step.done) setOnboardingResumePending(userId, step.id);
     openTarget(step.target);
   };
 
@@ -230,6 +291,7 @@ export function OnboardingWizard({ userId }: { userId: string }) {
                 onPress={() => {
                   autoStep.current = false;
                   setStepIndex(safeIndex - 1);
+                  rememberStep(steps[safeIndex - 1]?.id);
                 }}
                 style={[styles.footerButton, { borderColor: c.outlineVariant }]}
               >
@@ -245,6 +307,7 @@ export function OnboardingWizard({ userId }: { userId: string }) {
                 }
                 autoStep.current = false;
                 setStepIndex(safeIndex + 1);
+                rememberStep(steps[safeIndex + 1]?.id);
               }}
               style={[styles.footerButton, styles.footerPrimary, { backgroundColor: c.surface }]}
             >

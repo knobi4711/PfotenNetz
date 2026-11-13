@@ -4,7 +4,9 @@ import {
   completedStepCount,
   firstOpenStepIndex,
   firstOpenTaskIndex,
+  isOnboardingStepId,
   onboardingComplete,
+  resumeStepIndex,
   type OnboardingFacts,
 } from './onboarding';
 
@@ -101,6 +103,34 @@ describe('firstOpenTaskIndex', () => {
       facts({ displayName: 'König', hasAddress: true, petCount: 1, availabilityCount: 2 })
     );
     expect(firstOpenTaskIndex(steps)).toBe(3);
+  });
+});
+
+describe('resumeStepIndex', () => {
+  it('starts with the overview on the very first run', () => {
+    expect(resumeStepIndex(buildOnboardingSteps(EMPTY), null)).toBe(0);
+  });
+
+  it('continues at the step the user left', () => {
+    const steps = buildOnboardingSteps(EMPTY);
+    expect(resumeStepIndex(steps, 'profile')).toBe(1);
+    expect(resumeStepIndex(steps, 'pets')).toBe(2);
+    expect(resumeStepIndex(steps, 'helper')).toBe(3);
+  });
+
+  it('falls back to the overview for unknown step ids', () => {
+    const steps = buildOnboardingSteps(EMPTY);
+    expect(resumeStepIndex(steps, 'unknown' as never)).toBe(0);
+  });
+});
+
+describe('isOnboardingStepId', () => {
+  it('accepts the known step ids only', () => {
+    expect(isOnboardingStepId('profile')).toBe(true);
+    expect(isOnboardingStepId('pets')).toBe(true);
+    expect(isOnboardingStepId('unknown')).toBe(false);
+    expect(isOnboardingStepId(null)).toBe(false);
+    expect(isOnboardingStepId(2)).toBe(false);
   });
 });
 

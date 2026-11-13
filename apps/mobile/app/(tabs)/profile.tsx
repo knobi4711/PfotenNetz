@@ -810,7 +810,7 @@ export default function ProfileScreen() {
               <ActionButton
                 title="Einführung erneut ansehen"
                 variant="secondary"
-                onPress={openOnboarding}
+                onPress={() => openOnboarding('intro')}
               />
             </Card>
             <HelperStatusCard profile={profile} />
