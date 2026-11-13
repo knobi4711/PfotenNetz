@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu in 0.3.9: Die Einführung merkt sich jetzt den Fortschritt. Wird zwischendurch das Profil ausgefüllt oder ein Tier angelegt, geht es danach an der richtigen Stelle weiter – und offene Punkte erscheinen beim nächsten App-Start erneut.';
+  'Neu in 0.3.10: Der Ortsname des Tier-Zuhauses steht jetzt unter dem PfotenNetz-Titel in der Kopfzeile – in Großstädten als Stadtteil, in Kleinstädten als Stadt und auf dem Land als Gemeinde.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';
