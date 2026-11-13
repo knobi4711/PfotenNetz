@@ -442,7 +442,7 @@ function DayTrack({
         accessible
         accessibilityRole="button"
         accessibilityLabel={`${day.long}: Zeitfenster wählen oder per Ziehen anlegen`}
-        accessibilityHint={`Waagerechtes Ziehen legt ein Zeitfenster an. Tippen wählt ein Zeitfenster aus. Langes Drücken auf ein Zeitfenster öffnet Aktionen wie Löschen. Mit der Bedienungshilfen-Aktion wird das im Formular eingestellte Zeitfenster ${minutesToTime(defaultRange.startMinutes)} bis ${minutesToTime(defaultRange.endMinutes)} Uhr angelegt.`}
+        accessibilityHint={`Waagerechtes Ziehen legt ein Zeitfenster an. Tippen wählt ein Zeitfenster aus. Langes Drücken auf ein Zeitfenster öffnet Aktionen wie Löschen. Mit der Bedienungshilfen-Aktion wird das im Dialog eingestellte Zeitfenster ${minutesToTime(defaultRange.startMinutes)} bis ${minutesToTime(defaultRange.endMinutes)} Uhr angelegt.`}
         onAccessibilityTap={() =>
           current.current.onCreate(
             day.dayOfWeek,
@@ -584,11 +584,13 @@ function WeeklyEditor({
   onOpenActions: (slot: Availability) => void;
 }) {
   const c = usePalette();
+  const insets = useSafeAreaInsets();
   const week = buildAvailabilityWeek(slots);
   const span = Math.max(1, week.endMinutes - week.startMinutes);
   const percent = (minutes: number) => ((minutes - week.startMinutes) / span) * 100;
   const activeCount = slots.filter((slot) => slot.is_active !== false).length;
   // H-06: tastatur-/screenreaderfähiger Weg abseits der Ziehgeste.
+  const [addOpen, setAddOpen] = useState(false);
   const [addDay, setAddDay] = useState(1);
   const [addStart, setAddStart] = useState('09:00');
   const [addEnd, setAddEnd] = useState('10:00');
@@ -602,8 +604,18 @@ function WeeklyEditor({
       setAddError('Das Ende muss nach dem Beginn liegen.');
       return;
     }
+    const conflict = findAvailabilityOverlap(slots, {
+      dayOfWeek: addDay,
+      startTime: addStart,
+      endTime: addEnd,
+    });
+    if (conflict !== undefined) {
+      setAddError(overlapMessage(conflict));
+      return;
+    }
     setAddError(null);
     onCreate(addDay, defaultRange.startMinutes, defaultRange.endMinutes);
+    setAddOpen(false);
   };
   const majorTicks = week.hourTicks.filter(
     (tick) =>
@@ -630,66 +642,21 @@ function WeeklyEditor({
         </Text>
       </View>
       <Text style={[styles.graphHint, { color: c.onSurfaceVariant }]}>
-        Ziehe waagerecht über einen Tag, um ein Zeitfenster anzulegen. Alternativ nutzt du das
-        Formular „Zeitfenster ohne Zeigegeste anlegen“. Tippen wählt ein Fenster aus, langes Drücken
-        öffnet Löschen und Pausieren. Im Editor lässt sich dasselbe Zeitfenster für mehrere Tage
-        speichern.
+        Ziehe waagerecht über einen Tag, um ein Zeitfenster anzulegen. Alternativ nutzt du die
+        Schaltfläche „Zeitfenster ohne Zeigegeste anlegen“. Tippen wählt ein Fenster aus, langes
+        Drücken öffnet Löschen und Pausieren. Im Editor lässt sich dasselbe Zeitfenster für mehrere
+        Tage speichern.
         {slots.some((slot) => slot.is_active === false) ? ' Graue Zeitfenster sind pausiert.' : ''}
       </Text>
 
-      <View
-        style={[
-          styles.addForm,
-          { borderColor: c.outlineVariant, backgroundColor: c.surfaceContainerLowest },
-        ]}
-      >
-        <Text style={[styles.addTitle, { color: c.onSurface }]}>
-          Zeitfenster ohne Zeigegeste anlegen
-        </Text>
-        <Text style={[styles.addHint, { color: c.onSurfaceVariant }]}>
-          Wähle Wochentag, Beginn und Ende und füge das Fenster über die Schaltfläche hinzu.
-        </Text>
-        <View
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Wochentag"
-          style={styles.addDayRow}
-        >
-          {AVAILABILITY_WEEKDAYS.map((day) => {
-            const selected = addDay === day.value;
-            return (
-              <Pressable
-                key={day.value}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                accessibilityLabel={day.long}
-                onPress={() => setAddDay(day.value)}
-                style={[
-                  styles.addDayChip,
-                  {
-                    backgroundColor: selected ? c.primary : c.surfaceContainerHigh,
-                    borderColor: selected ? c.primary : c.outlineVariant,
-                  },
-                ]}
-              >
-                <Text style={[styles.addDayText, { color: selected ? c.onPrimary : c.onSurface }]}>
-                  {selected ? '✓ ' : ''}
-                  {day.short}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <View style={styles.addTimeRow}>
-          <TimeField label="Von" value={addStart} disabled={false} onChange={setAddStart} />
-          <TimeField label="Bis" value={addEnd} disabled={false} onChange={setAddEnd} />
-        </View>
-        <ActionButton title="Zeitfenster hinzufügen" onPress={addSlot} />
-        {addError !== null ? (
-          <Text accessibilityRole="alert" style={[styles.addError, { color: c.error }]}>
-            {addError}
-          </Text>
-        ) : null}
-      </View>
+      <ActionButton
+        title="Zeitfenster ohne Zeigegeste anlegen"
+        variant="secondary"
+        onPress={() => {
+          setAddError(null);
+          setAddOpen(true);
+        }}
+      />
 
       <View style={styles.graphBody}>
         {week.days.map((day) => (
@@ -730,6 +697,104 @@ function WeeklyEditor({
           })}
         </View>
       </View>
+
+      <Modal
+        visible={addOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAddOpen(false)}
+      >
+        <View style={styles.sheetRoot}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Formular schließen"
+            onPress={() => setAddOpen(false)}
+            style={styles.sheetBackdrop}
+          />
+          <View
+            accessibilityViewIsModal
+            style={[
+              styles.sheetPanel,
+              { backgroundColor: c.surface, paddingBottom: insets.bottom },
+            ]}
+          >
+            <ScrollView
+              contentContainerStyle={styles.sheetContent}
+              showsVerticalScrollIndicator={false}
+              style={styles.sheetScroll}
+            >
+              <View style={styles.inspectorHeader}>
+                <View style={styles.inspectorHeading}>
+                  <Text style={[styles.inspectorTitle, { color: c.onSurface }]}>
+                    Zeitfenster ohne Zeigegeste anlegen
+                  </Text>
+                  <Text style={[styles.inspectorSubtitle, { color: c.onSurfaceVariant }]}>
+                    Wähle Wochentag, Beginn und Ende. Das Zeitfenster wird direkt gespeichert.
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Formular schließen"
+                  onPress={() => setAddOpen(false)}
+                  style={[styles.miniButton, { backgroundColor: c.surfaceContainerHigh }]}
+                >
+                  <Text style={[styles.miniText, { color: c.onSurface }]}>Schließen</Text>
+                </Pressable>
+              </View>
+
+              <Text style={[styles.label, { color: c.onSurface }]}>Wochentag</Text>
+              <View
+                accessibilityRole="radiogroup"
+                accessibilityLabel="Wochentag"
+                style={styles.addDayRow}
+              >
+                {AVAILABILITY_WEEKDAYS.map((day) => {
+                  const selected = addDay === day.value;
+                  return (
+                    <Pressable
+                      key={day.value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      accessibilityLabel={day.long}
+                      onPress={() => setAddDay(day.value)}
+                      style={[
+                        styles.addDayChip,
+                        {
+                          backgroundColor: selected ? c.primary : c.surfaceContainerHigh,
+                          borderColor: selected ? c.primary : c.outlineVariant,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.addDayText, { color: selected ? c.onPrimary : c.onSurface }]}
+                      >
+                        {selected ? '✓ ' : ''}
+                        {day.short}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View style={styles.addTimeRow}>
+                <View style={styles.column}>
+                  <TimeField label="Von" value={addStart} disabled={false} onChange={setAddStart} />
+                </View>
+                <View style={styles.column}>
+                  <TimeField label="Bis" value={addEnd} disabled={false} onChange={setAddEnd} />
+                </View>
+              </View>
+
+              <ActionButton title="Zeitfenster speichern" onPress={addSlot} />
+              {addError !== null ? (
+                <Text accessibilityRole="alert" style={[styles.addError, { color: c.error }]}>
+                  {addError}
+                </Text>
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -954,7 +1019,7 @@ export function AvailabilityManager() {
 
             {slots.length === 0 ? (
               <EmptyText>
-                Noch keine Zeitfenster. Nutze das Formular „Zeitfenster ohne Zeigegeste anlegen“
+                Noch keine Zeitfenster. Nutze die Schaltfläche „Zeitfenster ohne Zeigegeste anlegen“
                 oder ziehe waagerecht über einen Tag.
               </EmptyText>
             ) : (
@@ -1395,9 +1460,6 @@ const styles = StyleSheet.create({
   graphTitle: { fontFamily: appFonts.extrabold, fontSize: 14, lineHeight: 20 },
   graphStat: { fontFamily: appFonts.bold, fontSize: 10, lineHeight: 15 },
   graphHint: { fontFamily: appFonts.regular, fontSize: 10, lineHeight: 15, marginTop: 2 },
-  addForm: { borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 12, gap: 8 },
-  addTitle: { fontFamily: appFonts.extrabold, fontSize: 13, lineHeight: 18 },
-  addHint: { fontFamily: appFonts.regular, fontSize: 10, lineHeight: 15 },
   addDayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   addDayChip: {
     minWidth: 40,
