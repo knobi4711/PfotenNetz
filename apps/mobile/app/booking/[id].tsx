@@ -357,19 +357,19 @@ export default function BookingDetailScreen() {
         </Pressable>
 
         {bookingId === undefined ? (
-          <ErrorBox message="Keine Buchungs-ID angegeben." />
+          <ErrorBox message="Keine Betreuungs-ID angegeben." />
         ) : bookingQuery.isPending || userQuery.isPending ? (
-          <LoadingView label="Buchung wird geladen …" />
+          <LoadingView label="Betreuung wird geladen …" />
         ) : bookingQuery.isError ? (
           <ErrorBox
-            message={`Buchung konnte nicht geladen werden: ${bookingQuery.error.message}`}
+            message={`Betreuung konnte nicht geladen werden: ${bookingQuery.error.message}`}
             onRetry={() => {
               void bookingQuery.refetch();
             }}
           />
         ) : booking === null ? (
           <ErrorBox
-            message="Buchung nicht gefunden."
+            message="Betreuung nicht gefunden."
             onRetry={() => {
               void bookingQuery.refetch();
             }}
@@ -426,7 +426,7 @@ export default function BookingDetailScreen() {
               <WorkflowTimeline status={booking.status} />
               {booking.status === 'cancelled' || booking.status === 'disputed' ? (
                 <EmptyText>
-                  Diese Buchung wurde{' '}
+                  Diese Betreuung wurde{' '}
                   {booking.status === 'cancelled' ? 'storniert' : 'als Streitfall markiert'} und
                   kann nicht fortgesetzt werden.
                 </EmptyText>
@@ -674,7 +674,7 @@ export default function BookingDetailScreen() {
               <Card>
                 <SectionTitle>Bereit?</SectionTitle>
                 <ActionButton
-                  title="Buchung starten"
+                  title="Betreuung starten"
                   pending={start.isPending}
                   disabled={anyPending}
                   onPress={() => {
@@ -692,7 +692,7 @@ export default function BookingDetailScreen() {
                   Guthaben wird danach neu geladen.
                 </EmptyText>
                 <ActionButton
-                  title="Buchung abschließen"
+                  title="Betreuung abschließen"
                   pending={complete.isPending}
                   disabled={anyPending}
                   onPress={() => {
@@ -733,7 +733,7 @@ export default function BookingDetailScreen() {
                 <SectionTitle>Stornierung</SectionTitle>
                 <ActionButton
                   title={
-                    booking.status === 'requested' ? 'Anfrage stornieren' : 'Buchung stornieren'
+                    booking.status === 'requested' ? 'Anfrage stornieren' : 'Betreuung stornieren'
                   }
                   variant="danger"
                   pending={cancel.isPending}
@@ -808,7 +808,7 @@ export default function BookingDetailScreen() {
                   )
                 ) : null}
                 {!isSeeker && !isHelper ? (
-                  <EmptyText>Du bist an dieser Buchung nicht beteiligt.</EmptyText>
+                  <EmptyText>Du bist an dieser Betreuung nicht beteiligt.</EmptyText>
                 ) : null}
                 {ratingError !== null ? <ErrorBox message={ratingError.message} /> : null}
                 {ratingDone ? <EmptyText>Danke für deine Bewertung.</EmptyText> : null}

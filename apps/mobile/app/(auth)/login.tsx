@@ -146,7 +146,7 @@ export default function LoginScreen() {
           PfotenNetz
         </Text>
         <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
-          Melde dich an, um deine Buchungen und deine Nachbarschafts-Stunden zu sehen.
+          Melde dich an, um deine Betreuungen und deine Nachbarschafts-Stunden zu sehen.
         </Text>
 
         <Card>

@@ -346,7 +346,7 @@ test.describe('Web smoke flows', () => {
     await expect(page.getByRole('button', { name: 'Gesundheitsdaten speichern' })).toBeVisible();
     await page.goto(`/booking/${bookingId}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Betreuung für Testtier' })).toBeVisible();
-    await page.getByRole('button', { name: 'Buchung stornieren' }).click();
+    await page.getByRole('button', { name: 'Betreuung stornieren' }).click();
     await expect(page.getByText('Storniert', { exact: true })).toBeVisible();
     await page.goto(`/chat/${bookingId}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Betreuung für Testtier')).toBeVisible();

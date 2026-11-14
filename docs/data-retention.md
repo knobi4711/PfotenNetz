@@ -6,7 +6,7 @@ werden erst aktiviert, wenn die Fristen fachlich und rechtlich freigegeben sind.
 
 | Datenkategorie | Zweck | Standardfrist | Löschung / Anonymisierung |
 | --- | --- | ---: | --- |
-| GPS-Trackingpunkte | Nachweis und Live-Betreuung | 30 Tage nach Abschluss | Punkte löschen; aggregierte Distanz/Dauer in der Buchung behalten |
+| GPS-Trackingpunkte | Nachweis und Live-Betreuung | 30 Tage nach Abschluss | Punkte löschen; aggregierte Distanz/Dauer in der Betreuung behalten |
 | Tracking-Sitzungen | Abrechnung und Support | 12 Monate nach Abschluss | Sessiondaten löschen oder anonymisieren |
 | Vermisst-Tier-Meldungen und Sichtungen | Tiersuche | 12 Monate nach Fund/Abbruch | Standort und Fotos löschen; anonymisierte Statistik optional |
 | Notfallkarten-Links | Öffentliche Notfallhilfe | Ablauf des Links, spätestens 30 Tage | Token widerrufen und Datensatz löschen |

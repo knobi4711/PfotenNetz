@@ -140,7 +140,7 @@ export default function BookingsPage() {
             </button>
           </div>
         </div>
-        <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label="Buchungsansicht">
+        <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label="Betreuungsansicht">
           <button
             type="button"
             aria-pressed={view === 'active'}
@@ -162,24 +162,24 @@ export default function BookingsPage() {
           <p className="mb-6 rounded-xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
             Betreuungsanfragen werden nach ihrem Ende aus der aktiven Ansicht hierher verschoben –
             unabhängig davon, ob ein:e Helfer:in gefunden wurde. Abgeschlossene und stornierte
-            Buchungen bleiben ebenfalls im Archiv nachvollziehbar.
+            Betreuungen bleiben ebenfalls im Archiv nachvollziehbar.
           </p>
         ) : null}
         {bookings.isPending ? (
-          <p className="py-12 text-center text-on-surface-variant">Buchungen werden geladen …</p>
+          <p className="py-12 text-center text-on-surface-variant">Betreuungen werden geladen …</p>
         ) : bookings.isError ? (
           <p role="alert" className="rounded-xl bg-error-container p-4 text-on-error-container">
-            Buchungen konnten nicht geladen werden: {bookings.error.message}
+            Betreuungen konnten nicht geladen werden: {bookings.error.message}
           </p>
         ) : data.length === 0 ? (
           <div className="card p-10 text-center">
             <p className="text-4xl">🐾</p>
             <h2 className="mt-4 text-xl font-extrabold">
-              {view === 'archive' ? 'Archiv ist noch leer' : 'Noch keine Buchungen'}
+              {view === 'archive' ? 'Archiv ist noch leer' : 'Noch keine Betreuungen'}
             </h2>
             <p className="mt-2 text-on-surface-variant">
               {view === 'archive'
-                ? 'Abgelaufene, abgeschlossene und stornierte Buchungen erscheinen hier.'
+                ? 'Abgelaufene, abgeschlossene und stornierte Betreuungen erscheinen hier.'
                 : 'Finde jetzt Unterstützung in deiner Nachbarschaft.'}
             </p>
           </div>

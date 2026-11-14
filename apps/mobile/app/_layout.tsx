@@ -201,7 +201,7 @@ function AuthGate() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="booking/new" options={{ title: 'Neue Betreuung buchen' }} />
-        <Stack.Screen name="booking/[id]" options={{ title: 'Buchung' }} />
+        <Stack.Screen name="booking/[id]" options={{ title: 'Betreuung' }} />
         <Stack.Screen name="marketplace" options={{ title: 'Tauschbörse' }} />
         <Stack.Screen name="helper/[id]" options={{ title: 'Helper-Profil' }} />
       </Stack>

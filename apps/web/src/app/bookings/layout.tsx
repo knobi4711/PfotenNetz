@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Meine Buchungen',
+  title: 'Meine Betreuungen',
 };
 
 export default function RouteLayout({ children }: { children: ReactNode }) {

@@ -47,7 +47,7 @@ nicht als Abnahmeumgebung.
 
 | Konto | Zweck |
 | --- | --- |
-| `staging-seeker` | Buchung erstellen, stornieren, Notfallkarte ansehen |
+| `staging-seeker` | Betreuung erstellen, stornieren, Notfallkarte ansehen |
 | `staging-helper` | Anfrage annehmen, Tracking starten, Chat/Medien nutzen |
 | `staging-admin` | Moderation, Verifizierung und Prüfpfade |
 
@@ -65,10 +65,10 @@ Der Kontaktanfrage-E2E-Flow prüft den eingehenden Status „Offen“, die Annah
 Push-Zustellung und der geräteübergreifende Chat-Anschluss bleiben Teil der
 nativen Abnahme.
 
-Zusätzliche Remote-E2E-Smokes decken den Buchungsstatus-Lifecycle
+Zusätzliche Remote-E2E-Smokes decken den Betreuungsstatus-Lifecycle
 `requested → confirmed → in_progress → completed` sowie eine Tracking-Session
 mit zwei Positionspunkten und sauberem Abschluss ab. Die erzeugten Nutzer,
-Tiere, Buchungen und Trackingdaten werden nach jedem Lauf gelöscht.
+Tiere, Betreuungen und Trackingdaten werden nach jedem Lauf gelöscht.
 
 ## 5. Native Passkeys
 

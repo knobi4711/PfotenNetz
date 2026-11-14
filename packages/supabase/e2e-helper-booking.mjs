@@ -208,7 +208,7 @@ async function main() {
   if (!bookErr) state.bookingId = booking.id;
   step(
     !bookErr && booking?.status === 'requested',
-    'Buchung als requested mit Helper angelegt',
+    'Betreuung als requested mit Helper angelegt',
     bookErr?.message ?? bookingNumber
   );
 

@@ -24,10 +24,10 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - OpenStreetMap/Nominatim-Ortssuche im Web-Gefahrenmelder mit Übernahme der gefundenen Koordinaten
 - Öffentliche Notfallkarten mit zeitlich validiertem Browser-Offline-Cache und Mobile-SecureStore-Fallback
 - OpenStreetMap-/Leaflet-Karten für Helfer:innen-Suche, Gefahrenradar und Tracking-Flows
-- Buchungsworkflow inklusive Statuswechseln, Zeitbank und Benachrichtigungen
+- Betreuungsworkflow inklusive Statuswechseln, Zeitbank und Benachrichtigungen
 - Mehrtier-Betreuungsanträge: Im Web-Dropdown und in Mobile-Checkboxen lassen sich mehrere aktive Tiere oder „Alle Tiere“ auswählen; sie werden als ein gemeinsamer Antrag gruppiert, während separat gestartete Anträge unabhängig bleiben
-- Wiederverwendbare Buchungsvorlagen: Am Ende des Buchungsformulars lassen sich Tiere, Leistung, Vergütung, Treffpunkt und Hinweise unter einem Namen speichern und bei der nächsten Anfrage mit einem Klick übernehmen; der Zeitraum bleibt pro Buchung individuell
-- Buchungs-Chat mit Nachrichtenliste und Realtime-Grundlage
+- Wiederverwendbare Betreuungsvorlagen: Am Ende des Betreuungsformulars lassen sich Tiere, Leistung, Vergütung, Treffpunkt und Hinweise unter einem Namen speichern und bei der nächsten Anfrage mit einem Klick übernehmen; der Zeitraum bleibt pro Betreuung individuell
+- Betreuungs-Chat mit Nachrichtenliste und Realtime-Grundlage
 - Privater Kennenlern-Chat für offene und angenommene Kontaktanfragen; separate `contact_messages`-Tabelle, ursprüngliche Anfrage automatisch als erste Nachricht, Zugriff ausschließlich für die beiden Beteiligten
 - Gefahrenmeldung, Gefahrenradar, Foto-Upload, Zeit-/Dringlichkeitsfilter, Realtime-Aktualisierung und Moderationsansicht
 - Rich-Push-Kategorien mit internen Deep-Links für Gefahren- und Vermisst-Tier-Warnungen
@@ -39,7 +39,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - PLZ als Pflichtfeld im Profil; gespeichert werden ausschließlich fünfstellige deutsche Postleitzahlen
 - Deutschlandweite Nutzung ohne Pilotregion- oder PLZ-Beschränkung; Web-Standortwahl per hochgenauer Browser-Geolokalisierung und manueller Ort-/PLZ-Suche
 - Dringende Betreuungsanfragen mit Betreuungsnotizen und serverseitiger Kennzeichnung
-- Unverbindliche Kontaktanfragen an verifizierte Helfer:innen vor einer Buchung
+- Unverbindliche Kontaktanfragen an verifizierte Helfer:innen vor einer Betreuung
 - Nach Annahme einer Kontaktanfrage direkter Übergang von Mobile und Web zu „Betreuung anfragen“
 - Meldung von Fake-Profilen, Spam, Belästigung und sonstigen Verstößen direkt aus Helferprofilen
 - Serverseitig geschützte Nutzer:innen-Meldungen mit Duplikatschutz und Admin-Moderationsstatus
@@ -68,8 +68,8 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - `/legal/terms` und `/legal/privacy`: technische Entwürfe für Nutzungsbedingungen und Datenschutz
 - `/hazard/radar`: Desktop-Gefahrenradar mit Standort, Pins und Filtern
 - `/hazard/report` und `/hazard/[id]`: Gefahrenmeldung und Details
-- `/bookings`: Buchungsübersicht
-- `/booking/[id]`: Buchungsdetail mit Statusaktionen und Chat-Einstieg
+- `/bookings`: Betreuungsübersicht
+- `/booking/[id]`: Betreuungsdetail mit Statusaktionen und Chat-Einstieg
 - `/chat/[bookingId]`: Web-Chat mit Text-, Foto- und Medienanzeige
 - `/chat/contact/[contactRequestId]`: privater Kennenlern-Chat zwischen Suchenden und Helfer:innen
 - Dashboard-QR-Code zur mobilen App mit der Beschriftung „PfotenNetz App · Version 0.0.9“; der QR-Code und der direkte Play-Store-Link verwenden dasselbe Ziel (Download-Link Web: https://play.google.com/store/apps/details?id=app.pfotennetz&pli=1, führt zum geschlossenen Test)
@@ -105,7 +105,7 @@ Diese Spezifikation beschreibt weiterhin das vollständige Zielbild. Der tatsäc
 - Supabase-Tests: 90 erfolgreich
 - Mobile-Tests: 67 erfolgreich
 - Repository-Lint: erfolgreich
-- Web-E2E: **18/18 erfolgreich**, inklusive Passwort-Reset-Route, authentifizierten Tier-, Buchungs-, Chat-, Medien- und Kontaktanfrage-Flüssen, Offline-Notfallkarten-Smoke-Test sowie Community-Moderation und Web-Notfallkartenroute
+- Web-E2E: **18/18 erfolgreich**, inklusive Passwort-Reset-Route, authentifizierten Tier-, Betreuungs-, Chat-, Medien- und Kontaktanfrage-Flüssen, Offline-Notfallkarten-Smoke-Test sowie Community-Moderation und Web-Notfallkartenroute
 - Web-Build: erfolgreich
 - Web-QR-Code-Beschriftung: auf „PfotenNetz App · Version 0.0.9“ aktualisiert; Web-Typecheck, Lint und Tests erfolgreich
 - Web-Produktivdeploy: neuer Stand per SSH auf `192.168.188.42` übertragen, Container/Caddy validiert und `https://pfotennetz.app` anschließend mit HTTP 200 geprüft
@@ -210,7 +210,7 @@ beide haben den Release-Build nicht verhindert.
 - Rechtstexte sind technische Entwürfe und benötigen Betreiberangaben sowie Rechtsprüfung
 - Web-Parität ist noch nicht vollständig: einige native Sonderfunktionen fehlen noch im Web
 - Kontaktanfragen können auf Mobile und Web erstellt, angenommen, abgelehnt oder storniert werden; der private Kennenlern-Chat ist auf Mobile und Web umgesetzt, Backend- und Web-Flows sind getestet, die produktive Push-/Antwort-/Chat-Abnahme auf echten Geräten bleibt noch offen
-- Urlaubspflege mit expliziten Betreuungsoptionen „bei der Halterin/dem Halter zu Hause“ (Besuche oder temporärer Helper-Einzug) oder „beim Helper zu Hause“ (zeitweiser Tieraufenthalt) auf Web und Mobile; der gewählte Ort wird in der Buchung gespeichert und nur den Beteiligten angezeigt
+- Urlaubspflege mit expliziten Betreuungsoptionen „bei der Halterin/dem Halter zu Hause“ (Besuche oder temporärer Helper-Einzug) oder „beim Helper zu Hause“ (zeitweiser Tieraufenthalt) auf Web und Mobile; der gewählte Ort wird in der Betreuung gespeichert und nur den Beteiligten angezeigt
 - Nachbarschafts-Tauschbörse auf Web und Mobile: Tierfutter, Zubehör und Utensilien zu verschenken, zu tauschen, zu verkaufen oder zu suchen; Suche nach Freitext, Kategorie und Angebotsart, sichere Interessenanfrage ohne Veröffentlichung privater Kontaktdaten
 
 ---
@@ -375,16 +375,16 @@ beide haben den Release-Build nicht verhindert.
   - Filter-Pills: `Hundeerfahren`, `Sachkundenachweis`, `Heute verfügbar`, `Schlüsselübergabe SmartLock`.
   - Horizontales Karussell mit geprüften Helfer-Karten inkl. Trust-Badges und Bewertungssternen.
 
-#### Screen 09: Helfer-Detail & Buchung: Jonas K. (Mobile)
+#### Screen 09: Helfer-Detail & Betreuung: Jonas K. (Mobile)
 
 - **Route:** `/sitter/jonas-k`
 - **Shell:** Mobile Tab / Stack
-- **Beschreibung:** Vertrauensprofil und verbindlicher Buchungs-Handschlag.
+- **Beschreibung:** Vertrauensprofil und verbindlicher Betreuungs-Handschlag.
 - **Komponenten & Features:**
   - Verifizierter Helfer-Header: 4.9 Sterne, 42 Walks, Sachkundenachweis & Tiernothelfer-Zertifikat.
-  - Buchungsdetails: Abrechnung über das faire Zeitbank-System (1 Zeitbankstunde für 45–60 Min. Walk).
+  - Betreuungsdetails: Abrechnung über das faire Zeitbank-System (1 Zeitbankstunde für 45–60 Min. Walk).
   - SmartLock-Treuhand-Depot: Schlüsselabholung kontaktlos und versichert freigegeben.
-  - Buchungs-CTA: `Betreuung verbindlich anfragen (1 Std.)` abgesichert durch 2.500 € Nachbarschafts-Schutzgarantie.
+  - Betreuungs-CTA: `Betreuung verbindlich anfragen (1 Std.)` abgesichert durch 2.500 € Nachbarschafts-Schutzgarantie.
 
 #### Screen 10: Anfragen & Status-Tracking (Gassi-GPS & Chat) (Mobile)
 
@@ -474,11 +474,11 @@ beide haben den Release-Build nicht verhindert.
 - **Beschreibung:** Erweiterung der Urlaubs- und Tagesbetreuung für längere Abwesenheiten. Vor dem Absenden wird eindeutig festgelegt, ob der Helper zum Tier nach Hause kommt oder das Tier während der Abwesenheit beim Helper wohnt.
 - **Komponenten & Features:**
   - Auswahl `Bei mir zu Hause (Besuche)`, `Bei mir zu Hause – Helper zieht vorübergehend ein` oder `Beim Helper zu Hause` für Urlaubs- und Tagesbetreuung.
-  - Zeitraum, Betreuungsnotizen, Vergütung und Sicherheitsbestätigung bleiben Teil derselben Buchungsanfrage.
-  - Der Betreuungsort wird als serverseitig geprüfte Eigenschaft (`care_location`) gespeichert und in Web-/Mobile-Buchungsdetails angezeigt; der temporäre Einzug ist dabei eine ausdrückliche Opt-in-Auswahl.
+  - Zeitraum, Betreuungsnotizen, Vergütung und Sicherheitsbestätigung bleiben Teil derselben Betreuungsanfrage.
+  - Der Betreuungsort wird als serverseitig geprüfte Eigenschaft (`care_location`) gespeichert und in Web-/Mobile-Betreuungsdetails angezeigt; der temporäre Einzug ist dabei eine ausdrückliche Opt-in-Auswahl.
   - Persönliches Kennenlernen, geschützter Chat sowie Hinweise zu Haftung und Versicherung vor der ersten Betreuung.
 
-#### Buchungsvorlagen — wiederkehrende Anfragen beschleunigen (Mobile & Web)
+#### Betreuungsvorlagen — wiederkehrende Anfragen beschleunigen (Mobile & Web)
 
 - **Route:** `/booking/new`
 - **Beschreibung:** Wer regelmäßig dieselbe Betreuung anfragt, kann die aktuellen Formularwerte am Seitenende unter einem Namen als private Vorlage speichern.
@@ -543,7 +543,7 @@ beide haben den Release-Build nicht verhindert.
 - **Komponenten & Features:**
   - **Große interaktive Karte:** Filterbare Marker für Helfer, Gefahrenstellen, Playdates und Notfall-Apotheken.
   - **Radius-Stepper:** entfällt – sichtbar sind Helfer:innen, deren eigene Reisebereitschaft das Tier-Zuhause der suchenden Person erreicht.
-  - **Rechtes Buchungs-Panel:** Detaillierte Helfer-Biografie von Jonas K. mit Sachkundenachweis, Terminwahl und verbindlichem Buchungsabschluss.
+  - **Rechtes Betreuungs-Panel:** Detaillierte Helfer-Biografie von Jonas K. mit Sachkundenachweis, Terminwahl und verbindlichem Betreuungsabschluss.
 
 #### Screen 20: PfotenNetz Web — Gefahren- & Notfall-Leitstelle (Desktop)
 
@@ -562,7 +562,7 @@ beide haben den Release-Build nicht verhindert.
 - **Beschreibung:** Duale Schaltzentrale für paralleles GPS-Echtzeit-Tracking und Betreuer-Chat.
 - **Komponenten & Features:**
   - **Links:** Vollwertiges Karten-Tracking mit Live-Pfad, Meilensteinen, Telemetrie und Geofence-Überwachung.
-  - **Rechts:** Integrierter 1:1 Kommunikations-Stream mit Medien-Galerie, Schnellantworten und Zeitbank-Buchungsfreigabe.
+  - **Rechts:** Integrierter 1:1 Kommunikations-Stream mit Medien-Galerie, Schnellantworten und Zeitbank-Betreuungsfreigabe.
 
 ---
 
@@ -624,7 +624,7 @@ Jeder HTML-Screen ist im DOM für externe LLM-Agenten, Screenreader und MCP-Clie
 ### Priorität 2 – Plattformfunktionen
 
 1. Native Geräte-/Development-Build-Tests für Push, Tracking, Geofence und QR mit reproduzierbaren GPS-Positionen durchführen; App-Start, Offline-Modus und Basis-Berechtigungen sind bereits geprüft, die Testmatrix ist dokumentiert.
-2. Authentifizierte Web-Buchungs-, Chat- und Medienflüsse sind mit isolierten Testkonten als E2E-Test abgedeckt; echte Staging-Testkonten ergänzen. Rollen und Reset-Regeln sind dokumentiert.
+2. Authentifizierte Web-Betreuungs-, Chat- und Medienflüsse sind mit isolierten Testkonten als E2E-Test abgedeckt; echte Staging-Testkonten ergänzen. Rollen und Reset-Regeln sind dokumentiert.
 3. Native Passkeys in einem Expo-Development-Build validieren; die Abnahmeschritte sind dokumentiert.
 4. Authentifizierte Playwright-/Detox- und native Gerätetests sowie CI-Checks für die Hauptjourneys ausbauen; die Web-Playwright-Suite läuft jetzt verpflichtend nach dem Build in CI.
 5. Kontaktanfragen mit Push-Benachrichtigungen, Antwortstatus und anschließendem Chat auf echten Geräten abnehmen; Web-Antwortstatus ist im E2E-Flow abgedeckt, Datenbanktrigger und kontrollierte RPCs sind implementiert.

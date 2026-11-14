@@ -3,7 +3,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { bookingTypeLabels } from '../../lib/booking';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { LeafletMapView, leafletPage, toScriptJson } from '../../components/leaflet-map';
 import {
   BOOKING_TYPES,
   nearbyHelperErrorMessage,
@@ -80,7 +80,18 @@ function osmMapHtml(center: MapCoordinate, helpers: NearbyHelper[], centerLabel:
     longitude: helper.longitude,
     distance: `${Number(helper.distance_km).toLocaleString('de-DE')} km entfernt`,
   }));
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${zoomForHelpers(helpers)});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.marker(center).addTo(map).bindPopup(${JSON.stringify(`Dein ${centerLabel}`)});${JSON.stringify(markers)}.forEach(h=>L.marker([h.latitude,h.longitude]).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.distance).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
+  return leafletPage(`function(){
+    var center=[${center.latitude},${center.longitude}];
+    var markers=${toScriptJson(markers)};
+    var map=L.map('map').setView(center,${zoomForHelpers(helpers)});
+    L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);
+    L.marker(center).addTo(map).bindPopup(${toScriptJson(`Dein ${centerLabel}`)});
+    markers.forEach(function(h){
+      L.marker([h.latitude,h.longitude]).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.distance).on('click',function(){
+        window.ReactNativeWebView.postMessage(h.id);
+      });
+    });
+  }`);
 }
 
 function NeighborhoodMap({
@@ -98,22 +109,15 @@ function NeighborhoodMap({
 }) {
   const c = usePalette();
   if (Platform.OS !== 'web') {
-    const handleMapMessage = (event: WebViewMessageEvent) => onSelect(event.nativeEvent.data);
     return (
-      <View
-        accessible={false}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={[styles.map, { borderColor: c.outlineVariant }]}
-      >
-        <WebView
-          javaScriptEnabled
-          onMessage={handleMapMessage}
-          originWhitelist={['*']}
-          source={{ html: osmMapHtml(center, helpers, centerLabel) }}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
+      <LeafletMapView
+        html={osmMapHtml(center, helpers, centerLabel)}
+        style={styles.map}
+        onMessage={(message) => {
+          if (message.startsWith('pfotennetz:')) return;
+          onSelect(message);
+        }}
+      />
     );
   }
   const radiusKm = projectionRadiusKm(helpers);

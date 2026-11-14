@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { router } from 'expo-router';
 import {
   useActiveHazards,
@@ -20,6 +19,7 @@ import {
   type HazardRadarRadiusKm,
 } from '@pfotennetz/shared';
 import { projectNearbyPoint, type MapCoordinate } from '../../lib/helper-map';
+import { LeafletMapView, leafletPage, toScriptJson } from '../../components/leaflet-map';
 import {
   ActionButton,
   AppHeader,
@@ -57,8 +57,23 @@ function osmHazardMapHtml(
       HAZARD_SEVERITY_LABELS[hazard.severity as keyof typeof HAZARD_SEVERITY_LABELS] ??
       hazard.severity,
   }));
-  const markerJson = JSON.stringify(markers).replace(/</g, '\\u003c');
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}.hazard{background:#c62828;border:2px solid #fff;border-radius:50%;color:#fff;font:bold 16px sans-serif;text-align:center;width:28px;height:28px;line-height:28px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const center=[${center.latitude},${center.longitude}];const map=L.map('map').setView(center,${Math.max(10, Math.round(15 - Math.log2(radiusKm)))});L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);L.circle(center,{radius:${radiusKm * 1000},color:'#b34a28',fillColor:'#b34a28',fillOpacity:.12}).addTo(map);L.marker(center).addTo(map).bindPopup('Dein Standort');${markerJson}.forEach(h=>L.marker([h.latitude,h.longitude],{icon:L.divIcon({className:'hazard',html:'!',iconSize:[32,32],iconAnchor:[16,16]})}).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.severity).on('click',()=>window.ReactNativeWebView.postMessage(h.id)));</script></body></html>`;
+  const markerJson = toScriptJson(markers);
+  return leafletPage(
+    `function(){
+      var center=[${center.latitude},${center.longitude}];
+      var markers=${markerJson};
+      var map=L.map('map').setView(center,${Math.max(10, Math.round(15 - Math.log2(radiusKm)))});
+      L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);
+      L.circle(center,{radius:${radiusKm * 1000},color:'#b34a28',fillColor:'#b34a28',fillOpacity:.12}).addTo(map);
+      L.marker(center).addTo(map).bindPopup('Dein Standort');
+      markers.forEach(function(h){
+        L.marker([h.latitude,h.longitude],{icon:L.divIcon({className:'hazard',html:'!',iconSize:[32,32],iconAnchor:[16,16]})}).addTo(map).bindPopup('<strong>'+h.name+'</strong><br>'+h.severity).on('click',function(){
+          window.ReactNativeWebView.postMessage(h.id);
+        });
+      });
+    }`,
+    '.hazard{background:#c62828;border:2px solid #fff;border-radius:50%;color:#fff;font:bold 16px sans-serif;text-align:center;width:28px;height:28px;line-height:28px}'
+  );
 }
 
 function HazardRow({ hazard }: { hazard: ActiveHazard }) {
@@ -138,24 +153,15 @@ function HazardMap({
 }) {
   const c = usePalette();
   if (Platform.OS !== 'web') {
-    const openHazard = (event: WebViewMessageEvent) => {
-      router.push({ pathname: '/hazard/[id]', params: { id: event.nativeEvent.data } });
-    };
     return (
-      <View
-        accessible={false}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={[styles.map, { borderColor: c.outlineVariant }]}
-      >
-        <WebView
-          javaScriptEnabled
-          onMessage={openHazard}
-          originWhitelist={['*']}
-          source={{ html: osmHazardMapHtml(center, radiusKm, hazards) }}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
+      <LeafletMapView
+        html={osmHazardMapHtml(center, radiusKm, hazards)}
+        style={styles.map}
+        onMessage={(message) => {
+          if (message.startsWith('pfotennetz:')) return;
+          router.push({ pathname: '/hazard/[id]', params: { id: message } });
+        }}
+      />
     );
   }
   return (

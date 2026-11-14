@@ -1,11 +1,11 @@
--- PfotenNetz Migration: Wiederverwendbare Buchungsvorlagen
+-- PfotenNetz Migration: Wiederverwendbare Betreuungsvorlagen
 --
 -- Wer regelmäßig dieselbe Betreuung anfragt, muss Tiere, Leistung, Vergütung,
 -- Treffpunkt und Hinweise nicht bei jeder Anfrage neu eingeben. Am Ende des
--- Buchungsformulars lassen sich die aktuellen Angaben unter einem Namen als
+-- Betreuungsformulars lassen sich die aktuellen Angaben unter einem Namen als
 -- Vorlage speichern. Vorlagen gehören genau einem Nutzer und werden nur für
 -- neue Anfragen angeboten; der Zeitraum wird bewusst nicht gespeichert, weil er
--- bei jeder Buchung neu gewählt werden muss.
+-- bei jeder Betreuung neu gewählt werden muss.
 
 CREATE TABLE public.booking_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

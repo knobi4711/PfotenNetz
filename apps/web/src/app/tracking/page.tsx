@@ -184,15 +184,15 @@ export default function TrackingPage() {
               <section className="card p-6">
                 <h2 className="text-xl font-extrabold text-on-surface">Kommunikation</h2>
                 <p className="mt-2 text-sm leading-6 text-on-surface-variant">
-                  Tausche dich direkt über den Buchungs-Chat aus und sende Statusupdates oder Fotos
-                  aus dem Browser.
+                  Tausche dich direkt über den Betreuungs-Chat aus und sende Statusupdates oder
+                  Fotos aus dem Browser.
                 </p>
                 <button
                   type="button"
                   className="btn-secondary mt-4 w-full"
                   onClick={() => router.push(active ? `/chat/${active.id}` : '/bookings')}
                 >
-                  {active ? 'Aktiven Chat öffnen' : 'Buchungen öffnen'}
+                  {active ? 'Aktiven Chat öffnen' : 'Betreuungen öffnen'}
                 </button>
               </section>
             </aside>

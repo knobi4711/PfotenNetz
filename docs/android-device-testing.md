@@ -42,8 +42,8 @@ pnpm --filter @pfotennetz/mobile test:android:local
 ## Abnahmeläufe
 
 1. Anmeldung und Push-Berechtigung erlauben.
-2. Buchung öffnen und Route zum Treffpunkt starten.
-3. Als Helfer eine bestätigte Buchung starten und Standortberechtigung auf
+2. Betreuung öffnen und Route zum Treffpunkt starten.
+3. Als Helfer eine bestätigte Betreuung starten und Standortberechtigung auf
    „Immer zulassen“ setzen.
 4. App minimieren, Emulatorstandort ändern und Tracking-Position prüfen.
 5. Netzwerk deaktivieren, weitere Positionen erzeugen, Netzwerk aktivieren und

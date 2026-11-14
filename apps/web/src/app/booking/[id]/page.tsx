@@ -212,7 +212,7 @@ export default function BookingDetailPage() {
     <main id="main-content" tabIndex={-1} className="min-h-screen bg-surface">
       <WebHeader backHref="/bookings" backLabel="Anfragen" />
       <div className="mx-auto max-w-5xl px-6 py-10">
-        {booking.isPending ? <p>Buchung wird geladen …</p> : null}
+        {booking.isPending ? <p>Betreuung wird geladen …</p> : null}
         {booking.isError ? (
           <p role="alert" className="rounded-xl bg-error-container p-4 text-on-error-container">
             {booking.error.message}
@@ -424,7 +424,7 @@ export default function BookingDetailPage() {
                       disabled={pending}
                       onClick={() => cancel.mutate(id)}
                     >
-                      {value.status === 'requested' ? 'Anfrage stornieren' : 'Buchung stornieren'}
+                      {value.status === 'requested' ? 'Anfrage stornieren' : 'Betreuung stornieren'}
                     </button>
                   ) : null}
                   {value.helper_id ? (

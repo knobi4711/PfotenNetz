@@ -33,7 +33,7 @@ GRANT EXECUTE ON FUNCTION public.helper_search_origin() TO authenticated;
 -- Kennzahl an die neue Suchlogik angleichen: Es zählt die eigene
 -- Reisebereitschaft der Helfer:innen, nicht mehr der Nachbarschafts-Radius der
 -- suchenden Person. Der Nachbarschafts-Radius bleibt für offene Anfragen und
--- Buchungen unverändert bestehen.
+-- Betreuungen unverändert bestehen.
 CREATE OR REPLACE FUNCTION public.nearby_helper_count()
 RETURNS bigint
 LANGUAGE sql

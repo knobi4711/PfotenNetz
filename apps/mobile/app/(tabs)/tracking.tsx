@@ -76,7 +76,7 @@ function BookingRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Buchung ${booking.booking_number} öffnen`}
+      accessibilityLabel={`Betreuung ${booking.booking_number} öffnen`}
       onPress={() => {
         router.push({ pathname: '/booking/[id]', params: { id: booking.id } });
       }}
@@ -242,10 +242,10 @@ export default function TrackingScreen() {
         </ChipRow>
 
         {displayedQuery.isPending ? (
-          <LoadingView label="Buchungen werden geladen …" />
+          <LoadingView label="Betreuungen werden geladen …" />
         ) : displayedQuery.isError ? (
           <ErrorBox
-            message={`Buchungen konnten nicht geladen werden: ${displayedQuery.error.message}`}
+            message={`Betreuungen konnten nicht geladen werden: ${displayedQuery.error.message}`}
             onRetry={() => {
               void displayedQuery.refetch();
             }}
@@ -254,13 +254,13 @@ export default function TrackingScreen() {
           <Card>
             <EmptyText>
               {currentUserId === null
-                ? 'Melde dich an, um deine Buchungen zu sehen.'
-                : 'Noch keine Buchungen vorhanden. Neue Anfragen erscheinen hier.'}
+                ? 'Melde dich an, um deine Betreuungen zu sehen.'
+                : 'Noch keine Betreuungen vorhanden. Neue Anfragen erscheinen hier.'}
             </EmptyText>
           </Card>
         ) : visibleBookings.length === 0 ? (
           <Card>
-            <EmptyText>Für diesen Filter gibt es aktuell keine Buchungen.</EmptyText>
+            <EmptyText>Für diesen Filter gibt es aktuell keine Betreuungen.</EmptyText>
           </Card>
         ) : (
           groupBookingsByRequest(visibleBookings).map((request) => (

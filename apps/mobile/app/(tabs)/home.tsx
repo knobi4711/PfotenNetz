@@ -82,7 +82,7 @@ function HighlightCard({
       </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Buchung ${booking.booking_number} öffnen`}
+        accessibilityLabel={`Betreuung ${booking.booking_number} öffnen`}
         onPress={() => {
           router.push({ pathname: '/booking/[id]', params: { id: booking.id } });
         }}
@@ -126,7 +126,7 @@ function PreviewRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Buchung ${booking.booking_number} öffnen`}
+      accessibilityLabel={`Betreuung ${booking.booking_number} öffnen`}
       onPress={() => {
         router.push({ pathname: '/booking/[id]', params: { id: booking.id } });
       }}
@@ -292,8 +292,8 @@ export default function HomeScreen() {
 
         {disputed !== null ? (
           <AlertBanner
-            title="Strittige Buchung"
-            message={`Die Buchung ${disputed.booking_number} benötigt deine Aufmerksamkeit.`}
+            title="Strittige Betreuung"
+            message={`Die Betreuung ${disputed.booking_number} benötigt deine Aufmerksamkeit.`}
             actionLabel="Details ansehen"
             onAction={() => {
               router.push({ pathname: '/booking/[id]', params: { id: disputed.id } });
@@ -373,12 +373,12 @@ export default function HomeScreen() {
 
         {bookingsQuery.isPending ? (
           <Card>
-            <LoadingView label="Buchungen werden geladen …" />
+            <LoadingView label="Betreuungen werden geladen …" />
           </Card>
         ) : bookingsQuery.isError ? (
           <Card>
             <ErrorBox
-              message={`Buchungen konnten nicht geladen werden: ${bookingsQuery.error.message}`}
+              message={`Betreuungen konnten nicht geladen werden: ${bookingsQuery.error.message}`}
               onRetry={() => {
                 void bookingsQuery.refetch();
               }}
@@ -467,7 +467,7 @@ export default function HomeScreen() {
           ) : account === null ? (
             <EmptyText>
               Noch kein Nachbarschafts-Konto vorhanden. Es wird automatisch angelegt, sobald deine
-              erste Buchung abgeschlossen ist.
+              erste Betreuung abgeschlossen ist.
             </EmptyText>
           ) : (
             <>
@@ -494,10 +494,10 @@ export default function HomeScreen() {
         <Card>
           <SectionTitle>Aktuelle Anfragen</SectionTitle>
           {bookingsQuery.isPending ? (
-            <LoadingView label="Buchungen werden geladen …" />
+            <LoadingView label="Betreuungen werden geladen …" />
           ) : bookingsQuery.isError ? (
             <ErrorBox
-              message={`Buchungen konnten nicht geladen werden: ${bookingsQuery.error.message}`}
+              message={`Betreuungen konnten nicht geladen werden: ${bookingsQuery.error.message}`}
               onRetry={() => {
                 void bookingsQuery.refetch();
               }}

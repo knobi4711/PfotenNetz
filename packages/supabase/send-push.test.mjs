@@ -71,7 +71,7 @@ describe('message building', () => {
   it('forwards rich-push categories and only internal action URLs', () => {
     const msg = buildExpoMessage(
       {
-        title: 'Neue Buchung',
+        title: 'Neue Betreuung',
         body: 'Bitte prüfen',
         data: {
           categoryIdentifier: 'booking',

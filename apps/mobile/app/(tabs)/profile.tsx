@@ -108,7 +108,7 @@ function TransactionRow({ tx }: { tx: TimebankTransaction }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Buchung ${bookingRef} öffnen`}
+      accessibilityLabel={`Betreuung ${bookingRef} öffnen`}
       onPress={() => {
         router.push({ pathname: '/booking/[id]', params: { id: bookingRef } });
       }}
@@ -575,7 +575,7 @@ export default function ProfileScreen() {
                 editable={!updateProfile.isPending}
                 keyboardType="phone-pad"
                 onChangeText={setPhone}
-                placeholder="Für Absprachen bei Buchungen"
+                placeholder="Für Absprachen bei Betreuungen"
                 placeholderTextColor={c.placeholder}
                 style={[
                   styles.input,
@@ -961,7 +961,7 @@ export default function ProfileScreen() {
           ) : account === null ? (
             <EmptyText>
               Noch kein Nachbarschafts-Konto vorhanden. Es wird automatisch angelegt, sobald deine
-              erste Buchung abgeschlossen ist.
+              erste Betreuung abgeschlossen ist.
             </EmptyText>
           ) : (
             <>

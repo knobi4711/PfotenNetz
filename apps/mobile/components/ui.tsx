@@ -361,7 +361,7 @@ export function ChipRow({ children }: { children: ReactNode }) {
   );
 }
 
-// Stitch "PfotenNetz App": Kritische Hinweis-Karte (z. B. strittige Buchung).
+// Stitch "PfotenNetz App": Kritische Hinweis-Karte (z. B. strittige Betreuung).
 export function AlertBanner({
   title,
   message,

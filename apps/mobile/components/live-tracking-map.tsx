@@ -1,43 +1,71 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import { WebView } from 'react-native-webview';
+import type { WebView } from 'react-native-webview';
 import { appFonts, usePalette } from './ui';
+import {
+  LEAFLET_MAP_ERROR,
+  LEAFLET_MAP_READY,
+  LeafletMapView,
+  leafletPage,
+  toScriptJson,
+} from './leaflet-map';
 
 export interface LiveTrackPoint {
   latitude: number;
   longitude: number;
 }
 
+interface TrackPayload {
+  points: Array<[number, number]>;
+  latest: { latitude: number; longitude: number } | null;
+}
+
 /**
- * Same OpenStreetMap/Leaflet approach as the neighbourhood map: a WebView on
- * native platforms, a lightweight placeholder on web (the web app has its own
- * full map under /tracking).
+ * The track is rendered directly from the page's initializer, so the map never
+ * depends on a successful `injectJavaScript` call. Live updates are injected
+ * afterwards, once the page reported that Leaflet is ready.
  */
-function trackingMapHtml(radiusMeters: number): string {
+function trackingInitScript(radiusMeters: number, initialJson: string): string {
   const radius = Math.max(50, Math.round(radiusMeters));
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>html,body,#map{height:100%;margin:0;background:#f4f0ed}.leaflet-control-attribution{font-size:10px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>
-var map=L.map('map',{zoomControl:false}).setView([51.16,10.45],6);
-L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);
-var track=L.polyline([],{color:'#b34a28',weight:4,opacity:0.9}).addTo(map);
-var zone=L.circle([0,0],{radius:${radius},color:'#b34a28',weight:1,fillColor:'#b34a28',fillOpacity:0.08});
-var marker=L.circleMarker([0,0],{radius:9,weight:3,color:'#ffffff',fillColor:'#b34a28',fillOpacity:1}).addTo(map);
-var fitted=false;
-window.renderTrack=function(data){
-  var pts=data.points||[];
-  track.setLatLngs(pts);
-  if(pts.length>0){zone.setLatLng(pts[0]);if(!map.hasLayer(zone)){zone.addTo(map);}}
-  var latest=data.latest;
-  if(!latest){return;}
-  var at=[latest.latitude,latest.longitude];
-  marker.setLatLng(at);
-  if(!fitted){
-    if(pts.length>1){map.fitBounds(L.latLngBounds(pts).pad(0.35));}else{map.setView(at,16);}
-    fitted=true;
-  }else if(!map.getBounds().contains(at)){
-    map.panTo(at);
-  }
-};
-</script></body></html>`;
+  return `function(){
+    var radius=${radius};
+    var initial=${initialJson};
+    var map=L.map('map',{zoomControl:true,attributionControl:true}).setView([51.16,10.45],6);
+    L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);
+    var track=L.polyline([],{color:'#b34a28',weight:4,opacity:0.9}).addTo(map);
+    var zone=L.circle([0,0],{radius:radius,color:'#b34a28',weight:1,fillColor:'#b34a28',fillOpacity:0.08});
+    var marker=L.circleMarker([0,0],{radius:9,weight:3,color:'#ffffff',fillColor:'#b34a28',fillOpacity:0}).addTo(map);
+    var fitted=false;
+
+    window.renderTrack=function(data){
+      data=data||{};
+      var pts=data.points||[];
+      track.setLatLngs(pts);
+      if(pts.length>0){
+        zone.setLatLng(pts[0]);
+        if(!map.hasLayer(zone)){ zone.addTo(map); }
+      }else if(map.hasLayer(zone)){
+        map.removeLayer(zone);
+      }
+      var latest=data.latest;
+      if(!latest){
+        marker.setStyle({opacity:0,fillOpacity:0});
+        return;
+      }
+      marker.setStyle({opacity:1,fillOpacity:1});
+      var at=[latest.latitude,latest.longitude];
+      marker.setLatLng(at);
+      if(!fitted){
+        if(pts.length>1){ map.fitBounds(L.latLngBounds(pts).pad(0.35)); }else{ map.setView(at,16); }
+        fitted=true;
+      }else if(!map.getBounds().contains(at)){
+        map.panTo(at);
+      }
+    };
+
+    map.invalidateSize();
+    window.renderTrack(initial);
+  }`;
 }
 
 export function LiveTrackingMap({
@@ -56,20 +84,40 @@ export function LiveTrackingMap({
   const c = usePalette();
   const webView = useRef<WebView | null>(null);
   const [ready, setReady] = useState(false);
-  const html = useMemo(() => trackingMapHtml(radiusMeters), [radiusMeters]);
-  const payload = useMemo(
-    () =>
-      JSON.stringify({
-        points: points.map((point) => [point.latitude, point.longitude]),
-        latest: latitude !== null && longitude !== null ? { latitude, longitude } : null,
-      }),
-    [points, latitude, longitude]
+
+  const payload = useMemo<TrackPayload>(
+    () => ({
+      points: points.map((point) => [point.latitude, point.longitude]),
+      latest: latitude !== null && longitude !== null ? { latitude, longitude } : null,
+    }),
+    [latitude, longitude, points]
+  );
+  const payloadJson = useMemo(() => toScriptJson(payload), [payload]);
+
+  // The HTML is only rebuilt when the safety radius changes; it carries the
+  // payload that was current at that moment so the first frame already shows
+  // the track.
+  const initialPayload = useRef(payload);
+  const html = useMemo(
+    () => leafletPage(trackingInitScript(radiusMeters, toScriptJson(initialPayload.current))),
+    [radiusMeters]
   );
 
   useEffect(() => {
+    initialPayload.current = payload;
+  }, [payload]);
+
+  const injectTrack = () => {
+    webView.current?.injectJavaScript(
+      `if(window.renderTrack){window.renderTrack(${payloadJson});} true;`
+    );
+  };
+
+  useEffect(() => {
     if (!ready) return;
-    webView.current?.injectJavaScript(`window.renderTrack(${payload}); true;`);
-  }, [ready, payload]);
+    injectTrack();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- injectTrack only reads refs and payloadJson
+  }, [payloadJson, ready]);
 
   const summary =
     latitude !== null && longitude !== null
@@ -80,7 +128,7 @@ export function LiveTrackingMap({
     return (
       <View
         style={[
-          styles.map,
+          styles.fallback,
           { height, backgroundColor: c.surfaceContainerLow, borderColor: c.outlineVariant },
         ]}
       >
@@ -95,30 +143,28 @@ export function LiveTrackingMap({
   }
 
   return (
-    <View
-      accessible
-      accessibilityRole="image"
+    <LeafletMapView
+      html={html}
+      height={height}
       accessibilityLabel={summary}
-      style={[styles.map, { height, borderColor: c.outlineVariant }]}
-    >
-      <WebView
-        ref={webView}
-        accessible={false}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        javaScriptEnabled
-        onLoadEnd={() => setReady(true)}
-        onLoadStart={() => setReady(false)}
-        originWhitelist={['*']}
-        source={{ html }}
-        style={StyleSheet.absoluteFill}
-      />
-    </View>
+      webViewRef={webView}
+      onMessage={(message) => {
+        if (message === LEAFLET_MAP_READY) {
+          setReady(true);
+          // Leaflet loads asynchronously, so the first render may still show an
+          // older payload.
+          injectTrack();
+        } else if (message === LEAFLET_MAP_ERROR) {
+          setReady(false);
+        }
+      }}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  map: {
+  fallback: {
+    position: 'relative',
     borderRadius: 24,
     borderWidth: 1,
     overflow: 'hidden',
@@ -132,6 +178,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     marginTop: 8,
+    textAlign: 'center',
   },
   fallbackText: {
     fontFamily: appFonts.regular,

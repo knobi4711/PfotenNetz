@@ -120,7 +120,7 @@ export function configureForegroundPresentation(): void {
     notifications.setNotificationCategoryAsync('booking', [
       {
         identifier: 'OPEN_BOOKING',
-        buttonTitle: 'Buchung öffnen',
+        buttonTitle: 'Betreuung öffnen',
         options: { opensAppToForeground: true },
       },
       {

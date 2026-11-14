@@ -147,7 +147,7 @@ export default function LiveTrackingScreen() {
               ) : session === null ? (
                 <EmptyText>
                   {isHelper
-                    ? 'Starte die GPS-Aufzeichnung in den Buchungsdetails, damit der Anbieter dich sehen kann.'
+                    ? 'Starte die GPS-Aufzeichnung in den Betreuungsdetails, damit der Anbieter dich sehen kann.'
                     : 'Das Live-Tracking startet, sobald dein:e Helfer:in die Betreuung vor Ort beginnt.'}
                 </EmptyText>
               ) : !hasPosition ? (
@@ -194,7 +194,7 @@ export default function LiveTrackingScreen() {
             </Card>
 
             <Card>
-              <SectionTitle>Buchung</SectionTitle>
+              <SectionTitle>Betreuung</SectionTitle>
               <Text style={[styles.detailLine, { color: c.onSurfaceVariant }]}>
                 Start:{' '}
                 {formatDate(booking.start_at, {
@@ -219,13 +219,13 @@ export default function LiveTrackingScreen() {
               </Text>
               <Text
                 accessibilityRole="button"
-                accessibilityLabel="Zur Buchung"
+                accessibilityLabel="Zur Betreuung"
                 onPress={() => {
                   router.push({ pathname: '/booking/[id]', params: { id: booking.id } });
                 }}
                 style={[styles.link, { color: c.primary }]}
               >
-                Buchungsdetails öffnen
+                Betreuungsdetails öffnen
               </Text>
             </Card>
           </>

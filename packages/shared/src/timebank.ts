@@ -15,7 +15,7 @@ function bookingNumberFromMetadata(metadata: unknown): string | null {
 
 function bookingDescription(kind: 'earned' | 'spent', bookingNumber: string): string {
   const action = kind === 'earned' ? 'erhalten' : 'ausgegeben';
-  return `${TIME_SERVICE_UNIT_LABEL} für Buchung ${bookingNumber} ${action}`;
+  return `${TIME_SERVICE_UNIT_LABEL} für Betreuung ${bookingNumber} ${action}`;
 }
 
 /**

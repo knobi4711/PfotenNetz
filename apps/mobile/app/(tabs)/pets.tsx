@@ -278,7 +278,7 @@ export default function PetsScreen() {
             {pets.length === 0 ? (
               <Card>
                 <EmptyText>
-                  Noch keine Tiere eingetragen. Lege dein erstes Tier an, um Buchungen anfragen zu
+                  Noch keine Tiere eingetragen. Lege dein erstes Tier an, um Betreuungen anfragen zu
                   können.
                 </EmptyText>
               </Card>

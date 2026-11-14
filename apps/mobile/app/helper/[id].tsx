@@ -114,7 +114,7 @@ export default function HelperDetailScreen() {
               <SectionTitle>Unverbindlich kennenlernen</SectionTitle>
               <Text style={[styles.privacy, { color: c.onSurfaceVariant }]}>
                 Sende zuerst eine Nachricht über PfotenNetz. Telefonnummern und Adressen bleiben
-                dabei geschützt; eine Buchung ist damit noch nicht verbunden.
+                dabei geschützt; eine Betreuung ist damit noch nicht verbunden.
               </Text>
               <TextInput
                 accessibilityLabel="Nachricht zur Kennenlernanfrage"

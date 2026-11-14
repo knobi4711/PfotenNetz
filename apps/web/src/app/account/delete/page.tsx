@@ -73,7 +73,7 @@ export default function DeleteAccountPage() {
               <p className="mt-5 text-on-surface-variant">
                 Du bist als <strong>{profile.data.display_name}</strong> angemeldet. Diese Aktion
                 löscht deinen Account dauerhaft einschließlich Profil, Tieren, Nachrichten und
-                Buchungsdaten. Sie kann nicht rückgängig gemacht werden.
+                Betreuungsdaten. Sie kann nicht rückgängig gemacht werden.
               </p>
               <label className="mt-6 flex items-start gap-3 text-sm font-semibold">
                 <input
