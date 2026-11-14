@@ -94,8 +94,15 @@ Web-Build und ein Deployment – sonst bleibt im Dashboard die alte Version steh
 Ablauf bei jedem App-Release:
 
 1. In `apps/mobile/app.json` `version` und `versionCode` erhöhen (und den lokalen
-   `apps/mobile/android/app/build.gradle`-Stand angleichen).
+   `apps/mobile/android/app/build.gradle`-Stand angleichen). Der `versionCode` muss
+   höher sein als jeder zuvor hochgeladene Wert; die Historie bleibt auch nach einem
+   Wechsel des Play-Console-Kontos erhalten.
 2. AAB bauen (`apps/mobile/android`: `./gradlew.bat app:bundleRelease`) und mit
    `pnpm --filter @pfotennetz/mobile upload:android:local` zu Google Play hochladen.
+   Der Service-Account aus `apps/mobile/.secrets/google-play-service-account.json` muss
+   im jeweiligen Play-Console-Konto unter „Nutzer und Berechtigungen“ eingeladen sein
+   (App-Berechtigungen „App-Informationen ansehen“ und „Release auf Test-Tracks
+   verwalten“). Die frühere Seite „API-Zugriff“ gibt es nicht mehr; ohne die Freigabe
+   antwortet die API trotz gültigem Token mit HTTP 403.
 3. `pnpm --filter @pfotennetz/web build` ausführen und den Web-Deploy wie oben beschrieben.
 4. Live prüfen, dass die neue Version im ausgelieferten Dashboard-Chunk enthalten ist.

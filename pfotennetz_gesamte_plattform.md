@@ -176,8 +176,20 @@ pnpm upload:android:local
 
 Der lokale Service-Account `pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com`
 mit seinem passenden JSON-Schlüssel muss in der Play Console für `app.pfotennetz`
-freigeschaltet sein. Falls der Schlüssel an einem anderen Ort liegt, wird der Pfad
-über `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY_PATH` gesetzt. Der AAB-Upload erfolgt zukünftig über den Google Play Store (https://play.google.com/store/apps/details?id=app.pfotennetz&pli=1, geschlossener Test) und überträgt weder das AAB noch Zugangsdaten an Expo.
+freigeschaltet sein. Die frühere Seite „Einrichten → API-Zugriff“ existiert nicht mehr,
+und ein Google-Cloud-Projekt wird auch nicht mehr mit dem Entwicklerkonto verknüpft.
+Stattdessen wird der Service-Account unter **Nutzer und Berechtigungen → Neue Nutzer
+einladen** wie ein Teammitglied eingetragen: E-Mail aus `client_email` des JSON-Schlüssels,
+App-Berechtigungen „App-Informationen ansehen“ und „Release auf Test-Tracks verwalten“.
+Eine Bestätigung ist nicht nötig, Service-Accounts haben kein Postfach; die Freigabe greift
+nach wenigen Minuten. Fehlt sie, antwortet die API trotz gültigem Token mit HTTP 403
+(`The caller does not have permission`).
+
+Der `versionCode` muss bei jedem Upload höher sein als jeder jemals veröffentlichte Wert –
+Google führt die Versionshistorie mit der App weiter, auch nach einem Wechsel des
+Play-Console-Kontos. Version 0.4.1 nutzt deshalb `versionCode` 47, weil 46 noch im
+übertragenen Konto veröffentlicht wurde. Falls der Schlüssel an einem anderen Ort liegt,
+wird der Pfad über `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY_PATH` gesetzt. Der AAB-Upload erfolgt über den Google Play Store (https://play.google.com/store/apps/details?id=app.pfotennetz, geschlossener Test, Track `alpha`) und überträgt weder das AAB noch Zugangsdaten an Expo.
 
 Der Build wurde erfolgreich verifiziert. Dabei wurden lediglich CMake-Warnungen zu
 langen Windows-Pfaden sowie Gradle-Hinweise zu künftig entfernten Features ausgegeben;
