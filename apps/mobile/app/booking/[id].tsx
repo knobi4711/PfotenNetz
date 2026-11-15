@@ -30,6 +30,7 @@ import {
   useStartBooking,
   useUpdateBookingRequest,
   useActiveTrackingSessions,
+  usePetsByIds,
   type BookingRatingInput,
   type Database,
 } from '@pfotennetz/supabase';
@@ -59,6 +60,7 @@ import {
   keyHandoffLabel,
 } from '../../lib/booking';
 import { TrackingRecorder } from '../../components/tracking-recorder';
+import { formatEmergencyList } from '../../lib/pet-emergency';
 import { buildDirectionsUrl, openDirections } from '../../lib/navigation';
 import { stopTrackingGeofence } from '../../lib/geofence';
 import { stopBackgroundTracking } from '../../lib/tracking-background';
@@ -311,6 +313,15 @@ export default function BookingDetailScreen() {
   );
   const liveSession = activeTracking.data?.find((item) => item.booking_id === bookingId) ?? null;
 
+  // Helpers get the emergency data of the cared-for pets automatically once
+  // the owner has confirmed the booking. RLS limits the rows to the booking.
+  const showEmergencyCards =
+    isHelper && (booking?.status === 'confirmed' || booking?.status === 'in_progress');
+  const emergencyPetsQuery = usePetsByIds(
+    showEmergencyCards ? groupedPets.map((item) => item.pet.id) : []
+  );
+  const emergencyPets = emergencyPetsQuery.data ?? [];
+
   // Tracking must not outlive its booking. The database closes the session when
   // the booking reaches a terminal status; this stops the device-side uploads
   // and the persistent foreground-service notification at the same moment.
@@ -432,6 +443,63 @@ export default function BookingDetailScreen() {
                 </EmptyText>
               ) : null}
             </Card>
+
+            {showEmergencyCards ? (
+              <Card accentColor={c.error}>
+                <SectionTitle>Notfallkarten</SectionTitle>
+                <EmptyText>
+                  Für{' '}
+                  {groupedPetNames.length > 0
+                    ? groupedPetNames.join(', ')
+                    : 'deine betreuten Tiere'}{' '}
+                  automatisch freigeschaltet – auch offline.
+                </EmptyText>
+                {emergencyPetsQuery.isPending ? (
+                  <EmptyText>Notfallkarten werden geladen …</EmptyText>
+                ) : emergencyPetsQuery.isError ? (
+                  <EmptyText>
+                    Die Notfallkarten konnten nicht geladen werden. Öffne sie erneut, sobald du
+                    wieder online bist.
+                  </EmptyText>
+                ) : emergencyPets.length === 0 ? (
+                  <EmptyText>
+                    Für diese Betreuung sind noch keine Notfallkarten hinterlegt.
+                  </EmptyText>
+                ) : (
+                  emergencyPets.map((pet) => (
+                    <View key={pet.id} style={styles.emergencyPet}>
+                      <Text style={[styles.emergencyPetName, { color: c.onSurface }]}>
+                        {pet.name}
+                      </Text>
+                      <InfoRow label="Medikamente" value={formatEmergencyList(pet.medications)} />
+                      <InfoRow
+                        label="Allergien"
+                        value={pet.allergies?.join(', ') || 'Keine Angaben'}
+                      />
+                      <InfoRow
+                        label="Tierarzt"
+                        value={
+                          [pet.vet_clinic, pet.vet_phone]
+                            .filter((value): value is string => Boolean(value))
+                            .join(' · ') || 'Nicht angegeben'
+                        }
+                      />
+                    </View>
+                  ))
+                )}
+                <ActionButton
+                  title="Vollständige Notfallkarten ansehen"
+                  onPress={() => {
+                    if (bookingId !== undefined) {
+                      router.push({
+                        pathname: '/booking/emergency/[bookingId]',
+                        params: { bookingId },
+                      });
+                    }
+                  }}
+                />
+              </Card>
+            ) : null}
 
             <Card>
               <SectionTitle>Details</SectionTitle>
@@ -903,6 +971,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   careNotesText: { fontFamily: appFonts.regular, fontSize: 14, lineHeight: 21 },
+  emergencyPet: { gap: 2, marginBottom: 10 },
+  emergencyPetName: { fontFamily: appFonts.bold, fontSize: 14, lineHeight: 20 },
   petPhotoPreview: { alignItems: 'center' },
   petPhoto: { width: 120, height: 120, borderRadius: 20 },
   photoHint: { fontFamily: appFonts.semibold, fontSize: 12, lineHeight: 18, marginTop: 2 },

@@ -5,6 +5,7 @@ import { fetchOwnEmergencyCardLinks, revokeEmergencyCardLink } from './emergency
 import {
   createPet,
   fetchOwnPets,
+  fetchPetsByIds,
   setPetActive,
   setPetDeceased,
   uploadPetPhoto,
@@ -20,6 +21,23 @@ export function useOwnPets(): UseQueryResult<Pet[], Error> {
   return useQuery({
     queryKey: petsKeys.own,
     queryFn: () => fetchOwnPets(client),
+  });
+}
+
+/**
+ * Pets by id. Used by helpers to load the animals of a booking; RLS only
+ * returns rows the caller is allowed to see.
+ */
+export function usePetsByIds(petIds: readonly string[]): UseQueryResult<Pet[], Error> {
+  const client = getSupabaseClient();
+  const ids = [...new Set(petIds)].sort();
+  return useQuery({
+    queryKey: petsKeys.byIds(ids),
+    queryFn: () => fetchPetsByIds(client, ids),
+    enabled: ids.length > 0,
+    // Medical data is safety-critical, so always fetch a fresh copy on mount.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 

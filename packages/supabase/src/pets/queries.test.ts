@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
-import { createPet, fetchOwnPets, setPetActive, validateCreatePet } from './queries';
+import {
+  createPet,
+  fetchOwnPets,
+  fetchPetsByIds,
+  setPetActive,
+  validateCreatePet,
+} from './queries';
 
 function clientWithStubs(stubs: { userId: string | null; result: unknown }) {
   const calls: { table: string; values?: unknown; filters: string[] }[] = [];
@@ -20,6 +26,10 @@ function clientWithStubs(stubs: { userId: string | null; result: unknown }) {
       eq: (column: string, value: unknown) => {
         filters.push(`${column}=${String(value)}`);
         return chain;
+      },
+      in: (column: string, values: readonly string[]) => {
+        filters.push(`${column} in (${values.join(',')})`);
+        return Promise.resolve(stubs.result);
       },
       order: () => Promise.resolve(stubs.result),
       single: () => Promise.resolve(stubs.result),
@@ -51,6 +61,25 @@ describe('pets queries', () => {
     const { client } = clientWithStubs({ userId: null, result: { data: [], error: null } });
 
     await expect(fetchOwnPets(client)).rejects.toThrow('Not authenticated');
+  });
+
+  it('loads pets by id and deduplicates the ids', async () => {
+    const pets = [{ id: 'pet-1' }, { id: 'pet-2' }];
+    const { client } = clientWithStubs({
+      userId: 'helper-1',
+      result: { data: pets, error: null },
+    });
+
+    await expect(fetchPetsByIds(client, ['pet-1', 'pet-2', 'pet-1'])).resolves.toEqual(pets);
+  });
+
+  it('returns an empty list without querying when no pet ids are given', async () => {
+    const { client } = clientWithStubs({
+      userId: 'helper-1',
+      result: { data: [{ id: 'unexpected' }], error: null },
+    });
+
+    await expect(fetchPetsByIds(client, [])).resolves.toEqual([]);
   });
 
   it('creates a pet for the caller and trims optional fields', async () => {

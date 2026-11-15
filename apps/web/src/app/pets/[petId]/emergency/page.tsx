@@ -15,29 +15,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { WebHeader } from '../../../../components/WebHeader';
-
-function age(birthDate: string | null): string {
-  if (!birthDate) return 'Nicht angegeben';
-  const birth = new Date(`${birthDate}T00:00:00`);
-  if (Number.isNaN(birth.getTime())) return 'Nicht angegeben';
-  const now = new Date();
-  let years = now.getFullYear() - birth.getFullYear();
-  if (
-    now.getMonth() < birth.getMonth() ||
-    (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())
-  ) {
-    years -= 1;
-  }
-  return years >= 0 ? `${years} Jahre` : 'Nicht angegeben';
-}
-
-function list(value: unknown): string {
-  if (!Array.isArray(value)) return 'Keine Angaben';
-  const values = value.filter(
-    (item): item is string => typeof item === 'string' && item.trim() !== ''
-  );
-  return values.length ? values.join(', ') : 'Keine Angaben';
-}
+import { calculatePetAge, formatEmergencyList } from '../../../../lib/pet-emergency';
 
 function createToken(): string {
   const bytes = new Uint8Array(32);
@@ -126,13 +104,13 @@ export default function EmergencyCardPage() {
                 </div>
               </div>
               <dl className="grid gap-4 p-6 sm:grid-cols-2">
-                <Info label="Alter" value={age(pet.birth_date)} />
+                <Info label="Alter" value={calculatePetAge(pet.birth_date)} />
                 <Info label="Rasse" value={pet.breed ?? 'Nicht angegeben'} />
                 <Info label="Chipnummer" value={pet.microchip_number ?? 'Nicht angegeben'} />
                 <Info label="Tasso-Nummer" value={pet.tasso_number ?? 'Nicht angegeben'} />
                 <Info label="Tasso-Telefon" value={TASSO_PHONE_NUMBER} />
-                <Info label="Medikamente" value={list(pet.medications)} />
-                <Info label="Allergien" value={list(pet.allergies)} />
+                <Info label="Medikamente" value={formatEmergencyList(pet.medications)} />
+                <Info label="Allergien" value={formatEmergencyList(pet.allergies)} />
                 <Info
                   label="Tierarzt"
                   value={`${pet.vet_clinic ?? 'Nicht angegeben'} · ${pet.vet_phone ?? 'Keine Telefonnummer'}`}

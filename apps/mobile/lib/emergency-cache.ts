@@ -17,7 +17,16 @@ export type EmergencyCardSnapshot = {
   savedAt: string;
 };
 
+export type BookingEmergencyCache = {
+  bookingId: string;
+  petIds: string[];
+  /** After this point the cached card list is no longer shown. */
+  expiresAt: string | null;
+  savedAt: string;
+};
+
 const storageKey = (petId: string) => `pfotennetz.emergency.${petId}`;
+const bookingStorageKey = (bookingId: string) => `pfotennetz.emergency.booking.${bookingId}`;
 
 function isEmergencyCardSnapshot(value: unknown): value is EmergencyCardSnapshot {
   if (typeof value !== 'object' || value === null) return false;
@@ -40,6 +49,49 @@ function isEmergencyCardSnapshot(value: unknown): value is EmergencyCardSnapshot
     (card.specialNeeds === null || typeof card.specialNeeds === 'string') &&
     typeof card.savedAt === 'string'
   );
+}
+
+function isBookingEmergencyCache(value: unknown): value is BookingEmergencyCache {
+  if (typeof value !== 'object' || value === null) return false;
+  const cache = value as Partial<BookingEmergencyCache>;
+  return (
+    typeof cache.bookingId === 'string' &&
+    Array.isArray(cache.petIds) &&
+    cache.petIds.every((petId) => typeof petId === 'string') &&
+    (cache.expiresAt === null || typeof cache.expiresAt === 'string') &&
+    typeof cache.savedAt === 'string'
+  );
+}
+
+/** Remembers which pets belong to a booking so a helper can find them offline. */
+export async function saveBookingEmergencyPets(
+  bookingId: string,
+  petIds: readonly string[],
+  expiresAt: string | null
+): Promise<void> {
+  const cache: BookingEmergencyCache = {
+    bookingId,
+    petIds: [...new Set(petIds)],
+    expiresAt,
+    savedAt: new Date().toISOString(),
+  };
+  await SecureStore.setItemAsync(bookingStorageKey(bookingId), JSON.stringify(cache));
+}
+
+/** Pet ids of a booking that were cached while the helper was authorized. */
+export async function loadBookingEmergencyPets(bookingId: string): Promise<string[]> {
+  const value = await SecureStore.getItemAsync(bookingStorageKey(bookingId));
+  if (value === null) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!isBookingEmergencyCache(parsed)) return [];
+    if (parsed.expiresAt !== null && new Date(parsed.expiresAt).getTime() <= Date.now()) {
+      return [];
+    }
+    return parsed.petIds;
+  } catch {
+    return [];
+  }
 }
 
 export async function saveEmergencyCardSnapshot(snapshot: EmergencyCardSnapshot): Promise<void> {

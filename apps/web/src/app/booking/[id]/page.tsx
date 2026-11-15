@@ -16,13 +16,16 @@ import {
   useConfirmBookingHelper,
   useRejectBookingHelper,
   useRejectBooking,
+  usePetsByIds,
   useStartBooking,
   type BookingRatingInput,
 } from '@pfotennetz/supabase';
 import { bookingTypeLabel } from '@pfotennetz/shared';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { WebHeader } from '../../../components/WebHeader';
 import { WebTrackingRecorder } from '../../../components/WebTrackingRecorder';
+import { formatEmergencyList } from '../../../lib/pet-emergency';
 
 const STATUS: Record<string, string> = {
   requested: 'Angefragt',
@@ -188,6 +191,16 @@ export default function BookingDetailPage() {
     (profile.data?.role === 'helper' || profile.data?.role === 'admin');
   const isAdmin = profile.data?.role === 'admin';
   const canAcceptOpen = useCanAcceptOpenBooking(isOpenRequest === true ? (id ?? null) : null);
+
+  // Helpers get the emergency data of the cared-for pets automatically once
+  // the owner has confirmed the booking. RLS limits the rows to the booking.
+  const showEmergencyCards =
+    isHelper === true && (value?.status === 'confirmed' || value?.status === 'in_progress');
+  const emergencyPetsQuery = usePetsByIds(
+    showEmergencyCards ? groupedPets.map((item) => item.pet.id) : []
+  );
+  const emergencyPets = emergencyPetsQuery.data ?? [];
+
   const pending =
     accept.isPending ||
     reject.isPending ||
@@ -445,6 +458,62 @@ export default function BookingDetailPage() {
                 ) : null}
               </section>
             </div>
+            {showEmergencyCards ? (
+              <section className="card mt-6 border-l-4 border-error p-7">
+                <h2 className="text-xl font-extrabold">Notfallkarten</h2>
+                <p className="mt-2 text-sm text-on-surface-variant">
+                  Für{' '}
+                  {groupedPetNames.length > 0
+                    ? groupedPetNames.join(', ')
+                    : 'deine betreuten Tiere'}{' '}
+                  automatisch freigeschaltet.
+                </p>
+                {emergencyPetsQuery.isPending ? (
+                  <p className="mt-4 text-sm">Notfallkarten werden geladen …</p>
+                ) : emergencyPetsQuery.isError ? (
+                  <p
+                    role="alert"
+                    className="mt-4 rounded-xl bg-error-container p-3 text-sm text-on-error-container"
+                  >
+                    Die Notfallkarten konnten nicht geladen werden. Öffne sie erneut, sobald du
+                    wieder online bist.
+                  </p>
+                ) : emergencyPets.length === 0 ? (
+                  <p className="mt-4 text-sm text-on-surface-variant">
+                    Für diese Betreuung sind noch keine Notfallkarten hinterlegt.
+                  </p>
+                ) : (
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {emergencyPets.map((pet) => (
+                      <div key={pet.id} className="rounded-xl bg-surface-container-low p-4 text-sm">
+                        <p className="font-bold text-on-surface">{pet.name}</p>
+                        <div className="mt-3 space-y-2">
+                          <SummaryRow
+                            label="Medikamente"
+                            value={formatEmergencyList(pet.medications)}
+                          />
+                          <SummaryRow
+                            label="Allergien"
+                            value={formatEmergencyList(pet.allergies)}
+                          />
+                          <SummaryRow
+                            label="Tierarzt"
+                            value={
+                              [pet.vet_clinic, pet.vet_phone]
+                                .filter((entry): entry is string => Boolean(entry))
+                                .join(' · ') || 'Nicht angegeben'
+                            }
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Link href={`/booking/${id}/emergency`} className="btn-primary mt-5 inline-flex">
+                  Vollständige Notfallkarten ansehen
+                </Link>
+              </section>
+            ) : null}
             {value.status === 'in_progress' && isHelper ? (
               <WebTrackingRecorder bookingId={id} />
             ) : null}
@@ -515,6 +584,15 @@ function Row({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="font-bold text-on-surface-variant">{label}</dt>
       <dd className="mt-1 whitespace-pre-line text-on-surface">{value}</dd>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-bold text-on-surface-variant">{label}</p>
+      <p className="mt-0.5 text-on-surface">{value}</p>
     </div>
   );
 }

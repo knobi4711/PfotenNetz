@@ -100,6 +100,12 @@ function toInsertRow(ownerId: string, input: CreatePetInput) {
       };
 }
 
+async function withSignedPetPhoto(client: SupabaseClient<Database>, pet: Pet): Promise<Pet> {
+  if (!pet.avatar_url) return pet;
+  const signed = await client.storage.from('pet-photos').createSignedUrl(pet.avatar_url, 3600);
+  return signed.error === null ? { ...pet, avatar_url: signed.data.signedUrl } : pet;
+}
+
 /** Loads the caller's own pets, newest first (RLS: owners only). */
 export async function fetchOwnPets(client: SupabaseClient<Database>): Promise<Pet[]> {
   const userId = await requireUserId(client);
@@ -110,13 +116,24 @@ export async function fetchOwnPets(client: SupabaseClient<Database>): Promise<Pe
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return Promise.all(
-    (data ?? []).map(async (pet) => {
-      if (!pet.avatar_url) return pet;
-      const signed = await client.storage.from('pet-photos').createSignedUrl(pet.avatar_url, 3600);
-      return signed.error === null ? { ...pet, avatar_url: signed.data.signedUrl } : pet;
-    })
-  );
+  return Promise.all((data ?? []).map((pet) => withSignedPetPhoto(client, pet)));
+}
+
+/**
+ * Loads pets by id with signed photos. RLS decides which rows the caller may
+ * read: owners always, helpers only while a booking grants access.
+ */
+export async function fetchPetsByIds(
+  client: SupabaseClient<Database>,
+  petIds: readonly string[]
+): Promise<Pet[]> {
+  const ids = [...new Set(petIds)];
+  if (ids.length === 0) return [];
+
+  const { data, error } = await client.from('pets').select('*').in('id', ids);
+
+  if (error) throw error;
+  return Promise.all((data ?? []).map((pet) => withSignedPetPhoto(client, pet)));
 }
 
 /** Creates a pet for the caller. */
