@@ -211,10 +211,20 @@ test.describe('Web smoke flows', () => {
       user: authUser,
     };
     await page.addInitScript(
-      ({ session, storageKey }) => {
+      ({ session, storageKey, onboardingKey }) => {
         window.localStorage.setItem(storageKey, JSON.stringify(session));
+        // Treat this account as a returning user, otherwise the first-run
+        // assistant opens as a modal and blocks the interactions under test.
+        window.localStorage.setItem(
+          onboardingKey,
+          JSON.stringify({ completed: true, lastStepId: null })
+        );
       },
-      { session: authSession, storageKey: supabaseAuthStorageKey() }
+      {
+        session: authSession,
+        storageKey: supabaseAuthStorageKey(),
+        onboardingKey: `pfotennetz.onboarding.v2.${userId}`,
+      }
     );
     await page.unroute('**/auth/v1/session');
     await page.unroute('**/rest/v1/**');
