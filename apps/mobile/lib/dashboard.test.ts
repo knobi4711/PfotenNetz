@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { BookingWithRelations } from '@pfotennetz/supabase';
-import { highlightHeadings, selectBookingPreview, selectHighlightedBooking } from './dashboard';
+import {
+  dashboardSectionIds,
+  defaultDashboardOrder,
+  highlightHeadings,
+  moveDashboardSection,
+  normalizeDashboardOrder,
+  selectBookingPreview,
+  selectHighlightedBooking,
+} from './dashboard';
 
 const NOW = new Date('2026-09-22T08:00:00.000Z');
 
@@ -158,5 +166,60 @@ describe('selectBookingPreview', () => {
     const before = list.map((b) => b.id);
     selectBookingPreview(list, { now: NOW });
     expect(list.map((b) => b.id)).toEqual(before);
+  });
+});
+
+describe('dashboard section order', () => {
+  it('default order contains every section exactly once', () => {
+    expect([...defaultDashboardOrder].sort()).toEqual([...dashboardSectionIds].sort());
+  });
+
+  it('keeps a stored order as-is when it is complete', () => {
+    const stored = [...defaultDashboardOrder].reverse();
+    expect(normalizeDashboardOrder(stored)).toEqual(stored);
+  });
+
+  it('drops unknown and duplicate entries', () => {
+    expect(
+      normalizeDashboardOrder(['requests', 'unknown', 'requests', 42, null, 'weather'])
+    ).toEqual([
+      'requests',
+      'weather',
+      'members',
+      'bookings',
+      'safety',
+      'community',
+      'missing',
+      'timebank',
+    ]);
+  });
+
+  it('appends sections that are missing from older versions', () => {
+    const order = normalizeDashboardOrder(['missing', 'timebank']);
+    expect(order.slice(0, 2)).toEqual(['missing', 'timebank']);
+    expect(order).toHaveLength(dashboardSectionIds.length);
+  });
+
+  it('falls back to the default order for malformed data', () => {
+    expect(normalizeDashboardOrder(undefined)).toEqual([...defaultDashboardOrder]);
+    expect(normalizeDashboardOrder({ order: ['requests'] })).toEqual([...defaultDashboardOrder]);
+    expect(normalizeDashboardOrder('requests')).toEqual([...defaultDashboardOrder]);
+  });
+
+  it('moves a section down and up', () => {
+    const order = [...defaultDashboardOrder];
+    const down = moveDashboardSection(order, 0, 2);
+    expect(down.slice(0, 3)).toEqual([order[1], order[2], order[0]]);
+    const up = moveDashboardSection(order, 3, 0);
+    expect(up.slice(0, 4)).toEqual([order[3], order[0], order[1], order[2]]);
+  });
+
+  it('ignores out-of-range moves and does not mutate the input', () => {
+    const order = [...defaultDashboardOrder];
+    const before = [...order];
+    expect(moveDashboardSection(order, 0, 0)).toEqual(order);
+    expect(moveDashboardSection(order, -1, 2)).toEqual(order);
+    expect(moveDashboardSection(order, 2, dashboardSectionIds.length)).toEqual(order);
+    expect(order).toEqual(before);
   });
 });

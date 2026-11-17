@@ -10,7 +10,7 @@ const packageName = process.env.ANDROID_APPLICATION_ID ?? 'app.pfotennetz';
 const track = process.env.GOOGLE_PLAY_TRACK ?? 'alpha';
 const releaseNotes =
   process.env.GOOGLE_PLAY_RELEASE_NOTES ??
-  'Neu in 0.4.1: Tasso-Nummer und Tasso-Notruf direkt am Tier hinterlegen, Zeitfenster auch ohne Zeigegeste als Dialog anlegen und den Ort des Tier-Zuhauses am Suchergebnis bestätigen.';
+  'Neu in 0.4.3: Dashboard-Bereiche per Drag & Drop frei anordnen – die Reihenfolge bleibt pro Konto gespeichert. Außerdem sehen Helfer:innen die Notfallkarten der betreuten Tiere während der Betreuung automatisch.';
 const expectedServiceAccount =
   process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL ??
   'pfotennetz-play-upload@pfotennetz.iam.gserviceaccount.com';

@@ -120,3 +120,74 @@ export function selectBookingPreview(
     .sort(byStartAsc)
     .slice(0, limit);
 }
+
+/**
+ * Reorderable dashboard blocks. The order is a user preference: only the ids
+ * are persisted per account, never the data inside the cards.
+ */
+export const dashboardSectionIds = [
+  'members',
+  'bookings',
+  'safety',
+  'weather',
+  'community',
+  'missing',
+  'timebank',
+  'requests',
+] as const;
+
+export type DashboardSectionId = (typeof dashboardSectionIds)[number];
+
+/** Matches the order the dashboard has always used. */
+export const defaultDashboardOrder: readonly DashboardSectionId[] = [...dashboardSectionIds];
+
+export const dashboardSectionLabels: Record<DashboardSectionId, string> = {
+  members: 'Mitglieder & Helfer:innen',
+  bookings: 'Aktuelle Betreuungen',
+  safety: 'Nachbarschafts-Sicherheit',
+  weather: 'Pfotenschutz & Wetter',
+  community: 'Gemeinsam unterwegs',
+  missing: 'Tier vermisst?',
+  timebank: 'Nachbarschafts-Stunden',
+  requests: 'Aktuelle Anfragen',
+};
+
+export function isDashboardSectionId(value: unknown): value is DashboardSectionId {
+  return typeof value === 'string' && (dashboardSectionIds as readonly string[]).includes(value);
+}
+
+/**
+ * Turns whatever was stored (parsed JSON, unknown shape, older app version)
+ * into a complete order: unknown entries are dropped, duplicates removed and
+ * new sections are appended in their default position. Never mutates the input.
+ */
+export function normalizeDashboardOrder(value: unknown): DashboardSectionId[] {
+  const seen = new Set<DashboardSectionId>();
+  const order: DashboardSectionId[] = [];
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      if (isDashboardSectionId(entry) && !seen.has(entry)) {
+        seen.add(entry);
+        order.push(entry);
+      }
+    }
+  }
+  for (const id of defaultDashboardOrder) {
+    if (!seen.has(id)) order.push(id);
+  }
+  return order;
+}
+
+/** Moves one section to another position. Out-of-range moves return a copy. */
+export function moveDashboardSection(
+  order: readonly DashboardSectionId[],
+  from: number,
+  to: number
+): DashboardSectionId[] {
+  const next = [...order];
+  if (from === to || from < 0 || to < 0 || from >= next.length || to >= next.length) return next;
+  const [moved] = next.splice(from, 1);
+  if (moved === undefined) return next;
+  next.splice(to, 0, moved);
+  return next;
+}

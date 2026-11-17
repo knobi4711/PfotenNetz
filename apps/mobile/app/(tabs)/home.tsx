@@ -1,11 +1,13 @@
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView } from 'react-native-gesture-handler';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import {
+  useAuth,
   useBookings,
   groupBookingsByRequest,
   useNearbyHelperCount,
@@ -28,7 +30,10 @@ import {
   highlightHeadings,
   selectBookingPreview,
   selectHighlightedBooking,
+  type DashboardSectionId,
 } from '../../lib/dashboard';
+import { useDashboardOrder } from '../../lib/use-dashboard-order';
+import { DashboardSectionSorter } from '../../components/dashboard-sorter';
 import {
   ActionButton,
   AlertBanner,
@@ -232,6 +237,10 @@ function PawWeatherCard() {
 
 export default function HomeScreen() {
   const c = usePalette();
+  const scrollRef = useRef<ScrollView>(null);
+  const auth = useAuth();
+  const { order, move, reset, isCustom } = useDashboardOrder(auth.userId);
+  const [editing, setEditing] = useState(false);
   const bookingsQuery = useBookings();
   const accountQuery = useTimebankAccount();
   const profileQuery = useOwnProfile();
@@ -267,9 +276,267 @@ export default function HomeScreen() {
     }
   };
 
+  const petNamesFor = (bookingId: string) =>
+    requests
+      .find((request) => request.primary.id === bookingId)
+      ?.bookings.map((booking) => booking.pet?.name ?? 'Tier');
+
+  const openEditor = () => {
+    setEditing(true);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  };
+
+  const renderSection = (id: DashboardSectionId) => {
+    switch (id) {
+      case 'members':
+        return (
+          <Card>
+            <View style={styles.statsRow}>
+              <Text style={[styles.statsNumber, { color: c.primary }]}>
+                {statsQuery.data === undefined ? '–' : statsQuery.data.toLocaleString('de-DE')}
+              </Text>
+              <View style={styles.statsText}>
+                <Text style={[styles.statsTitle, { color: c.onSurface }]}>
+                  PfotenNetz-Mitglieder
+                </Text>
+                <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+                  Alle registrierten Konten.
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Helfer:innen in der Umgebung auf der Nachbarschaftskarte anzeigen"
+              onPress={() => {
+                router.push('/(tabs)/explore');
+              }}
+              style={({ pressed }) => [
+                styles.statsRow,
+                {
+                  borderTopColor: c.outlineVariant,
+                  borderTopWidth: StyleSheet.hairlineWidth,
+                  paddingTop: 14,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <Text style={[styles.statsNumber, { color: c.primary }]}>
+                {nearbyHelperStats.data === undefined || nearbyHelperStats.data === null
+                  ? '–'
+                  : nearbyHelperStats.data.toLocaleString('de-DE')}
+              </Text>
+              <View style={styles.statsText}>
+                <Text style={[styles.statsTitle, { color: c.onSurface }]}>
+                  Helfer:innen in der Umgebung
+                </Text>
+                <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+                  {nearbyHelperStats.isError
+                    ? 'Aktuell nicht verfügbar.'
+                    : nearbyHelperStats.data === undefined
+                      ? 'Wird geladen …'
+                      : nearbyHelperStats.data === null
+                        ? 'Standort im Profil festlegen.'
+                        : `Verifiziert rund um dein ${homeLabel}.`}
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={c.outline} />
+            </Pressable>
+            <ActionButton
+              title="Helfer:innen entdecken"
+              variant="secondary"
+              onPress={() => {
+                router.push('/(tabs)/explore');
+              }}
+            />
+          </Card>
+        );
+      case 'bookings':
+        return (
+          <>
+            <View style={styles.sectionHeading}>
+              <SectionTitle>Aktuelle Betreuungen</SectionTitle>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  router.push('/(tabs)/tracking');
+                }}
+              >
+                <Text style={[styles.sectionLink, { color: c.primary }]}>Alle anzeigen</Text>
+              </Pressable>
+            </View>
+            {bookingsQuery.isPending ? (
+              <Card>
+                <LoadingView label="Betreuungen werden geladen …" />
+              </Card>
+            ) : bookingsQuery.isError ? (
+              <Card>
+                <ErrorBox
+                  message={`Betreuungen konnten nicht geladen werden: ${bookingsQuery.error.message}`}
+                  onRetry={() => {
+                    void bookingsQuery.refetch();
+                  }}
+                />
+              </Card>
+            ) : highlighted === null ? (
+              <Card>
+                <EmptyText>Keine kommenden Betreuungen. Neue Anfragen erscheinen hier.</EmptyText>
+              </Card>
+            ) : (
+              <HighlightCard
+                booking={highlighted.booking}
+                kind={highlighted.kind}
+                petNames={petNamesFor(highlighted.booking.id)}
+              />
+            )}
+          </>
+        );
+      case 'safety':
+        return (
+          <Card>
+            <SectionTitle>Nachbarschafts-Sicherheit</SectionTitle>
+            <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+              Aktive Gefahren in deiner Nähe prüfen oder eine Warnung melden.
+            </Text>
+            <ActionButton
+              title="Gefahrenradar öffnen"
+              variant="secondary"
+              onPress={() => {
+                router.push('/hazard/radar');
+              }}
+            />
+            <ActionButton
+              title="Notfallkarte scannen"
+              variant="secondary"
+              onPress={() => router.push('/scan')}
+            />
+          </Card>
+        );
+      case 'weather':
+        return <PawWeatherCard />;
+      case 'community':
+        return (
+          <Card>
+            <SectionTitle>Gemeinsam unterwegs</SectionTitle>
+            <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+              Rudelrunden, Playdates und Treffen in deiner Nachbarschaft.
+            </Text>
+            <ActionButton
+              title="Community-Events entdecken"
+              variant="secondary"
+              onPress={() => router.push('/community')}
+            />
+            <ActionButton
+              title="Tauschbörse für Tierbedarf"
+              variant="secondary"
+              onPress={() => router.push('/marketplace')}
+            />
+          </Card>
+        );
+      case 'missing':
+        return (
+          <Card>
+            <SectionTitle>Tier vermisst?</SectionTitle>
+            <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+              Aktiviere schnell Hilfe aus deiner Nachbarschaft.
+            </Text>
+            <ActionButton
+              title="Vermisstes Tier melden"
+              variant="secondary"
+              onPress={() => router.push('/missing')}
+            />
+          </Card>
+        );
+      case 'timebank':
+        return (
+          <Card>
+            <View style={styles.balanceHeading}>
+              <View style={[styles.balanceIcon, { backgroundColor: c.secondaryFixed }]}>
+                <MaterialCommunityIcons name="hand-heart" size={22} color={c.secondary} />
+              </View>
+              <SectionTitle>Nachbarschafts-Stunden</SectionTitle>
+            </View>
+            {accountQuery.isPending ? (
+              <LoadingView label="Kontostand wird geladen …" />
+            ) : accountQuery.isError ? (
+              <ErrorBox
+                message={`Kontostand konnte nicht geladen werden: ${accountQuery.error.message}`}
+                onRetry={() => {
+                  void accountQuery.refetch();
+                }}
+              />
+            ) : account === null ? (
+              <EmptyText>
+                Noch kein Nachbarschafts-Konto vorhanden. Es wird automatisch angelegt, sobald deine
+                erste Betreuung abgeschlossen ist.
+              </EmptyText>
+            ) : (
+              <>
+                <Text
+                  style={[
+                    styles.balance,
+                    { color: Number(account.balance_hours) < 0 ? c.error : c.onSurface },
+                  ]}
+                >
+                  {formatTimebankHours(Number(account.balance_hours))}
+                </Text>
+                <InfoRow
+                  label="Verdient"
+                  value={formatTimebankHoursMagnitude(Number(account.total_earned_hours))}
+                />
+                <InfoRow
+                  label="Ausgegeben"
+                  value={formatTimebankHoursMagnitude(Number(account.total_spent_hours))}
+                />
+              </>
+            )}
+          </Card>
+        );
+      case 'requests':
+        return (
+          <Card>
+            <SectionTitle>Aktuelle Anfragen</SectionTitle>
+            {bookingsQuery.isPending ? (
+              <LoadingView label="Betreuungen werden geladen …" />
+            ) : bookingsQuery.isError ? (
+              <ErrorBox
+                message={`Betreuungen konnten nicht geladen werden: ${bookingsQuery.error.message}`}
+                onRetry={() => {
+                  void bookingsQuery.refetch();
+                }}
+              />
+            ) : preview.length === 0 ? (
+              <EmptyText>Keine aktuellen Anfragen vorhanden.</EmptyText>
+            ) : (
+              preview.map((booking) => (
+                <PreviewRow
+                  key={booking.id}
+                  booking={booking}
+                  petNames={petNamesFor(booking.id)}
+                  adminOpenRequest={
+                    profileQuery.data?.role === 'admin' &&
+                    booking.status === 'requested' &&
+                    booking.helper_id === null &&
+                    booking.seeker_id !== profileQuery.data?.id
+                  }
+                />
+              ))
+            )}
+            <ActionButton
+              title="Anfragen anzeigen"
+              variant="secondary"
+              onPress={() => {
+                router.push('/(tabs)/tracking');
+              }}
+            />
+          </Card>
+        );
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.surface }]}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
@@ -301,241 +568,55 @@ export default function HomeScreen() {
           />
         ) : null}
 
-        <Card>
-          <View style={styles.statsRow}>
-            <Text style={[styles.statsNumber, { color: c.primary }]}>
-              {statsQuery.data === undefined ? '–' : statsQuery.data.toLocaleString('de-DE')}
+        {editing ? (
+          <Card>
+            <SectionTitle>Dashboard anordnen</SectionTitle>
+            <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
+              Ziehe die Bereiche am Griff in deine Wunschreihenfolge. Die Anordnung wird für dein
+              Konto gespeichert.
             </Text>
-            <View style={styles.statsText}>
-              <Text style={[styles.statsTitle, { color: c.onSurface }]}>PfotenNetz-Mitglieder</Text>
-              <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
-                Alle registrierten Konten.
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Helfer:innen in der Umgebung auf der Nachbarschaftskarte anzeigen"
-            onPress={() => {
-              router.push('/(tabs)/explore');
-            }}
-            style={({ pressed }) => [
-              styles.statsRow,
-              {
-                borderTopColor: c.outlineVariant,
-                borderTopWidth: StyleSheet.hairlineWidth,
-                paddingTop: 14,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <Text style={[styles.statsNumber, { color: c.primary }]}>
-              {nearbyHelperStats.data === undefined || nearbyHelperStats.data === null
-                ? '–'
-                : nearbyHelperStats.data.toLocaleString('de-DE')}
-            </Text>
-            <View style={styles.statsText}>
-              <Text style={[styles.statsTitle, { color: c.onSurface }]}>
-                Helfer:innen in der Umgebung
-              </Text>
-              <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
-                {nearbyHelperStats.isError
-                  ? 'Aktuell nicht verfügbar.'
-                  : nearbyHelperStats.data === undefined
-                    ? 'Wird geladen …'
-                    : nearbyHelperStats.data === null
-                      ? 'Standort im Profil festlegen.'
-                      : `Verifiziert rund um dein ${homeLabel}.`}
-              </Text>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={22} color={c.outline} />
-          </Pressable>
-          <ActionButton
-            title="Helfer:innen entdecken"
-            variant="secondary"
-            onPress={() => {
-              router.push('/(tabs)/explore');
-            }}
-          />
-        </Card>
-
-        <View style={styles.sectionHeading}>
-          <SectionTitle>Aktuelle Betreuungen</SectionTitle>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              router.push('/(tabs)/tracking');
-            }}
-          >
-            <Text style={[styles.sectionLink, { color: c.primary }]}>Alle anzeigen</Text>
-          </Pressable>
-        </View>
-
-        {bookingsQuery.isPending ? (
-          <Card>
-            <LoadingView label="Betreuungen werden geladen …" />
-          </Card>
-        ) : bookingsQuery.isError ? (
-          <Card>
-            <ErrorBox
-              message={`Betreuungen konnten nicht geladen werden: ${bookingsQuery.error.message}`}
-              onRetry={() => {
-                void bookingsQuery.refetch();
-              }}
-            />
-          </Card>
-        ) : highlighted === null ? (
-          <Card>
-            <EmptyText>Keine kommenden Betreuungen. Neue Anfragen erscheinen hier.</EmptyText>
+            <DashboardSectionSorter order={order} onReorder={move} scrollRef={scrollRef} />
+            <ActionButton title="Fertig" onPress={() => setEditing(false)} />
+            {isCustom ? (
+              <ActionButton
+                title="Standardanordnung wiederherstellen"
+                variant="secondary"
+                onPress={reset}
+              />
+            ) : null}
           </Card>
         ) : (
-          <HighlightCard
-            booking={highlighted.booking}
-            kind={highlighted.kind}
-            petNames={requests
-              .find((request) => request.primary.id === highlighted.booking.id)
-              ?.bookings.map((booking) => booking.pet?.name ?? 'Tier')}
-          />
+          <View style={styles.toolbar}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Dashboard-Bereiche anordnen"
+              onPress={openEditor}
+              style={({ pressed }) => [
+                styles.toolbarButton,
+                { backgroundColor: c.surfaceContainerLow, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <MaterialCommunityIcons name="tune-variant" size={16} color={c.onSurface} />
+              <Text style={[styles.toolbarLabel, { color: c.onSurface }]}>Anordnen</Text>
+            </Pressable>
+          </View>
         )}
 
-        <Card>
-          <SectionTitle>Nachbarschafts-Sicherheit</SectionTitle>
-          <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
-            Aktive Gefahren in deiner Nähe prüfen oder eine Warnung melden.
-          </Text>
+        {/*
+          The sections stay mounted while editing: queries and local card state
+          (e.g. the loaded temperature) are kept when the order changes.
+        */}
+        <View style={editing ? styles.hidden : undefined}>
+          {order.map((id) => (
+            <View key={id}>{renderSection(id)}</View>
+          ))}
           <ActionButton
-            title="Gefahrenradar öffnen"
-            variant="secondary"
+            title="Neue Betreuung buchen"
             onPress={() => {
-              router.push('/hazard/radar');
+              router.push('/booking/new');
             }}
           />
-          <ActionButton
-            title="Notfallkarte scannen"
-            variant="secondary"
-            onPress={() => router.push('/scan')}
-          />
-        </Card>
-
-        <PawWeatherCard />
-
-        <Card>
-          <SectionTitle>Gemeinsam unterwegs</SectionTitle>
-          <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
-            Rudelrunden, Playdates und Treffen in deiner Nachbarschaft.
-          </Text>
-          <ActionButton
-            title="Community-Events entdecken"
-            variant="secondary"
-            onPress={() => router.push('/community')}
-          />
-          <ActionButton
-            title="Tauschbörse für Tierbedarf"
-            variant="secondary"
-            onPress={() => router.push('/marketplace')}
-          />
-        </Card>
-
-        <Card>
-          <SectionTitle>Tier vermisst?</SectionTitle>
-          <Text style={[styles.petMeta, { color: c.onSurfaceVariant }]}>
-            Aktiviere schnell Hilfe aus deiner Nachbarschaft.
-          </Text>
-          <ActionButton
-            title="Vermisstes Tier melden"
-            variant="secondary"
-            onPress={() => router.push('/missing')}
-          />
-        </Card>
-
-        <Card>
-          <View style={styles.balanceHeading}>
-            <View style={[styles.balanceIcon, { backgroundColor: c.secondaryFixed }]}>
-              <MaterialCommunityIcons name="hand-heart" size={22} color={c.secondary} />
-            </View>
-            <SectionTitle>Nachbarschafts-Stunden</SectionTitle>
-          </View>
-          {accountQuery.isPending ? (
-            <LoadingView label="Kontostand wird geladen …" />
-          ) : accountQuery.isError ? (
-            <ErrorBox
-              message={`Kontostand konnte nicht geladen werden: ${accountQuery.error.message}`}
-              onRetry={() => {
-                void accountQuery.refetch();
-              }}
-            />
-          ) : account === null ? (
-            <EmptyText>
-              Noch kein Nachbarschafts-Konto vorhanden. Es wird automatisch angelegt, sobald deine
-              erste Betreuung abgeschlossen ist.
-            </EmptyText>
-          ) : (
-            <>
-              <Text
-                style={[
-                  styles.balance,
-                  { color: Number(account.balance_hours) < 0 ? c.error : c.onSurface },
-                ]}
-              >
-                {formatTimebankHours(Number(account.balance_hours))}
-              </Text>
-              <InfoRow
-                label="Verdient"
-                value={formatTimebankHoursMagnitude(Number(account.total_earned_hours))}
-              />
-              <InfoRow
-                label="Ausgegeben"
-                value={formatTimebankHoursMagnitude(Number(account.total_spent_hours))}
-              />
-            </>
-          )}
-        </Card>
-
-        <Card>
-          <SectionTitle>Aktuelle Anfragen</SectionTitle>
-          {bookingsQuery.isPending ? (
-            <LoadingView label="Betreuungen werden geladen …" />
-          ) : bookingsQuery.isError ? (
-            <ErrorBox
-              message={`Betreuungen konnten nicht geladen werden: ${bookingsQuery.error.message}`}
-              onRetry={() => {
-                void bookingsQuery.refetch();
-              }}
-            />
-          ) : preview.length === 0 ? (
-            <EmptyText>Keine aktuellen Anfragen vorhanden.</EmptyText>
-          ) : (
-            preview.map((booking) => (
-              <PreviewRow
-                key={booking.id}
-                booking={booking}
-                petNames={requests
-                  .find((request) => request.primary.id === booking.id)
-                  ?.bookings.map((item) => item.pet?.name ?? 'Tier')}
-                adminOpenRequest={
-                  profileQuery.data?.role === 'admin' &&
-                  booking.status === 'requested' &&
-                  booking.helper_id === null &&
-                  booking.seeker_id !== profileQuery.data?.id
-                }
-              />
-            ))
-          )}
-          <ActionButton
-            title="Anfragen anzeigen"
-            variant="secondary"
-            onPress={() => {
-              router.push('/(tabs)/tracking');
-            }}
-          />
-        </Card>
-
-        <ActionButton
-          title="Neue Betreuung buchen"
-          onPress={() => {
-            router.push('/booking/new');
-          }}
-        />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -544,6 +625,17 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 40 },
+  hidden: { display: 'none' },
+  toolbar: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },
+  toolbarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 40,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+  },
+  toolbarLabel: { fontFamily: appFonts.bold, fontSize: 12, lineHeight: 18 },
   sectionHeading: {
     flexDirection: 'row',
     alignItems: 'center',
