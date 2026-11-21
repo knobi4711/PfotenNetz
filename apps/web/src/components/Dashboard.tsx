@@ -20,6 +20,7 @@ import Link from 'next/link';
 import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
 import { bookingTypeLabel, petHomeLabel } from '@pfotennetz/shared';
+import { FooterScenery } from './FooterScenery';
 import { PasskeyPanel } from './PasskeyPanel';
 import { WebHeader } from './WebHeader';
 import { getCurrentBrowserLocation } from '../lib/location';
@@ -209,23 +210,22 @@ export function Dashboard() {
 
   if (auth.status !== 'authenticated') {
     return (
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="min-h-screen bg-surface flex items-center justify-center p-6"
-      >
-        <div className="w-full max-w-md">
-          <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-fixed text-3xl">
-              🐾
+      <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col bg-surface">
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="w-full max-w-md">
+            <div className="mb-8 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-fixed text-3xl">
+                🐾
+              </div>
+              <h1 className="text-3xl font-extrabold text-on-surface">PfotenNetz</h1>
+              <p className="mt-2 text-on-surface-variant">
+                Deine Nachbarschaft für gute Tierbetreuung.
+              </p>
             </div>
-            <h1 className="text-3xl font-extrabold text-on-surface">PfotenNetz</h1>
-            <p className="mt-2 text-on-surface-variant">
-              Deine Nachbarschaft für gute Tierbetreuung.
-            </p>
+            <PasskeyPanel />
           </div>
-          <PasskeyPanel />
         </div>
+        <FooterScenery />
       </main>
     );
   }
@@ -234,13 +234,13 @@ export function Dashboard() {
   const visibleBookings = groupBookingsByRequest(bookings.data ?? []).slice(0, 4);
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="flex min-h-screen flex-col bg-surface">
       <WebHeader />
 
       <main
         id="main-content"
         tabIndex={-1}
-        className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10 lg:py-12"
+        className="mx-auto w-full max-w-[1440px] flex-1 px-6 py-8 lg:px-10 lg:py-12"
       >
         <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
@@ -632,6 +632,7 @@ export function Dashboard() {
             · Impressum · © 2026 PfotenNetz
           </span>
         </div>
+        <FooterScenery />
       </footer>
     </div>
   );
