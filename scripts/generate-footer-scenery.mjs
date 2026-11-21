@@ -45,6 +45,13 @@ function groundPath(base, bottom = 340, amp = 1) {
   return `${d} L1600,${bottom} L0,${bottom} Z`;
 }
 
+/** Offene Linie entlang der Wiesenkante (Grundlinie fuer die Figuren). */
+function crestPath(base, amp = 1) {
+  let d = `M0,${n(groundY(0, base, amp))}`;
+  for (let x = 25; x <= 1600; x += 25) d += ` L${x},${n(groundY(x, base, amp))}`;
+  return d;
+}
+
 function pine(x, baseY, h, color, seed = 0, widthK = 1) {
   const r = rnd(seed + 7);
   const tiers = 4;
@@ -86,44 +93,52 @@ function bush(x, y, w, color) {
 }
 
 // ---------------------------------------------------------------------------
-// characters
+// characters – line art wie im Video: duenne Strokes, betonte Koepfe,
+// Gesichter als Tuschepunkte. Alle Masse in Einheiten des 1600x340-Canvas.
 // ---------------------------------------------------------------------------
 const C = {
   ink: 'var(--scenery-ink)',
   face: 'var(--scenery-face)',
   accent: 'var(--scenery-accent)',
 };
-const cap = (d, w, color = C.ink) =>
+const PEN = 5.2; // Hauptstrich
+const cap = (d, w = PEN, color = C.ink) =>
   `<path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+const dot = (cx, cy, r, color = C.ink) =>
+  `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(r)}" fill="${color}"/>`;
+const ring = (cx, cy, r, w = PEN, color = C.ink) =>
+  `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(r)}" fill="none" stroke="${color}" stroke-width="${n(w)}"/>`;
 
-function face(cx, cy, r, eye = 1.9, mouth = true) {
-  const ey = cy - r * 0.2;
+/** Lachendes Gesicht im Kopf. */
+function face(cx, cy, r, eye = 2.6, smile = true) {
   const ex = r * 0.34;
-  let s =
-    `<circle cx="${n(cx - ex)}" cy="${n(ey)}" r="${n(eye)}" fill="${C.face}"/>` +
-    `<circle cx="${n(cx + ex)}" cy="${n(ey)}" r="${n(eye)}" fill="${C.face}"/>`;
-  if (mouth) {
-    const my = cy + r * 0.26;
-    s += `<path d="M${n(cx - r * 0.3)},${n(my)} q${n(r * 0.3)},${n(r * 0.3)} ${n(r * 0.6)},0" fill="none" stroke="${C.face}" stroke-width="${n(Math.max(1.6, r * 0.16))}" stroke-linecap="round"/>`;
-  }
-  return s;
+  const ey = cy - r * 0.18;
+  return (
+    dot(cx - ex, ey, eye) +
+    dot(cx + ex, ey, eye) +
+    (smile
+      ? cap(
+          `M${n(cx - r * 0.36)},${n(cy + r * 0.16)} Q${n(cx)},${n(cy + r * 0.62)} ${n(cx + r * 0.36)},${n(cy + r * 0.16)}`,
+          Math.max(2.4, r * 0.26)
+        )
+      : '')
+  );
 }
 
-/** Person walking, bag in hand. Height ≈ 132. */
+/** Gehende Person mit Tasche in der Hand. Hoehe ≈ 131. */
 const walker = (x, y, scale = 1) => `<g transform="translate(${x} ${y}) scale(${scale})">
-    ${cap('M-1,-78 L-10,-42 L-17,-4', 9)}
-    ${cap('M1,-78 L10,-44 L14,-4', 9)}
-    ${cap('M-17,-4 L-26,-2', 7)}
-    ${cap('M14,-4 L23,-2', 7)}
-    <path d="M-9,-109 C-10,-98 -9,-88 -7,-76 L8,-76 C10,-88 11,-98 9,-109 Z" fill="${C.ink}"/>
-    ${cap('M2,-104 L10,-88 L13,-77', 6.5)}
-    <rect x="11" y="-80" width="18" height="17" rx="5" fill="${C.ink}"/>
-    ${cap('M2,-107 L12,-79', 2.4)}
-    <circle cx="0" cy="-122" r="12.5" fill="${C.ink}"/>
-    ${face(0, -122, 12.5)}
+    ${cap('M0,-74 L-13,-38 L-20,-2')}
+    ${cap('M0,-74 L12,-40 L17,-2')}
+    ${cap('M-20,-2 L-28,-1')}
+    ${cap('M17,-2 L24,-1')}
+    ${cap('M0,-102 L0,-74')}
+    ${cap('M2,-100 L14,-77')}
+    <rect x="10" y="-79" width="21" height="20" rx="5.5" fill="none" stroke="${C.ink}" stroke-width="${PEN}"/>
+    ${ring(0, -116, 14.5)}
+    ${face(0, -116, 14.5)}
   </g>`;
 
-/** Long-bodied dog, head raised. */
+/** Hund mit Stoeckchen-Koerper, Kopf und Schwanz; Leine wird aussen gezeichnet. */
 const dog = (
   x,
   y,
@@ -131,20 +146,19 @@ const dog = (
   hearts = false,
   flip = false
 ) => `<g transform="translate(${x} ${y}) scale(${flip ? -scale : scale} ${scale})">
-    ${cap('M-30,-30 Q-41,-35 -43,-48', 6.5)}
-    ${cap('M-21,-18 L-22,-2', 6.5)}
-    ${cap('M-11,-18 L-11,-2', 6.5)}
-    ${cap('M3,-18 L3,-2', 6.5)}
-    ${cap('M13,-18 L13,-2', 6.5)}
-    <rect x="-31" y="-39" width="44" height="23" rx="11.5" fill="${C.ink}"/>
-    ${cap('M8,-34 L18,-46', 11)}
-    <path d="M17,-51 L26,-53 L21,-62 Z" fill="${C.ink}"/>
-    <circle cx="23" cy="-49" r="8.8" fill="${C.ink}"/>
-    ${cap('M30,-50 L37,-50', 5.5)}
-    <circle cx="39" cy="-50" r="2.3" fill="${C.ink}"/>
-    <circle cx="25" cy="-51.5" r="1.9" fill="${C.face}"/>
-    <circle cx="14" cy="-32" r="2.2" fill="${C.accent}"/>
-  </g>${hearts ? heartsMark(x + (flip ? -24 : 24), y - 78, 1) : ''}`;
+    ${cap('M-36,-38 Q-45,-42 -47,-53')}
+    ${cap('M-36,-38 L8,-40')}
+    ${cap('M-26,-39 L-34,-2')}
+    ${cap('M-26,-39 L-17,-2')}
+    ${cap('M-1,-40 L-4,-2')}
+    ${cap('M-1,-40 L5,-2')}
+    ${cap('M13,-52 L17,-59 L21,-53', 4.4)}
+    ${ring(17, -45, 9.6)}
+    ${cap('M26,-45 L31,-44', 5.6)}
+    ${dot(33, -44, 2.4)}
+    ${dot(19.5, -48, 2)}
+    ${dot(9, -42, 2.1, C.accent)}
+  </g>${hearts ? heartsMark(x + (flip ? -18 : 18), y - 62, 1) : ''}`;
 
 function heartsMark(x, y, s = 1) {
   const h = (cx, cy, k, o) =>
@@ -156,82 +170,92 @@ function heartsMark(x, y, s = 1) {
   );
 }
 
+/** Sitzende/stehende Katze mit hochgezogenem Schwanz. */
 const cat = (
   x,
   y,
   scale = 1,
   flip = false
 ) => `<g transform="translate(${x} ${y}) scale(${flip ? -scale : scale} ${scale})">
-    ${cap('M-11,-4 C-23,-7 -26,-29 -18,-45', 5.5)}
-    <path d="M-15,0 C-20,-12 -18,-29 -6,-37 C2,-42 11,-40 15,-33 C20,-24 19,-10 13,-3 Z" fill="${C.ink}"/>
-    ${cap('M8,-15 L9,-2', 6)}
-    ${cap('M1,-15 L1,-2', 6)}
-    <circle cx="3" cy="-51" r="12" fill="${C.ink}"/>
-    <path d="M-7,-55 L-9,-68 L2,-61 Z" fill="${C.ink}"/>
-    <path d="M9,-61 L17,-69 L18,-56 Z" fill="${C.ink}"/>
-    ${face(3, -51, 12, 1.8)}
+    ${cap('M-31,-34 C-40,-38 -44,-50 -37,-60')}
+    ${cap('M-30,-34 L14,-36')}
+    ${cap('M-21,-35 L-23,-2')}
+    ${cap('M-12,-35 L-7,-2')}
+    ${cap('M3,-36 L0,-2')}
+    ${cap('M10,-36 L15,-2')}
+    ${cap('M12,-48 L8,-61 L18,-54', 4.4)}
+    ${cap('M23,-53 L31,-62 L31,-49', 4.4)}
+    ${ring(21, -42, 11)}
+    ${dot(17.5, -44, 2.3)}
+    ${dot(25, -44, 2.3)}
+    ${cap('M18,-38 Q21.5,-35 25,-38', 2.6)}
   </g>`;
 
-/** Standing cat, facing right; head lowered to drink. */
-const catSide = (x, y, scale = 1) => `<g transform="translate(${x} ${y}) scale(${scale})">
-    ${cap('M-19,-25 C-29,-27 -32,-40 -27,-50', 5)}
-    ${cap('M-12,-17 L-13,-1', 5.5)}
-    ${cap('M-2,-17 L-2,-1', 5.5)}
-    ${cap('M6,-17 L7,-1', 5.5)}
-    ${cap('M14,-17 L15,-1', 5.5)}
-    <rect x="-20" y="-33" width="36" height="17" rx="8.5" fill="${C.ink}"/>
-    <circle cx="16" cy="-26" r="8.6" fill="${C.ink}"/>
-    <path d="M9,-29 L7,-40 L16,-35 Z" fill="${C.ink}"/>
-    <path d="M19,-31 L26,-36 L26,-27 Z" fill="${C.ink}"/>
-    ${cap('M22,-22 L28,-17', 6.5)}
-    <circle cx="18" cy="-28" r="1.5" fill="${C.face}"/>
+/** Katze am Napf: Kopf tief ueber der Schuessel. */
+const catDrinking = (x, y, scale = 1) => `<g transform="translate(${x} ${y}) scale(${scale})">
+    ${cap('M-2,-40 C-10,-45 -12,-56 -6,-65')}
+    ${cap('M-1,-40 L34,-41')}
+    ${cap('M4,-41 L2,-2')}
+    ${cap('M12,-41 L15,-2')}
+    ${cap('M24,-41 L22,-2')}
+    ${cap('M31,-41 L34,-2')}
+    ${cap('M41,-36 L37,-50 L47,-43', 4.6)}
+    ${cap('M51,-40 L59,-48 L59,-35', 4.6)}
+    ${ring(47, -30, 10.8)}
+    ${dot(51, -32, 2.3)}
+    ${cap('M56,-24 L62,-19', 4.6)}
   </g>`;
 
+/** Schildkroete, Kopf nach rechts. */
 const turtle = (x, y, scale = 1) => `<g transform="translate(${x} ${y}) scale(${scale})">
-    <path d="M-34,-3 L-41,-1" stroke="${C.ink}" stroke-width="5" stroke-linecap="round"/>
-    ${cap('M-26,-5 L-27,0', 5.5)}
-    ${cap('M-13,-5 L-13,0', 5.5)}
-    ${cap('M2,-5 L2,0', 5.5)}
-    ${cap('M14,-5 L14,0', 5.5)}
-    <path d="M-35,-3 C-37,-17 -24,-28 -7,-28 C11,-28 20,-17 20,-4 L-35,-4 Z" fill="${C.ink}"/>
-    ${cap('M19,-13 C23,-15 25,-17 27,-20', 10)}
-    <circle cx="30" cy="-21" r="7" fill="${C.ink}"/>
-    <path d="M-27,-11 C-22,-21 -14,-24 -5,-24" fill="none" stroke="${C.face}" stroke-width="1.5" stroke-linecap="round" opacity="0.55"/>
-    <circle cx="32" cy="-23" r="1.7" fill="${C.face}"/>
+    ${cap('M-34,-4 L-41,-2', 4.6)}
+    ${cap('M-27,-4 L-29,0', 4.6)}
+    ${cap('M-14,-4 L-14,0', 4.6)}
+    ${cap('M2,-4 L2,0', 4.6)}
+    ${cap('M14,-4 L14,0', 4.6)}
+    ${cap('M-34,-4 C-34,-20 -20,-30 -2,-30 C16,-30 29,-20 29,-4')}
+    ${cap('M-34,-4 L29,-4')}
+    ${cap('M-2,-30 L-2,-17', 4)}
+    ${cap('M-21,-9 C-17,-21 -9,-24 -1,-22', 3.4)}
+    ${cap('M27,-14 L31,-16', 5)}
+    ${ring(37, -18, 7.4)}
+    ${dot(39, -20, 1.9)}
   </g>`;
 
+/** Vogel auf der Sitzstange. */
 const birdStand = (x, y, scale = 1) => `<g transform="translate(${x} ${y}) scale(${scale})">
-    ${cap('M0,-1 L0,-58', 4)}
-    ${cap('M-11,-1 L11,-1', 4)}
-    ${cap('M-14,-58 L14,-58', 4)}
-    ${cap('M-4,-58 L-4,-63', 2.6)}
-    ${cap('M3,-58 L3,-63', 2.6)}
-    ${cap('M-7,-70 L-19,-63', 6)}
-    <circle cx="0" cy="-74" r="11" fill="${C.ink}"/>
-    <circle cx="9" cy="-85" r="6.5" fill="${C.ink}"/>
-    <path d="M14,-85 L22,-83 L14,-79 Z" fill="${C.ink}"/>
-    <path d="M-6,-78 q7,-4.5 13,0 q-7,3.5 -13,0 Z" fill="${C.face}" opacity="0.65"/>
-    <circle cx="11" cy="-87" r="1.5" fill="${C.face}"/>
+    ${cap('M0,-1 L0,-57', 4.2)}
+    ${cap('M-12,-1 L12,-1', 4.2)}
+    ${cap('M-15,-57 L15,-57', 4.2)}
+    ${cap('M-3,-57 L-3,-63', 3)}
+    ${cap('M4,-57 L4,-63', 3)}
+    ${cap('M-8,-68 L-19,-62', 4.2)}
+    ${cap('M-6,-72 L-17,-67', 4.2)}
+    ${ring(0, -74, 11)}
+    <path d="M-6.5,-78 Q0,-72.5 6.5,-78 Q0,-82 -6.5,-78 Z" fill="none" stroke="${C.ink}" stroke-width="3.4" stroke-linejoin="round"/>
+    ${cap('M15,-87 L21,-85', 3.2)}
+    ${cap('M15,-84 L20,-79', 3.2)}
+    ${ring(9, -86, 7)}
+    ${dot(11, -88, 1.9)}
   </g>`;
 
-/** Person standing next to a bowl; a cat drinks from it. */
+/** Person, die Futter in den Napf streut; daneben trinkt eine Katze. */
 const feedingPair = (x, y, scale = 1) => `<g transform="translate(${x} ${y}) scale(${scale})">
-    ${catSide(-90, 0, 0.95)}
-    <path d="M-70,-1 L-62,-10 L-45,-10 L-37,-1 Z" fill="${C.ink}"/>
-    <circle cx="-58" cy="-15" r="1.4" fill="${C.accent}"/>
-    <circle cx="-53" cy="-20" r="1.1" fill="${C.accent}"/>
-    ${cap('M-4,-78 L-10,-46 L-9,-4', 9)}
-    ${cap('M4,-78 L10,-48 L12,-4', 9)}
-    ${cap('M-9,-4 L-17,-2', 7)}
-    ${cap('M12,-4 L20,-2', 7)}
-    <path d="M-9,-107 C-10,-97 -9,-87 -7,-76 L7,-76 C9,-87 10,-97 9,-107 Z" fill="${C.ink}"/>
-    ${cap('M1,-102 L-19,-82 L-32,-48', 6.5)}
-    <ellipse cx="-33" cy="-45" rx="9" ry="6.5" fill="${C.ink}" transform="rotate(-18 -33 -45)"/>
-    <circle cx="-39" cy="-32" r="1.5" fill="${C.accent}"/>
-    <circle cx="-44" cy="-24" r="1.2" fill="${C.accent}"/>
-    <circle cx="-49" cy="-17" r="1.4" fill="${C.accent}"/>
-    <circle cx="0" cy="-120" r="12.5" fill="${C.ink}"/>
-    ${face(0, -120, 12.5)}
+    ${catDrinking(-110, 0, 0.95)}
+    ${cap('M-58,-2 L-52,-11 L-32,-11 L-26,-2')}
+    ${cap('M-58,-2 L-26,-2', 3.2)}
+    ${cap('M-8,-40 L-14,-2')}
+    ${cap('M6,-40 L10,-2')}
+    ${cap('M-14,-2 L-21,-1')}
+    ${cap('M10,-2 L17,-1')}
+    ${cap('M0,-102 L0,-74 L-1,-40', 4.6)}
+    ${cap('M1,-100 L-17,-84 L-25,-60')}
+    <rect x="-33" y="-62" width="12" height="13" rx="3.5" fill="none" stroke="${C.ink}" stroke-width="4"/>
+    ${dot(-30, -42, 1.6, C.accent)}
+    ${dot(-35, -32, 1.3, C.accent)}
+    ${dot(-40, -22, 1.5, C.accent)}
+    ${ring(0, -116, 14.5)}
+    ${face(0, -116, 14.5)}
   </g>`;
 
 // ---------------------------------------------------------------------------
@@ -454,13 +478,12 @@ function scene() {
     }
   }
   for (const [tx, h] of [
-    [52, 168],
-    [292, 146],
+    [62, 168],
+    [290, 146],
     [612, 160],
-    [948, 150],
-    [1048, 156],
-    [1382, 152],
-    [1568, 184],
+    [890, 150],
+    [1110, 164],
+    [1500, 152],
   ]) {
     rowNear += pine(tx, n(groundY(tx, HILL) + 26), h, 'var(--scenery-forest-front)', tx, 1.02);
   }
@@ -539,17 +562,18 @@ function scene() {
   <g>${rowMid}</g>
   <g>${rowNear}</g>
   <path d="${groundPath(HILL)}" fill="var(--scenery-ground)"/>
+  <path d="${crestPath(HILL)}" fill="none" stroke="var(--scenery-ground-line)" stroke-width="2"/>
   <g>${grass}${flowers}</g>
   ${bush(84, n(groundY(84, HILL, 1.6) + 12), 64, 'var(--scenery-ground-front)')}
   ${bush(1520, n(groundY(1520, HILL, 1.6) + 13), 58, 'var(--scenery-ground-front)')}
   ${birdStand(214, g(214), 1)}
   ${turtle(352, g(352), 1.15)}
   ${cat(492, g(492), 1)}
-  ${cap(`M${n(690 + 28)},${n(g(690) - 68)} Q${n(760)},${n(g(760) - 46)} ${n(798 + 12)},${n(g(798) - 34)}`, 2.3, 'var(--scenery-leash)')}
+  ${cap(`M${n(690 + 30)},${n(g(690) - 68)} Q${n(752)},${n(g(752) - 52)} ${n(798 + 15)},${n(g(798) - 45)}`, 2.2, 'var(--scenery-leash)')}
   ${walker(690, g(690), 1.02)}
   ${dog(798, g(798), 1.02)}
   ${feedingPair(1046, g(1046), 0.96)}
-  ${cat(1216, g(1216), 1)}
+  ${cat(1176, g(1176), 1)}
   ${dog(1300, g(1300), 1, true, true)}
   ${walker(1412, g(1412), 1.02)}
   <path d="${groundPath(HILL + 30, 340, 2.6)}" fill="var(--scenery-ground-front)"/>
@@ -569,6 +593,7 @@ const PALETTE = {
   'scenery-ground': '#4e6e56',
   'scenery-ground-soft': '#587a65',
   'scenery-ground-front': '#44644f',
+  'scenery-ground-line': 'rgba(255,246,240,0.42)',
   'scenery-grass': '#41604a',
   'scenery-ink': '#201d1a',
   'scenery-face': '#fff8f5',
